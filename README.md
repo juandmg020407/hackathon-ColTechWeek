@@ -1,6 +1,6 @@
 <div align="center">
 
-# SERENO
+# IOmido
 
 **Inteligencia agroclimática para el minifundio colombiano**
 
