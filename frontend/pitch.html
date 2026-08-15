@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IOmido · Pitch</title>
+<meta name="theme-color" content="#00aedb">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/pitch.css">
+</head>
+<body>
+<div class="veil"></div>
+
+<main class="slide">
+  <header class="head">
+    <div class="mark">iO</div>
+    <div class="word">IOmido<small>NPK 4.0</small></div>
+    <div class="spacer"></div>
+    <div>
+      <div class="kicker">Planeta y comunidad · Resiliencia</div>
+      <h1>El minifundio fertiliza a ciegas. <em>Le damos el suelo medido</em>, en bultos y en pesos.</h1>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div class="demo">
+      <span class="live"><i></i>Demo en vivo</span>
+      <iframe src="index.html" title="Tablero del lote, en vivo" loading="eager"></iframe>
+    </div>
+
+    <aside class="side">
+      <div class="three">
+        <div class="beat"><b>Problema</b><span id="beat-problema">El 80% de los paperos siembra menos de una hectárea y fertiliza sin análisis de suelo. Una sonda con IA cuesta más que el cultivo entero.</span></div>
+        <div class="beat"><b>Producto</b><span id="beat-producto">Un sensor que rota por la vereda. Interpolamos el lote, calculamos qué falta en cada zona y lo traducimos a bultos y pesos.</span></div>
+        <div class="beat"><b>Objetivo</b><span id="beat-objetivo">Que aplique lo justo y sepa qué viene. Papa en Pasto, Nariño, en 2G y sin señal.</span></div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="ahorro">—</div><div class="l" id="ahorro-l">de ahorro contra la receta genérica</div></div>
+        <div class="stat"><div class="n warn" id="riesgo">—</div><div class="l" id="riesgo-l">riesgo principal</div></div>
+      </div>
+
+      <p class="quote" id="message">—</p>
+      <div class="chips">
+        <span class="chip">Voz</span><span class="chip">Offline</span><span class="chip" id="peso">—</span><span class="chip" id="fuentes">—</span>
+      </div>
+    </aside>
+  </section>
+
+  <footer class="foot">
+    <audio id="pitch-audio" src="/pitch-audio.mp3" preload="auto"></audio>
+    <button class="play" id="btn-play" aria-label="Reproducir el pitch narrado">▶ <span id="play-label">Pitch narrado · 1 min</span></button>
+    <div class="bar" aria-hidden="true"><i id="bar-fill"></i></div>
+    <span id="clock">0:00</span>
+    <span class="spacer"></span>
+    <span class="note" id="aviso">Cada recomendación trae su modelo, sus datos y su fuente. El sistema propone; el agricultor decide.</span>
+  </footer>
+</main>
+
+<script type="module">
+import { getPackage } from '/lib/api.js';
+import { adapt, formatCop } from '/lib/adapt.js';
+
+const set = (id, value) => { document.getElementById(id).textContent = value; };
+
+getPackage().then(({ data }) => {
+  const view = adapt(data);
+  const top = view.riesgos[0];
+
+  set('ahorro', formatCop(view.receta.ahorro_cop));
+  if (top) {
+    set('riesgo', top.severidad.toUpperCase());
+    set('riesgo-l', top.titulo);
+  }
+  set('message', view.voz[0]?.texto ?? '');
+  set('peso', `${view.plot.area_ha} ha · ${view.sampling.valid} mediciones`);
+  set('fuentes', [...new Set(view.riesgos.flatMap((r) => r.por_que.fuentes.map((f) => f.nombre)))].join(' · '));
+  if (view.aviso) set('aviso', view.aviso);
+}).catch((error) => {
+  set('message', `No se pudo cargar el paquete del lote: ${error.message}`);
+});
+
+// Narración sincronizada: el audio manda el reloj; si no carga, el botón se desactiva.
+const audio = document.getElementById('pitch-audio');
+const button = document.getElementById('btn-play');
+const label = document.getElementById('play-label');
+const fill = document.getElementById('bar-fill');
+const clock = document.getElementById('clock');
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+function stop() {
+  if (!audio.paused) audio.pause();
+  button.firstChild.nodeValue = '▶ ';
+  button.setAttribute('aria-label', 'Reproducir el pitch narrado');
+}
+
+function start() {
+  button.firstChild.nodeValue = '❚❚ ';
+  button.setAttribute('aria-label', 'Pausar el pitch narrado');
+  const played = audio.play();
+  if (played && typeof played.catch === 'function') played.catch(stop);
+}
+
+button.addEventListener('click', () => (audio.paused ? start() : stop()));
+audio.addEventListener('timeupdate', () => {
+  const total = audio.duration || 60;
+  fill.style.width = `${(audio.currentTime / total) * 100}%`;
+  clock.textContent = mmss(audio.currentTime);
+});
+audio.addEventListener('ended', () => { stop(); fill.style.width = '0'; clock.textContent = '0:00'; });
+audio.addEventListener('loadedmetadata', () => { clock.textContent = mmss(0); label.textContent = `Pitch narrado · ${mmss(audio.duration)}`; });
+audio.addEventListener('error', () => {
+  button.disabled = true;
+  label.textContent = 'Audio pendiente — coloca pitch-audio.mp3';
+  button.title = 'Falta public/pitch-audio.mp3';
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === ' ' && !button.disabled) { event.preventDefault(); button.click(); }
+});
+</script>
+</body>
+</html>

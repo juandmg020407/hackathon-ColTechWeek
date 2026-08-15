@@ -1,0 +1,10 @@
+{
+  "name": "IOmido NPK 4.0 — Fertilidad por lote",
+  "short_name": "IOmido NPK",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f3f4",
+  "theme_color": "#00aedb",
+  "description": "Mapa de fertilidad del lote a partir de muestras NPK georreferenciadas",
+  "icons": []
+}
