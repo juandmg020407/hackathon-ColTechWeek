@@ -1,4 +1,4 @@
-# Sereno — backend
+# IOmido — backend
 
 ```bash
 cd backend
