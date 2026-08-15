@@ -1,0 +1,169 @@
+/* Entry screens: the lot's fertility surface behind a light panel. */
+
+html, body { height: 100%; overflow: hidden; }
+
+#field {
+  position: fixed;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  z-index: 0;
+  filter: blur(1px) saturate(1.02);
+  animation: drift 46s var(--ease, cubic-bezier(.22,.61,.36,1)) infinite alternate;
+}
+@keyframes drift {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to { transform: scale(1.16) translate3d(-2.2%, 1.6%, 0); }
+}
+
+.screen {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  width: 100%;
+  padding: clamp(16px, 4vh, 48px) 20px;
+}
+.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 52% 68% at 50% 50%, rgb(241 243 244 / 82%), transparent 76%),
+    linear-gradient(180deg, rgb(241 243 244 / 52%) 0%, rgb(241 243 244 / 24%) 44%, rgb(241 243 244 / 66%) 100%);
+}
+
+/* Scene 01 — darkness, one pulse of the probe, then the field fades up. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  background: var(--bg);
+  pointer-events: none;
+  animation: lift 760ms var(--ease, cubic-bezier(.22,.61,.36,1)) 380ms both;
+}
+.curtain::after {
+  content: '';
+  position: absolute;
+  top: 52%;
+  left: 24%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 16px 5px rgb(0 174 219 / 55%);
+  animation: probe 1000ms ease-in-out both;
+}
+@keyframes probe {
+  0% { opacity: 0; transform: translate(0, 0) scale(.4); }
+  25% { opacity: 1; transform: translate(44px, -16px) scale(1); }
+  70% { opacity: .9; transform: translate(158px, -44px) scale(1); }
+  100% { opacity: 0; transform: translate(238px, -66px) scale(.7); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+.panel {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 410px;
+  max-height: calc(100dvh - clamp(32px, 8vh, 96px));
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(1.2rem, 3.2vh, 2rem);
+  box-shadow: 0 24px 70px rgb(31 42 48 / 22%), 0 2px 6px rgb(31 42 48 / 8%);
+  animation: rise 600ms var(--ease, cubic-bezier(.22,.61,.36,1)) 1720ms both;
+}
+
+.brand { display: flex; align-items: center; gap: .7rem; margin-bottom: clamp(.9rem, 2.4vh, 1.4rem); }
+.brand .mark { width: 42px; font-size: 22px; box-shadow: 0 8px 22px rgb(0 174 219 / 30%); }
+.word { font-size: 1.05rem; font-weight: 600; line-height: 1.15; }
+.word small { display: block; font-size: .68em; color: var(--muted); font-weight: 400; letter-spacing: .09em; }
+
+.tagline {
+  font-size: clamp(1.2rem, 2.4vw, 1.65rem);
+  line-height: 1.18;
+  letter-spacing: -.025em;
+  font-weight: 700;
+  margin-bottom: .35rem;
+}
+.tagline em { font-style: normal; color: var(--brand-deep); }
+.prompt { color: var(--muted); font-size: .88rem; margin-bottom: clamp(.9rem, 2.4vh, 1.4rem); }
+
+form { display: grid; gap: clamp(.6rem, 1.6vh, .95rem); }
+.field { display: grid; gap: .32rem; }
+label { font-size: .7rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.wrap { position: relative; display: flex; align-items: center; }
+
+input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: .72rem 2.5rem .72rem .85rem;
+  color: var(--ink);
+  font: inherit;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+input::placeholder { color: var(--muted); opacity: .7; }
+input:focus { outline: 0; border-color: var(--brand); background: var(--surface); box-shadow: 0 0 0 3px rgb(0 174 219 / 16%); }
+input:disabled { opacity: .55; }
+.wrap svg {
+  position: absolute; right: .85rem; width: 17px; height: 17px;
+  stroke: var(--muted); fill: none; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; pointer-events: none;
+}
+input:focus ~ svg { stroke: var(--brand-deep); }
+
+.hint { font-size: .7rem; color: var(--muted); }
+
+.error {
+  display: flex; align-items: flex-start; gap: .5rem;
+  font-size: .8rem; color: #8c2d22;
+  background: #fdf2f1; border: 1px solid #f0c4bf;
+  border-radius: 9px; padding: .55rem .7rem;
+}
+.error svg { flex: none; width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; margin-top: 1px; }
+
+.submit {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; background: var(--brand-deep); color: #fff;
+  border: 0; border-radius: 9px; padding: .78rem 1rem;
+  font: inherit; font-weight: 600; cursor: pointer;
+  transition: background 180ms ease;
+}
+.submit:hover:not(:disabled) { background: #005a73; }
+.submit:disabled { opacity: .65; cursor: progress; }
+.submit:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 3px; }
+.submit svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.switch {
+  background: none; border: 0; padding: 0; font: inherit;
+  color: var(--brand-deep); cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+}
+.switch:hover { color: #005a73; }
+
+.aside {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: .6rem; flex-wrap: wrap; font-size: .76rem; color: var(--muted);
+}
+.aside a { color: var(--brand-deep); text-decoration: none; }
+.aside a:hover { text-decoration: underline; }
+.badge { border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; font-size: .7rem; }
+
+@media (max-height: 620px) {
+  .curtain, #field { animation-duration: 1ms; }
+  .panel { animation-delay: 60ms; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}
