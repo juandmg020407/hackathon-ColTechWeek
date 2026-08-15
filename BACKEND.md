@@ -1,4 +1,4 @@
-# SERENO — backend
+# IOmido — backend
 
 Arquitectura, endpoints y fuentes. Complemento técnico de `BRIEF.md`.
 El contrato con el frontend está en `FRONTEND.md` y es la fuente de verdad.
