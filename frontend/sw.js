@@ -1,6 +1,6 @@
 // Cache-first service worker: after the first load the app opens without network.
 
-const CACHE = 'iomido-v3';
+const CACHE = 'iomido-v4';
 const SHELL = [
   '/',
   '/index.html',

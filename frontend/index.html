@@ -10,14 +10,6 @@
 </head>
 <body>
 <div id="app"><div class="loading">Cargando el acopio…</div></div>
-<script>
-  // En el despliegue la API sale del mismo origen y api.js la resuelve sola.
-  // Aquí solo se apunta al backend de desarrollo, que corre en otro puerto.
-  // Si no responde, api.js cae al paquete local: la app abre igual.
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.port !== '8000') {
-    window.NPK_API_BASE ??= 'http://127.0.0.1:8000';
-  }
-</script>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

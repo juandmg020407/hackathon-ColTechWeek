@@ -166,6 +166,8 @@ export function adapt(pkg) {
     contorno: plot.boundary,
     puntos: valid,
     descartados: rejected,
+    mediciones: points,
+    unidadLectura: measurements?.unit,
     zonas,
     nextSample,
     propuesta: proposal && {

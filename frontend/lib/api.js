@@ -3,14 +3,25 @@
 const DEFAULT_PLOT = 'nar-001';
 const REQUEST_TIMEOUT_MS = 8000;
 
+const BACKEND_DEV_PORT = '8000';
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1)$/;
+
 // En el despliegue la API se sirve desde el mismo origen que esta página, así
-// que ese es el valor por defecto. Para un backend en otro host se sobreescribe
+// que ese es el valor por defecto. Para cualquier otro backend se sobreescribe
 // antes de cargar el módulo: window.NPK_API_BASE = 'https://api.example.com'.
-// Un origen file:// no tiene backend detrás y se queda en el paquete local.
+//
+// Un preview estático local en otro puerto no tiene API detrás: devolver el
+// origen ahí dispara peticiones que el navegador registra como error antes de
+// que el código pueda capturarlas. Sin base, la app va directo al paquete
+// local y la consola queda limpia.
 function resolveBase() {
   if (typeof window === 'undefined') return '';
   if (typeof window.NPK_API_BASE === 'string') return window.NPK_API_BASE;
-  return /^https?:$/.test(window.location.protocol) ? window.location.origin : '';
+
+  const { protocol, hostname, port, origin } = window.location;
+  if (!/^https?:$/.test(protocol)) return '';
+  if (LOCAL_HOST.test(hostname) && port !== BACKEND_DEV_PORT) return '';
+  return origin;
 }
 
 export const apiBase = resolveBase();
