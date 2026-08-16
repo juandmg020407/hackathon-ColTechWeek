@@ -1,75 +1,76 @@
-# IOmido — backend
+# IOmido backend 2.0
 
-Backend de la demo de inteligencia de suelo y clima para centros de acopio.
+Backend FastAPI local-first. Requiere Python 3.11 o superior.
 
-## Arrancar
+## Instalar y arrancar
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+Desde la raíz del repositorio:
+
+```powershell
+python -m pip install -r backend/requirements.txt
+Set-Location backend
+Copy-Item .env.example .env
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Abrir <http://localhost:8000/docs>.
+No se necesita `.env` para la demo. Por defecto no se consulta Internet y los
+fixtures climáticos se declaran degradados.
 
-No hace falta `.env` para ejecutar la demo. Las fuentes externas degradan cuando
-no responden, aunque el primer package puede tardar mientras vencen sus timeouts.
+## Tests
 
-## Estado real
+```powershell
+python -m pytest backend/tests -q
+```
 
-| Capacidad | Estado |
-|---|---|
-| Lote demo desde Excel | Implementado |
-| Calidad geográfica y anomalías | Implementado |
-| GP, incertidumbre y siguiente medición | Implementado |
-| Zonas de manejo | Implementado |
-| Riesgos de helada, sequía, gota y estacional | Implementado |
-| Package único comprimido | Implementado |
-| Ingesta idempotente | Implementada en memoria |
-| Propuestas, decisiones y explicación | Implementadas con SQLite local |
-| Unidad NPK porcentual de extremo a extremo | En migración `v0.2` |
-| Formulaciones configurables `30-30-40` | En migración `v0.2` |
-| Optimización entera sin precios | En migración `v0.2` |
-| Persistencia durable y autenticación | Pendiente |
-| Agente conversacional y TTS externo | Pendiente; no son ruta crítica |
+Resultado de referencia: `26 passed`. Todos los tests usan SQLite temporal,
+fixtures o clientes falsos. Ninguno habilita APIs externas o un LLM.
 
-## Advertencia de contrato
+## Demo sin red
 
-El Excel almacena porcentajes NPK. La primera fila es `2,1,1`, es decir N 2 %, P
-1 %, K 1 %. El contrato `v0.1` todavía etiqueta el campo interpolado como ppm y
-produce marcas, productos y precios heredados. Esa salida permite ejecutar la demo
-actual, pero está obsoleta y no debe presentarse como diseño final.
+```powershell
+python backend/scripts/demo_backend.py
+```
 
-El contrato objetivo `v0.2`:
+El script crea una base temporal y ejecuta el pipeline entero. Para regenerar los
+mocks contractuales desde el mismo motor:
 
-- conserva porcentajes;
-- usa formulaciones por grado, por ejemplo `30-30-40`;
-- elimina marcas y precios;
-- carga perfiles y formulaciones desde datos versionados;
-- resuelve bultos enteros por ajuste nutricional;
-- activa revisión por incertidumbre y límites, no por costo.
+```powershell
+python tools/build_mock.py
+```
 
-Ver [`../BACKEND.md`](../BACKEND.md) para el diseño completo y
-[`../TAREAS.md`](../TAREAS.md) para el orden de migración.
+## Variables principales
 
-## Módulos
+Ver `.env.example`. Las de mayor impacto son:
 
-| Ruta | Responsabilidad |
-|---|---|
-| `app/main.py` | API y caches demo |
-| `app/schemas.py` | Contrato `v0.1`; punto de entrada de la migración |
-| `app/ml/soil.py` | Calidad, GP, zonas y optimizador heredado |
-| `app/ml/package.py` | Ensamble suelo + clima + recomendaciones |
-| `app/risk/` | Motores climáticos activos |
-| `app/sources/` | Clientes y cache en memoria |
-| `app/governance/` | Propuestas, decisiones y auditoría local |
+- `DB_PATH`;
+- `EXTERNAL_SOURCES_ENABLED=false`;
+- `WRITE_API_KEY`;
+- `MAX_IMPORT_BYTES`;
+- `CORS_ORIGINS`;
+- `AI_EXPLAINER_ENABLED=false`;
+- `AI_TOTAL_BUDGET_USD=1.00`.
 
-## Antes de afirmar que `v0.2` está lista
+## Importar el Excel
 
-- No aparece `ppm` en OpenAPI ni en mocks.
-- La primera fila sigue siendo `2,1,1` después del pipeline.
-- No hay marcas, nombres químicos, precios ni costos en la respuesta.
-- Los bultos son enteros y la solución pasa tests de cobertura/exceso.
-- Ningún perfil agronómico activo carece de fuente y versión.
-- La auditoría registra generación y decisión.
-- Las lecturas sobreviven un reinicio.
+Con el servidor activo:
+
+```powershell
+curl.exe -X POST "http://localhost:8000/v1/readings/import?plot_id=nar-001" `
+  -F "file=@../data/data_ejemplo.csv.xlsx"
+curl.exe -X POST "http://localhost:8000/v1/plots/nar-001/recompute"
+curl.exe "http://localhost:8000/v1/plots/nar-001/package"
+```
+
+El primer response de importación debe mostrar N 2 %, P 1 %, K 1 %, con
+`conversion_applied=false`.
+
+## Base de datos
+
+El archivo local por defecto es `backend/iomido.sqlite3` y está ignorado por Git.
+Las migraciones viven en `app/repositories/migrations/`. No edite `audit_log`:
+triggers de SQLite rechazan cambios y borrados.
+
+## Limitación de uso
+
+El perfil demo está `demo_unvalidated`. Los planes son candidatos pendientes y
+requieren un técnico; no son una receta lista para aplicar.
