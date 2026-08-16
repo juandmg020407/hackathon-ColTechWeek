@@ -146,6 +146,7 @@ class SoilIntelligenceEngine:
             "plot": {
                 "id": plot.id,
                 "center_id": plot.center_id,
+                "producer_id": plot.producer_id,
                 "crop_profile_id": plot.crop_profile_id,
                 "name": plot.name,
                 "municipality": plot.municipality,

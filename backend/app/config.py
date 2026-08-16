@@ -51,7 +51,10 @@ class Settings(BaseSettings):
     random_seed: int = 42
     log_level: str = "INFO"
 
-    ai_explainer_enabled: bool = True
+    # Las llamadas pagadas son opt-in. Un contador local no puede imponer un
+    # presupuesto global entre procesos serverless; el limite global se fija en
+    # el workspace del proveedor antes de habilitar esta opcion.
+    ai_explainer_enabled: bool = False
     ai_total_budget_usd: float = Field(default=2.0, ge=0, le=4)
     ai_max_input_tokens: int = Field(default=8_000, gt=0)
     ai_max_output_tokens: int = Field(default=800, gt=0)

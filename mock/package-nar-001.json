@@ -85,7 +85,7 @@
     "agronomy": "soil-mass-balance/2.0.0",
     "optimizer": "bounded-exact-integer/2.0.0"
   },
-  "generated_at": "2026-08-16T02:11:58.225794Z",
+  "generated_at": "2026-08-16T05:47:18.266023Z",
   "degraded": true,
   "warnings": [
     "Open-Meteo Forecast: network access is disabled; using a versioned offline fixture; data is not presented as current",
@@ -95,10 +95,11 @@
     "Small dataset (18 in-plot observations); metrics have high variance.",
     "The crop profile is demo_unvalidated; no candidate plan is an applied prescription."
   ],
-  "id": "package-c8628063975bc264",
+  "id": "package-800aec473c26195b",
   "plot": {
     "id": "nar-001",
     "center_id": "center-pasto-demo",
+    "producer_id": "producer-el-rosal-demo",
     "crop_profile_id": "potato-pasto-demo-v1",
     "name": "Lote El Rosal",
     "municipality": "Pasto, Narino",
@@ -2729,16 +2730,16 @@
       "gp_better_than_idw": false,
       "claim": "GP is not claimed to outperform IDW for this input set."
     },
-    "inference_ms": 1711.823,
+    "inference_ms": 547.529,
     "input_hash": "e088f55208bdf1f3f0f378e29a917d1f9ce3a168dafff8e5e09875b22a2b40e3",
     "limitations": [
       "Sensor percentages have not been calibrated against laboratory samples.",
       "Spatial predictions support sampling and review; they are not laboratory measurements.",
       "Small dataset (18 in-plot observations); metrics have high variance."
     ],
-    "id": "model-run-eee8678d45fbf150",
+    "id": "model-run-aa60691c0fccbf02",
     "plot_id": "nar-001",
-    "created_at": "2026-08-16T02:11:58.225794Z"
+    "created_at": "2026-08-16T05:47:18.266023Z"
   },
   "climate": {
     "risks": [
@@ -2754,8 +2755,8 @@
           "unit": "probability_0_1"
         },
         "window": {
-          "start": "2026-08-15",
-          "end": "2026-08-31",
+          "start": "2026-08-16",
+          "end": "2026-09-01",
           "unit": "date"
         },
         "inputs": {
@@ -2808,8 +2809,8 @@
           "unit": "probability_0_1"
         },
         "window": {
-          "start": "2026-08-15",
-          "end": "2026-08-31",
+          "start": "2026-08-16",
+          "end": "2026-09-01",
           "unit": "date"
         },
         "inputs": {
@@ -2864,8 +2865,8 @@
           "unit": "probability_0_1"
         },
         "window": {
-          "start": "2026-08-15",
-          "end": "2026-08-17",
+          "start": "2026-08-16",
+          "end": "2026-08-18",
           "unit": "date"
         },
         "inputs": {
@@ -3068,9 +3069,9 @@
     "effective_from": "2026-08-15"
   },
   "proposal": {
-    "id": "proposal-31ff9fb07fbf3836",
+    "id": "proposal-beb94b4ad3ee5972",
     "plot_id": "nar-001",
-    "package_id": "package-c8628063975bc264",
+    "package_id": "package-800aec473c26195b",
     "status": "pending",
     "validation_status": "requires_technical_validation",
     "human_decision_required": true,
@@ -3828,7 +3829,7 @@
       "steps": [
         {
           "step": "spatial inference",
-          "evidence_id": "model-run-eee8678d45fbf150",
+          "evidence_id": "model-run-aa60691c0fccbf02",
           "detail": "Three Matern Gaussian Processes produced means and uncertainty."
         },
         {
@@ -3845,7 +3846,7 @@
         }
       ],
       "evidence": {
-        "model_run_id": "model-run-eee8678d45fbf150",
+        "model_run_id": "model-run-aa60691c0fccbf02",
         "source_names": [
           "Open-Meteo Forecast",
           "NASA POWER",
@@ -3859,6 +3860,6 @@
         "Offline or stale climate data must be refreshed before field action."
       ]
     },
-    "created_at": "2026-08-16T02:11:58.225794Z"
+    "created_at": "2026-08-16T05:47:18.266023Z"
   }
 }

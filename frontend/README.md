@@ -51,7 +51,7 @@ enlazar. Un hash desconocido cae en `#resumen`. `pitch.html` embebe
 |---|---|
 | `lib/api.js` | Única puerta de red: package, lecturas, propuestas, decisiones, agente y gobernanza |
 | `lib/adapt.js` | Contrato v2 → modelo de vista. No modifica el JSON de origen |
-| `lib/network.js` | Contexto del centro a partir de `/v1/centers` y `/v1/plots` |
+| `lib/network.js` | Dashboard persistido del centro; `network.json` solo como fallback offline |
 | `lib/heatsurface.js` | Superficie e incertidumbre |
 | `lib/slippy.js` | Basemap opcional |
 | `lib/plotmap.js` | Render local sin tiles |
@@ -61,9 +61,10 @@ enlazar. Un hash desconocido cae en `#resumen`. `pitch.html` embebe
 ## Datos: qué es real y qué no
 
 El único lote con datos reales es **El Rosal**, y sus valores salen siempre del
-package v2 del backend o de su mock. `mock/network.json` es **contexto sintético
-de demostración** para poblar la vista de red mientras el backend no expone un
-listado de centro; la interfaz lo rotula como tal y no lo usa nunca para El Rosal.
+package v2 del backend o de su mock. Con conexión, la red consume
+`/v1/centers/{center_id}/dashboard`, cuyos conteos son persistidos y declaran su
+origen. `mock/network.json` queda exclusivamente como contexto sintético para el
+fallback offline.
 
 No se publica exposición en pesos: no existe un modelo de producción validado.
 

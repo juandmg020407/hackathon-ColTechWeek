@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 
-from ..domain.models import Formulation, NPKPercent, Plot, Reading
+from ..domain.models import Formulation, NPKPercent, Plot, Producer, Reading
 from ..ml.geometry import point_in_polygon
 from ..repositories.sqlite import stable_id
 from ..services.contracts import contract_metadata
@@ -19,6 +19,7 @@ from .schemas import (
     FormulationPayload,
     PackageResponse,
     PlotCreate,
+    ProducerPayload,
     ReadingCreate,
 )
 
@@ -120,6 +121,100 @@ def center(center_id: str, request: Request) -> dict:
     return _response({"center": item}, validation_status=item["validation_status"])
 
 
+@router.get("/v1/centers/{center_id}/dashboard")
+def center_dashboard(center_id: str, request: Request) -> dict:
+    container = _container(request)
+    center_item = container.repository.get_center(center_id)
+    if center_item is None:
+        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+    dashboard = container.network.dashboard(center_id)
+    plot_rows = [
+        plot
+        for producer in dashboard["producers"]
+        for plot in producer["plots"]
+    ] + dashboard["unassigned_plots"]
+    return contract_metadata(
+        validation_status=center_item["validation_status"],
+        model_versions={"network": container.network.version},
+        degraded=any(plot["degraded"] for plot in plot_rows),
+        warnings=(
+            ["El dashboard incluye registros identificados como datos de demostración."]
+            if dashboard["data_scope"]["contains_demonstration_data"] else []
+        ),
+    ) | {"dashboard": dashboard}
+
+
+@router.get("/v1/centers/{center_id}/producers")
+def producers(center_id: str, request: Request) -> dict:
+    container = _container(request)
+    center_item = container.repository.get_center(center_id)
+    if center_item is None:
+        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+    items = [
+        producer.model_dump(mode="json")
+        for producer in container.repository.list_producers(center_id)
+    ]
+    return _response({"producers": items}, validation_status=center_item["validation_status"])
+
+
+@router.post(
+    "/v1/centers/{center_id}/producers",
+    dependencies=write_guard,
+    status_code=201,
+)
+def create_producer(center_id: str, payload: ProducerPayload, request: Request) -> dict:
+    container = _container(request)
+    if container.repository.get_center(center_id) is None:
+        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+    producer_id = payload.id or stable_id(
+        "producer", f"{center_id}|{payload.display_name}|{payload.municipality}"
+    )
+    producer = Producer(
+        id=producer_id,
+        center_id=center_id,
+        **payload.model_dump(exclude={"id"}),
+    )
+    container.repository.upsert_producer(producer, actor="api")
+    return _response({"producer": producer.model_dump(mode="json")})
+
+
+@router.get("/v1/producers/{producer_id}")
+def producer(producer_id: str, request: Request) -> dict:
+    item = _container(request).repository.get_producer(producer_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+    return _response({"producer": item.model_dump(mode="json")})
+
+
+@router.put("/v1/producers/{producer_id}", dependencies=write_guard)
+def update_producer(
+    producer_id: str,
+    payload: ProducerPayload,
+    request: Request,
+) -> dict:
+    container = _container(request)
+    current = container.repository.get_producer(producer_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+    if payload.id and payload.id != producer_id:
+        raise HTTPException(status_code=409, detail="payload id does not match path id")
+    updated = Producer(
+        id=producer_id,
+        center_id=current.center_id,
+        **payload.model_dump(exclude={"id"}),
+    )
+    container.repository.upsert_producer(updated, actor="api")
+    return _response({"producer": updated.model_dump(mode="json")})
+
+
+@router.get("/v1/producers/{producer_id}/plots")
+def producer_plots(producer_id: str, request: Request) -> dict:
+    container = _container(request)
+    if container.repository.get_producer(producer_id) is None:
+        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+    return _response({"plots": container.repository.list_plots(producer_id=producer_id)})
+
+
 @router.get("/v1/centers/{center_id}/formulations")
 def formulations(center_id: str, request: Request) -> dict:
     container = _container(request)
@@ -189,13 +284,31 @@ def crop_profile(profile_id: str, request: Request) -> dict:
 
 
 @router.get("/v1/plots")
-def plots(request: Request) -> dict:
-    return _response({"plots": _container(request).repository.list_plots()})
+def plots(
+    request: Request,
+    center_id: str | None = None,
+    producer_id: str | None = None,
+) -> dict:
+    return _response({
+        "plots": _container(request).repository.list_plots(
+            center_id=center_id, producer_id=producer_id
+        )
+    })
 
 
 @router.post("/v1/plots", dependencies=write_guard, status_code=201)
 def create_plot(payload: PlotCreate, request: Request) -> dict:
     container = _container(request)
+    if payload.producer_id:
+        producer_item = container.repository.get_producer(payload.producer_id)
+        if producer_item is None:
+            raise HTTPException(
+                status_code=409, detail=f"producer {payload.producer_id} does not exist"
+            )
+        if producer_item.center_id != payload.center_id:
+            raise HTTPException(
+                status_code=409, detail="producer and plot must belong to the same center"
+            )
     plot = Plot.model_validate(payload.model_dump())
     try:
         container.repository.upsert_plot(plot)
@@ -210,6 +323,23 @@ def plot(plot_id: str, request: Request) -> dict:
     if item is None:
         raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
     return _response({"plot": item.model_dump(mode="json")})
+
+
+@router.get("/v1/plots/{plot_id}/readings")
+def plot_readings(plot_id: str, request: Request, valid_only: bool = False) -> dict:
+    container = _container(request)
+    if container.repository.get_plot(plot_id) is None:
+        raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
+    readings = [
+        item.model_dump(mode="json")
+        for item in container.repository.list_readings(plot_id, valid_only=valid_only)
+    ]
+    return _response({
+        "plot_id": plot_id,
+        "readings": readings,
+        "count": len(readings),
+        "valid_only": valid_only,
+    })
 
 
 @router.get("/v1/plots/{plot_id}/package", response_model=PackageResponse)

@@ -18,6 +18,7 @@ from ..services.engine import SoilIntelligenceEngine
 from ..services.explainer import AIBudgetPolicy, EvidenceExplainer
 from ..services.agent import GroundedAgent
 from ..services.importer import ReadingImporter
+from ..services.network import CenterNetworkService
 from ..sources.climate import ClimateFusion
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class AppContainer:
     importer: ReadingImporter
     governance: GovernanceService
     agent: GroundedAgent
+    network: CenterNetworkService
 
 
 def build_container(settings: Settings) -> AppContainer:
@@ -60,6 +62,7 @@ def build_container(settings: Settings) -> AppContainer:
         importer=ReadingImporter(repository, settings.max_import_bytes),
         governance=GovernanceService(repository),
         agent=GroundedAgent(repository, build_explainer(settings)),
+        network=CenterNetworkService(repository),
     )
 
 
