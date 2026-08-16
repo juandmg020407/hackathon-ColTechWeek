@@ -35,7 +35,7 @@ cuesta más de lo que deja una cosecha pequeña y los resultados llegan cuando y
 sembró. Entonces se fertiliza por costumbre —el mismo bulto, la misma dosis, en
 todo el lote y todos los años.
 
-Y un lote no es homogéneo. En las **19 mediciones reales** de esta demo, dos
+Y un lote no es homogéneo. En las **19 mediciones REALES** de esta demo, dos
 puntos separados **45 metros** dan potasio de **1 %** y de **13 %**, y el
 nitrógeno va de **1 % a 27 %** dentro de la misma hectárea y cuarto. Fertilizar
 eso con una dosis única es equivocarse en casi toda la superficie: sobra donde ya
