@@ -294,3 +294,11 @@ automatizar más decisiones sin control.
 Ninguno de esos pendientes autoriza presentar el perfil de demo como una
 prescripción validada. Por eso, el sistema marca toda propuesta como pendiente
 de validación técnica.
+
+## El equipo
+
+<p align="center">
+  <a href="https://www.linkedin.com/in/david-morales-galindo-35042b319/"><img alt="Juan David Morales en LinkedIn" src="https://img.shields.io/badge/Juan%20David%20Morales-LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>
+  <a href="https://www.linkedin.com/in/luis-alejandro/"><img alt="Luis Cárdenas en LinkedIn" src="https://img.shields.io/badge/Luis%20C%C3%A1rdenas-LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>
+  <a href="https://www.linkedin.com/in/german-m-r-26aa08136/"><img alt="Germán Mueses en LinkedIn" src="https://img.shields.io/badge/Germ%C3%A1n%20Mueses-LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>
+</p>
