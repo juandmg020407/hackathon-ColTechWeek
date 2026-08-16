@@ -13,11 +13,20 @@ async function fetchJson(url) {
 }
 
 export async function getPackage(plotId = DEFAULT_PLOT) {
-  const url = apiBase
-    ? `${apiBase}/v1/plots/${plotId}/package`
-    : `/mock/package-${plotId}.json`;
-  const data = await fetchJson(url);
-  return { data, origin: apiBase ? 'backend' : 'paquete local', live: Boolean(apiBase) };
+  const local = `/mock/package-${plotId}.json`;
+  if (!apiBase) {
+    return { data: await fetchJson(local), origin: 'paquete local', live: false };
+  }
+  try {
+    const data = await fetchJson(`${apiBase}/v1/plots/${plotId}/package`);
+    return { data, origin: 'backend', live: true };
+  } catch (error) {
+    // El backend no responde. Se sirve el último paquete bueno en vez de una
+    // pantalla en blanco: es la misma regla que el backend aplica con sus
+    // fuentes externas. Una demo en 2G no se puede caer porque falle la red.
+    console.warn('[api] backend no disponible, se usa el paquete local:', error.message);
+    return { data: await fetchJson(local), origin: 'paquete local', live: false };
+  }
 }
 
 export async function listPlots() {
