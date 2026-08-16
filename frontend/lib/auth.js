@@ -4,8 +4,11 @@ import { apiBase } from './api.js';
 
 const SESSION_KEY = 'npk.session';
 
-// Mock mode is the default until the backend exists. Set window.NPK_API_BASE to switch.
-export const usingMock = !apiBase;
+// El contrato v2 del backend es /v1 y no tiene sesiones: nadie sirve todavía
+// /api/auth/*. La costura de abajo queda lista, pero se activa con su propia
+// bandera y no al vuelo por tener API de datos, o el login del despliegue
+// llamaría a rutas inexistentes. Para activarla: window.NPK_AUTH_API = true.
+export const usingMock = !(typeof window !== 'undefined' && window.NPK_AUTH_API && apiBase);
 
 export function currentSession() {
   try {

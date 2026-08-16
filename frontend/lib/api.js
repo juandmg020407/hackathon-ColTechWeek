@@ -3,8 +3,17 @@
 const DEFAULT_PLOT = 'nar-001';
 const REQUEST_TIMEOUT_MS = 8000;
 
-// Point this at the backend when it exists: window.NPK_API_BASE = 'https://api.example.com'
-export const apiBase = (typeof window !== 'undefined' && window.NPK_API_BASE) || '';
+// En el despliegue la API se sirve desde el mismo origen que esta página, así
+// que ese es el valor por defecto. Para un backend en otro host se sobreescribe
+// antes de cargar el módulo: window.NPK_API_BASE = 'https://api.example.com'.
+// Un origen file:// no tiene backend detrás y se queda en el paquete local.
+function resolveBase() {
+  if (typeof window === 'undefined') return '';
+  if (typeof window.NPK_API_BASE === 'string') return window.NPK_API_BASE;
+  return /^https?:$/.test(window.location.protocol) ? window.location.origin : '';
+}
+
+export const apiBase = resolveBase();
 
 async function fetchJson(url) {
   const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });

@@ -9,10 +9,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .api import router
 from .api.dependencies import build_container
-from .config import Settings, settings as default_settings
+from .config import REPOSITORY_ROOT, Settings, settings as default_settings
 from .observability import configure_logging, request_context_middleware
 from .services.bootstrap import bootstrap_repository
 from .services.contracts import utc_now
@@ -67,6 +68,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return _error_response(request, 400, "domain_error", str(error))
 
     app.include_router(router)
+
+    # El frontend se sirve desde la misma app: una sola URL en el despliegue y
+    # ningún CORS que configurar. Va montado después del router para que
+    # /health y /v1 conserven precedencia sobre este catch-all.
+    frontend_root = REPOSITORY_ROOT / "frontend"
+    if frontend_root.is_dir():
+        app.mount("/", StaticFiles(directory=frontend_root, html=True), name="frontend")
+
     return app
 
 
