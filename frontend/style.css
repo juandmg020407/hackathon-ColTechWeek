@@ -282,6 +282,7 @@ table.data tr.row-out td { color: var(--low); }
   grid-template-columns: minmax(0, 1fr) clamp(250px, 25vw, 340px);
   gap: var(--gap);
   min-height: 0;
+  transition: grid-template-columns .22s ease;
 }
 
 /* min-width:0 everywhere a grid item holds text: without it the track refuses
@@ -712,6 +713,71 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .decision-msg { font-size: .82em; color: var(--ink); }
 .why-body { font-size: .8em; line-height: 1.5; border-left: 3px solid var(--brand); padding-left: .6em; }
 .real-plots code { font-size: .9em; background: var(--brand-soft); border-radius: 4px; padding: 0 .25em; }
+
+/* La propuesta toma el plano principal sin reconstruir el mapa ni perder su estado. */
+@media (min-width: 900px) {
+  .lote-grid.proposal-focus {
+    grid-template-columns: clamp(250px, 28vw, 360px) minmax(0, 1fr);
+  }
+  .lote-grid.proposal-focus .tabs-card {
+    border-color: var(--brand-border);
+  }
+  .lote-grid.proposal-focus .proposal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+  }
+  .lote-grid.proposal-focus .proposal > .note,
+  .lote-grid.proposal-focus .proposal > .decision {
+    grid-column: 1 / -1;
+  }
+}
+
+.acta-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 154px;
+  gap: clamp(12px, 2vw, 22px);
+  align-items: center;
+  margin-top: .25em;
+  padding: clamp(12px, 1.8vw, 20px);
+  border-radius: 10px;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-border);
+}
+.acta-copy { min-width: 0; display: grid; gap: .55em; }
+.acta-kicker {
+  color: var(--high); font-size: .72em; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.acta-panel h3 { color: var(--brand-deep); font-size: 1.12em; line-height: 1.15; }
+.acta-panel p { font-size: .86em; line-height: 1.45; }
+.acta-actions { display: flex; gap: .5em; flex-wrap: wrap; }
+.acta-url-label {
+  margin-top: .2em; color: var(--muted); font-size: .72em;
+  font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.acta-url {
+  width: 100%; min-width: 0; border: 1px solid var(--brand-border);
+  border-radius: 6px; background: rgb(255 255 255 / 85%); color: var(--ink);
+  padding: .55em .65em; font: inherit; font-size: .76em;
+}
+.acta-url:focus { outline: 2px solid var(--brand-deep); outline-offset: 1px; }
+.acta-local { color: var(--low); font-weight: 600; }
+.acta-copy-status { min-height: 1.2em; color: var(--brand-deep); }
+.acta-qr {
+  display: grid; gap: .45em; justify-items: center; align-self: stretch;
+  padding: 9px; border-radius: 8px; background: #fff; color: var(--brand-deep);
+  border: 1px solid var(--brand-border); text-decoration: none;
+}
+.acta-qr:hover { border-color: var(--brand-deep); }
+.acta-qr .qr-svg { width: 100%; height: auto; aspect-ratio: 1; }
+.acta-qr span {
+  font-size: .68em; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .acta-panel { grid-template-columns: 1fr; }
+  .acta-qr { width: min(180px, 100%); justify-self: center; }
+}
 
 /* ── command center (acopio) ──────────────────────────── */
 /* The shell is a sidebar plus a content column; rows live on .content. */

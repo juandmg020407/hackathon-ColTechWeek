@@ -10,6 +10,9 @@ import { plasmaGradient } from './lib/colormap.js';
 import { renderTiles, ATTRIBUTION, MIN_ZOOM, MAX_ZOOM } from './lib/slippy.js';
 import { gridGeoBounds, paintSurface, paintOverlay } from './lib/heatsurface.js';
 import { ask, speak, stopSpeaking, listen, canSpeak, canListen } from './lib/assistant.js';
+import { qrSvg } from './lib/qr.js';
+
+const ACTA_PATH = '/informes/acta-plan-el-rosal.pdf';
 
 const state = {
   nutrient: 'K',
@@ -424,7 +427,7 @@ function decisionBlock(propuesta) {
       ${aplicada ? '<span class="pill pill-applied">aplicada</span>' : '<span class="note">no aplicada</span>'}
     </div>
     ${propuesta.validacion ? `<p class="note">${VALIDATION_LABEL[propuesta.validacion] || propuesta.validacion}</p>` : ''}
-    ${propuesta.requiere_decision ? `<p class="note">Requiere la decisión de un técnico antes de aplicarse.</p>
+    ${propuesta.requiere_decision && !state.decision ? `<p class="note">Requiere la decisión de un técnico antes de aplicarse.</p>
       <div class="decision-actions">
         <button class="btn" type="button" data-decide="accept" ${apiBase ? '' : 'disabled'}>Aceptar</button>
         <button class="btn ghost" type="button" data-decide="refer" ${apiBase ? '' : 'disabled'}>Pedir revisión</button>
@@ -432,8 +435,33 @@ function decisionBlock(propuesta) {
       </div>
       ${apiBase ? '' : '<p class="note">Sin conexión no se puede registrar una decisión.</p>'}` : ''}
     <div class="decision-msg" id="decision-msg" ${state.decisionMsg ? '' : 'hidden'}>${state.decisionMsg || ''}</div>
+    ${state.decision?.acta_available ? actaPanel() : ''}
     <div class="why-body" id="why-body" hidden></div>
   </div>`;
+}
+
+function actaPanel() {
+  const url = `${location.origin}${ACTA_PATH}`;
+  const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  return `<section class="acta-panel" aria-labelledby="acta-title">
+    <div class="acta-copy">
+      <p class="acta-kicker">Decisión registrada</p>
+      <h3 id="acta-title">El acta está lista para campo</h3>
+      <p>Escanee el QR o abra el PDF con el reparto de 13 bultos en las tres zonas.</p>
+      <div class="acta-actions">
+        <a class="btn" href="${url}" target="_blank" rel="noopener">Abrir acta PDF</a>
+        <button class="btn ghost" type="button" data-copy-acta>Copiar enlace</button>
+      </div>
+      <label class="acta-url-label" for="acta-url">Enlace que codifica el QR</label>
+      <input class="acta-url" id="acta-url" type="url" value="${url}" spellcheck="false">
+      ${local ? '<p class="acta-local">En localhost el celular no puede abrir este enlace. Pegue aquí la URL de Vercel antes de escanear.</p>' : ''}
+      <p class="acta-copy-status" aria-live="polite"></p>
+    </div>
+    <a class="acta-qr" href="${url}" target="_blank" rel="noopener" aria-label="Abrir el acta en PDF">
+      ${qrSvg(url, { level: 'Q', title: 'QR del acta de fertilización' })}
+      <span>Escanear para abrir</span>
+    </a>
+  </section>`;
 }
 
 function panelRiesgos() {
@@ -548,6 +576,10 @@ function wireTabs(initial) {
   const show = (name) => {
     stopSpeaking();
     body.innerHTML = panels[name]();
+    const lotGrid = document.querySelector('.lote-grid');
+    lotGrid?.classList.toggle('proposal-focus', name === 'propuesta');
+    // The map changes width without a re-render; repaint once its CSS transition settles.
+    if (lotGrid) setTimeout(() => scheduleDraw(), 240);
     for (const tab of document.querySelectorAll('.tab')) {
       tab.classList.toggle('on', tab.dataset.tab === name);
       tab.setAttribute('aria-selected', String(tab.dataset.tab === name));
@@ -560,6 +592,37 @@ function wireTabs(initial) {
       }
       const why = body.querySelector('[data-why]');
       if (why) why.addEventListener('click', () => showWhy(why.dataset.why));
+      const copyActa = body.querySelector('[data-copy-acta]');
+      const actaInput = body.querySelector('#acta-url');
+      if (actaInput) {
+        actaInput.addEventListener('change', () => {
+          const qr = body.querySelector('.acta-qr');
+          const status = body.querySelector('.acta-copy-status');
+          try {
+            const nextUrl = new URL(actaInput.value);
+            if (!/^https?:$/.test(nextUrl.protocol)) throw new Error('protocol');
+            qr.href = nextUrl.href;
+            qr.innerHTML = `${qrSvg(nextUrl.href, { level: 'Q', title: 'QR del acta de fertilización' })}<span>Escanear para abrir</span>`;
+            actaInput.value = nextUrl.href;
+            status.textContent = 'QR actualizado.';
+          } catch {
+            status.textContent = 'Escriba una URL completa que empiece por http:// o https://.';
+          }
+        });
+      }
+      if (copyActa) {
+        copyActa.addEventListener('click', async () => {
+          const input = body.querySelector('#acta-url');
+          const status = body.querySelector('.acta-copy-status');
+          try {
+            await navigator.clipboard.writeText(input.value);
+            status.textContent = 'Enlace copiado.';
+          } catch {
+            input.select();
+            status.textContent = 'Enlace seleccionado: cópielo manualmente.';
+          }
+        });
+      }
       return;
     }
 
@@ -657,6 +720,7 @@ async function decide(action) {
       id: decision.id,
       resulting_status: decision.resulting_status,
       applied: propuesta.aplicada,
+      acta_available: action === 'accept',
     };
     // The identifier belongs in the audit trail, not in the sentence a person
     // reads; it stays reachable on hover.
@@ -1056,7 +1120,7 @@ function viewLote() {
   const worstZone = view.zonas[0];
 
   return `<div class="bcrumb"><button class="btn ghost" type="button" data-nav="${reachable('productores')}">← Red del acopio</button></div>
-    <div class="grid">
+    <div class="grid lote-grid">
       <section class="card map-card">
         <div class="nutrients">
           ${NUTRIENTS.map((n) => `<button class="nut" data-nut="${n}" aria-pressed="${n === state.nutrient}">${n}</button>`).join('')}
