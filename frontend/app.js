@@ -694,33 +694,35 @@ function viewResumen() {
 
     <div class="kpi-grid">${kpis}</div>
 
-    <section class="card map-card">
-      <div class="nutrients">
-        ${NUTRIENTS.map((n) => `<button class="nut" data-nut="${n}" aria-pressed="${n === state.nutrient}">${n}</button>`).join('')}
-        <span class="spacer"></span>
-        <span class="uncertain-note">rayado = sin certeza · ${view.coverage.uncertainPct}% del lote</span>
-      </div>
-      <div class="map-stage" id="stage">
-        <div class="tiles" id="tiles"></div>
-        <canvas id="heat"></canvas>
-        <svg id="overlay"></svg>
-        <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
-        <div id="colorbar-slot"></div>
-        <div class="map-ctl">
-          <button type="button" data-map="in" aria-label="Acercar">+</button>
-          <button type="button" data-map="out" aria-label="Alejar">−</button>
-          <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+    <div class="mvp-main net-grid">
+      <section class="card map-card">
+        <div class="nutrients">
+          ${NUTRIENTS.map((n) => `<button class="nut" data-nut="${n}" aria-pressed="${n === state.nutrient}">${n}</button>`).join('')}
+          <span class="spacer"></span>
+          <span class="uncertain-note">rayado = sin certeza · ${view.coverage.uncertainPct}% del lote</span>
         </div>
-        <div class="map-probe" id="map-probe" hidden></div>
-        <div class="map-status" id="map-status" hidden></div>
-        <div class="attribution">${ATTRIBUTION}</div>
-      </div>
-    </section>
+        <div class="map-stage" id="stage">
+          <div class="tiles" id="tiles"></div>
+          <canvas id="heat"></canvas>
+          <svg id="overlay"></svg>
+          <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
+          <div id="colorbar-slot"></div>
+          <div class="map-ctl">
+            <button type="button" data-map="in" aria-label="Acercar">+</button>
+            <button type="button" data-map="out" aria-label="Alejar">−</button>
+            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+          </div>
+          <div class="map-probe" id="map-probe" hidden></div>
+          <div class="map-status" id="map-status" hidden></div>
+          <div class="attribution">${ATTRIBUTION}</div>
+        </div>
+      </section>
 
-    <section class="card rail">
-      <h2>Prioridad hoy</h2>
-      ${rail || '<p class="note">Sin acciones pendientes.</p>'}
-    </section>
+      <section class="card rail">
+        <h2>Prioridad hoy</h2>
+        ${rail || '<p class="note">Sin acciones pendientes.</p>'}
+      </section>
+    </div>
 
     <button class="btn open-lote" type="button" data-nav="lote">Abrir ${view.plot.name} →</button>
 
@@ -768,7 +770,7 @@ function viewResumenRed() {
       <span class="horizon-level lv-${h.nivel}">${h.nivel}</span>
     </div>`).join('');
 
-  return `<div class="rwrap">
+  return `<div class="rwrap resumen-c">
     <section class="hero">${hero}<span class="demo-chip">productores demostrativos</span></section>
 
     ${net.real ? `<section class="card real-plots">

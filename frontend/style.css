@@ -225,8 +225,15 @@ body {
 .map-title span { display: block; font-weight: 400; color: var(--muted); font-size: 0.86em; }
 
 /* ── MVP summary: a decision queue, not a network board ── */
-.rwrap-mvp { display: grid; gap: var(--gap); align-content: start; max-width: 820px; margin: 0 auto; }
-/* In a column flex card, flex-basis:0 beats height, so the stage needs flex:none. */
+.rwrap-mvp {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: var(--gap);
+  align-content: stretch;
+  width: 100%;
+}
 .rwrap-mvp .map-card .map-stage { flex: none; height: clamp(220px, 32vh, 380px); }
 .open-lote {
   width: 100%; min-height: 56px; font-size: 1.05em; font-weight: 700;
@@ -476,6 +483,15 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .main { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .rwrap { min-height: 0; overflow-y: auto; display: grid; gap: var(--gap); align-content: start; padding: 2px; }
 
+.resumen-c {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: var(--gap);
+  align-content: stretch;
+}
+
 .bell, .user { font-size: 1.05em; line-height: 1; }
 .bell b { color: var(--low); }
 
@@ -496,9 +512,57 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); }
 .kpi-grid .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .kpi-grid .kpi.warn-kpi .value { color: var(--low); }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 
-.net-grid { display: grid; grid-template-columns: minmax(0, 1fr) clamp(240px, 24vw, 320px); gap: var(--gap); min-height: min(52vh, 460px); }
-@media (max-width: 980px) { .net-grid { grid-template-columns: 1fr; } }
+.net-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(260px, auto) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+.net-grid .map-card { min-height: 0; }
+
+@media (min-width: 1100px) {
+  .resumen-c,
+  .rwrap-mvp {
+    max-width: 1560px;
+    margin-inline: auto;
+    width: 100%;
+    grid-template-rows: auto auto minmax(340px, 1fr) auto;
+  }
+
+  .net-grid,
+  .rwrap-mvp .mvp-main {
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 26vw, 400px);
+    grid-template-rows: none;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .net-grid .map-card,
+  .rwrap-mvp .mvp-main .map-card {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .net-grid .map-stage,
+  .rwrap-mvp .mvp-main .map-stage {
+    flex: 1;
+    height: auto;
+    min-height: 340px;
+  }
+
+  .kpi-grid .kpi { min-height: 92px; }
+  .bot-grid { grid-template-columns: 1.3fr 1fr 1fr; }
+  .open-lote { width: auto; justify-self: start; min-width: 280px; }
+}
+
+@media (max-width: 1099px) {
+  .resumen-c { grid-template-rows: auto auto auto auto; overflow-y: auto; }
+  .rwrap-mvp .map-card .map-stage { height: clamp(260px, 38vh, 440px); }
+}
 
 /* Standalone on the Mapa view, the card has no grid row to stretch it: give it its own height. */
 .map-full { min-height: min(72vh, 620px); }
@@ -520,8 +584,7 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .rail-item p { margin-top: .3em; line-height: 1.45; }
 .rail-go { margin-top: .5em; font-size: .82em; padding: .35em .8em; }
 
-.bot-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap); }
-@media (max-width: 980px) { .bot-grid { grid-template-columns: 1fr; } }
+.bot-grid { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
 
 .health-pct { font-size: clamp(26px, 3vw, 40px); font-weight: 800; line-height: 1.05; color: var(--brand-deep); }
 .rbar { height: 9px; border-radius: 99px; background: var(--border); overflow: hidden; margin: .4em 0; }
