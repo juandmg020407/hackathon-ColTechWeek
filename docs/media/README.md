@@ -1,18 +1,17 @@
 # Imágenes del README
 
-El [README](../../README.md) cuenta el recorrido completo en seis etapas, y cada
+El [README](../../README.md) cuenta el recorrido completo en cinco etapas, y cada
 una lleva su imagen. Copia aquí los archivos con **exactamente** estos nombres:
 
 | Archivo | Etapa | Qué debe mostrar |
 |---|---|---|
 | `1.jpg` | ① La medición en campo | **Foto real.** El agricultor o el técnico insertando el sensor NPK en el suelo del lote de papa. Es la primera imagen que ve el jurado y la única que debe ser fotografía auténtica |
 | `2.jpg` | ② Recolección y envío a la nube | La lectura viajando del sensor al teléfono del técnico y de ahí a la nube. Idempotencia (`client_id`), captura offline, importación por Excel |
-| `3.jpg` | ③ La IA procesa y cruza fuentes | El motor cruzando las cinco APIs externas. **Nómbralas en la imagen** con lo que aporta cada una (ver tabla abajo) |
-| `4.jpg` | ④ Análisis y receta optimizada | Mapa de calor del lote con las zonas de manejo, la incertidumbre rayada y la receta NPK por zona |
-| `5.jpg` | ⑤ El agricultor recibe la receta | El agricultor revisando la receta junto al técnico. La etiqueta debe decir **«recomendada»**, nunca «prescrita» ni «ordenada» |
-| `6.jpg` | ⑥ Aplicación precisa y anticipación | Aplicación por zona y alerta anticipada de riesgo climático estacional (El Niño, sequía, helada, gota tardía) |
+| `3.jpg` | ③ La IA procesa y cruza fuentes | El motor cruzando las seis fuentes externas. **Nómbralas en la imagen** con lo que aporta cada una (ver tabla abajo) |
+| `4.jpg` | ④ Decisión entendible | Una composición que reúna el mapa con incertidumbre, la receta **recomendada** y el QR que abre el acta humanizada. Debe quedar claro que la IA explica sobre evidencia y que una persona valida |
+| `5.jpg` | ⑤ Aplicación precisa y anticipación | Aplicación por zona y alerta anticipada de riesgo climático estacional (El Niño, sequía, helada, gota tardía). Es la imagen que antes se llamaba `6.jpg` |
 
-## Las seis APIs para la imagen `3.jpg`
+## Las seis fuentes para la imagen `3.jpg`
 
 | API | Texto corto para la imagen |
 |---|---|
@@ -30,14 +29,14 @@ climáticas son productos de modelo.
 ## Recomendaciones
 
 - **Comprime cada archivo por debajo de 500 KB.** GitHub sirve el README entero y
-  seis imágenes pesadas lo vuelven lento justo cuando el jurado lo abre.
+  cinco imágenes pesadas lo vuelven lento justo cuando el jurado lo abre.
 - Ancho útil: **1400–1600 px**. Todas se muestran a ancho completo, así que un
   formato horizontal consistente (16:9 o 3:2) hace que el README se lea parejo.
 - Si alguna persona es identificable, confirma que dio permiso para publicar la
   imagen. El proyecto declara consentimiento explícito en los datos; las fotos no
   pueden ser la excepción.
 - **Cuidado con lo que prometen las imágenes.** El sistema modela helada, sequía
-  y gota tardía, más el contexto ENSO. **No modela incendios.** Si `6.jpg` sugiere
+  y gota tardía, más el contexto ENSO. **No modela incendios.** Si `5.jpg` sugiere
   detección de incendios, la imagen estaría afirmando algo que el código no hace
   y el README desmiente explícitamente.
 - Los textos alternativos ya están escritos en el README. Si cambias lo que

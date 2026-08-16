@@ -43,6 +43,26 @@ en el río.
 
 Comprar un sensor por finca no lo resuelve, porque nadie lo va a comprar.
 
+## A quién está dirigido
+
+IOmido está pensado para **centros de acopio, asociaciones y técnicos
+agropecuarios que acompañan a pequeños productores**. El centro comparte un
+sensor entre muchas fincas, interpreta las mediciones y entrega al agricultor una
+propuesta que puede entender y discutir. El productor no necesita comprar
+hardware, aprender un software especializado ni tener conexión permanente.
+
+## Impacto social
+
+El proyecto busca que la agricultura de precisión deje de ser un servicio
+reservado para fincas grandes. Compartir el sensor reduce la barrera de entrada;
+aplicar por zonas **puede** evitar fertilizante innecesario y busca disminuir el
+excedente de N y P que termina en las fuentes de agua; mostrar la incertidumbre
+evita disfrazar una estimación como certeza; y traducir el resultado a lenguaje
+cotidiano devuelve la decisión a quien conoce el lote.
+
+IOmido no reemplaza al agricultor, al técnico ni al laboratorio. Les da una
+evidencia más útil, trazable y oportuna para decidir juntos.
+
 ---
 
 ## De la tierra a la decisión
@@ -97,9 +117,9 @@ sistema **sigue funcionando con fixtures versionados y lo declara degradado en l
 propia respuesta**. Una demo que se cae por el wifi del auditorio no es una demo;
 una que disimula que usa datos viejos es peor.
 
-### ④ Análisis, mapa de calor y receta optimizada
+### ④ La IA convierte los datos en una decisión entendible
 
-<img src="docs/media/4.jpg" alt="Mapa de calor de nutrientes del lote con zonas de manejo y la receta NPK propuesta" width="100%">
+<img src="docs/media/4.jpg" alt="Mapa de nutrientes, receta recomendada y acta humanizada accesible mediante un código QR" width="100%">
 
 Tres **procesos gaussianos Matérn** —uno por nutriente— llevan 18 puntos a 140
 celdas de 10 × 10 m. Cada celda recibe media, desviación e intervalo del 95 %, así
@@ -107,8 +127,19 @@ que el mapa dice también **dónde no sabe**: lo rayado es lo incierto, nunca lo
 pobre. Y sugiere la **siguiente** medición, a 54 m de la más cercana, para
 aprender lo máximo con un solo punto más.
 
-Sobre esas zonas, una **búsqueda entera exacta** enumera 12 341 combinaciones del
-catálogo que el centro tiene en bodega y devuelve la mejor:
+La IA no es una caja negra ni un chatbot que inventa dosis. En el flujo actual
+cumple tareas separadas y verificables:
+
+- el proceso gaussiano construye el mapa y cuantifica su incertidumbre;
+- el aprendizaje activo propone dónde conviene tomar la siguiente muestra;
+- KMeans agrupa las celdas en zonas que el técnico sí puede manejar;
+- NearestNeighbors busca temporadas climáticas parecidas;
+- Claude Sonnet 5, cuando está habilitado, **traduce la evidencia a español
+  claro**, pero no calcula ni decide.
+
+Después, una **búsqueda entera exacta y determinista** —no el modelo de lenguaje—
+enumera 12 341 combinaciones del catálogo que el centro tiene en bodega y
+devuelve la mejor:
 
 ```text
 Zona 1 · 0,67 ha        8 bultos de 20-10-30  +  1 bulto de 30-30-40
@@ -119,13 +150,24 @@ Bultos enteros, porque nadie aplica 2,7 bultos. Sin marcas, sin nombres químico
 y **sin precios**: el objetivo es nutricional, no monetario, y no publicamos un
 ahorro que no podemos sustentar.
 
-### ⑤ El agricultor recibe una receta *recomendada*
+El resultado es siempre una receta **recomendada, no prescrita**. Toda propuesta
+nace en la base de datos como `pending`, `applied = false` y
+`requires_technical_validation`, y una persona puede **aceptar, rechazar,
+modificar o remitir** la propuesta.
 
-<img src="docs/media/5.jpg" alt="El agricultor revisando junto al técnico la receta nutricional recomendada para su lote" width="100%">
+Cuando el técnico la acepta, el tablero genera un **QR humanizado** que abre el
+acta de campo en el celular. El documento conserva las cifras calculadas por el
+motor, reparte los bultos por zona y pone cada tecnicismo al lado de su traducción
+cotidiana: por ejemplo, «incertidumbre predictiva sobre el umbral» se convierte
+en «las franjas rayadas son lugares donde hace falta medir». El QR se genera
+dentro de la aplicación, apunta al PDF del mismo proyecto y no envía información
+a un servicio externo.
 
-La palabra es deliberada. **Recomendada, no prescrita.** Toda propuesta nace en la
-base de datos como `pending`, `applied = false` y `requires_technical_validation`,
-y el productor puede **aceptar, rechazar, modificar o remitir** al técnico.
+Claude puede mejorar la redacción del asistente sobre evidencia ya estructurada,
+pero un verificador compara todas sus cifras con las permitidas. Si introduce un
+número que no estaba en la evidencia, se descarta la respuesta completa y se usa
+la explicación determinista. Si no hay llave, Internet o presupuesto, el sistema
+sigue funcionando.
 
 Es supervisión humana significativa en el sentido del **AI Act**, y no está
 sostenida por una promesa en un slide:
@@ -141,9 +183,9 @@ sostenida por una promesa en un slide:
 - los datos son del productor: cada uno lleva `data_origin` y `consent_status`
   explícitos, y no puntuamos agricultores ni evaluamos crédito.
 
-### ⑥ Aplicación precisa y anticipación al clima
+### ⑤ Aplicación precisa y anticipación al clima
 
-<img src="docs/media/6.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="100%">
+<img src="docs/media/5.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="100%">
 
 La receta llega a la zona que la necesita, en la cantidad que le corresponde, y
 **en el momento en que tiene sentido aplicarla**. Tres motores de riesgo
