@@ -140,6 +140,26 @@ Las respuestas principales incluyen `contract_version`, unidades, convención,
 validación, fuentes, versiones, tiempo, degradación y advertencias. Los errores
 incluyen `request_id` y el middleware emite logs JSON con duración.
 
+## Agente conversacional sobre evidencia
+
+`POST /v1/agent/ask` conserva rutas deterministas para las preguntas operativas
+más frecuentes. Para preguntas abiertas entrega a Claude un resumen compacto y
+auditable del package, sin las grillas ni series pesadas.
+
+El modelo configurado es `claude-sonnet-5`. No decide ni aplica propuestas:
+
+- toda cifra de la redacción se contrasta contra la evidencia; si aparece una
+  que no estaba —incluido un redondeo—, la respuesta se descarta;
+- si el modelo falla, tarda o se queda sin presupuesto, se devuelve el texto
+  determinista o un rechazo explícito y la demo no se cae;
+- el costo real de cada llamada se acumula contra `AI_TOTAL_BUDGET_USD` y viaja
+  en la respuesta. Las rutas conocidas incluyen `answer_deterministic` para
+  poder comparar.
+
+`llm_used` dice si la redacción se usó, y `model_versions.explainer` identifica
+la versión del agente. Con los topes actuales, una llamada no puede estimarse en
+más de 0,036 USD usando el precio estándar conservador de Sonnet 5.
+
 ## Seguridad y presupuesto
 
 - CORS configurable.
@@ -147,10 +167,16 @@ incluyen `request_id` y el middleware emite logs JSON con duración.
 - tamaño máximo de archivo configurable;
 - validación de nombres, extensiones, tipos y porcentajes;
 - no se registran secretos;
-- LLM desactivado por defecto;
+- el agente intenta activarse por defecto y degrada al router determinista si no
+  existe `ANTHROPIC_API_KEY`;
 - precios de tokens solo por variables de entorno;
-- presupuesto opcional máximo por defecto: 1 USD;
-- las pruebas no habilitan red ni proveedor pagado.
+- presupuesto máximo por defecto: 2 USD, verificado antes de cada llamada y
+  acumulado con el consumo real que reporta la API dentro de cada proceso;
+- ese contador en memoria no sustituye un límite de gasto del proveedor y se
+  reinicia en un nuevo proceso o arranque en frío;
+- `ANTHROPIC_API_KEY` vive en el `.env` local, que `.gitignore` excluye;
+- las pruebas no habilitan red ni proveedor pagado: el explicador se prueba
+  contra un cliente falso.
 
 ## Verificación
 

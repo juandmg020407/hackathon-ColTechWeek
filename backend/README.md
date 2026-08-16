@@ -47,8 +47,9 @@ Ver `.env.example`. Las de mayor impacto son:
 - `WRITE_API_KEY`;
 - `MAX_IMPORT_BYTES`;
 - `CORS_ORIGINS`;
-- `AI_EXPLAINER_ENABLED=false`;
-- `AI_TOTAL_BUDGET_USD=1.00`.
+- `AI_EXPLAINER_ENABLED=true`;
+- `AI_MODEL=claude-sonnet-5`;
+- `AI_TOTAL_BUDGET_USD=2.00`.
 
 ## Importar el Excel
 

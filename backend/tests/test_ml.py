@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pandas as pd
 import pytest
 
 from app.config import REPOSITORY_ROOT
@@ -10,6 +9,7 @@ from app.domain.models import NPKPercent, Plot, Reading
 from app.ml.geometry import point_in_polygon
 from app.ml.quality import annotate_quality
 from app.ml.spatial import SoilSpatialEngine
+from app.services.importer import rows_from_excel
 
 
 @pytest.fixture(scope="module")
@@ -31,18 +31,18 @@ def plot():
 
 @pytest.fixture(scope="module")
 def demo_readings():
-    frame = pd.read_excel(REPOSITORY_ROOT / "data" / "data_ejemplo.csv.xlsx")
+    excel = (REPOSITORY_ROOT / "data" / "data_ejemplo.csv.xlsx").read_bytes()
     return [
         Reading(
             id=f"reading-{index}",
             plot_id="nar-001",
-            latitude=row.Latitud,
-            longitude=row.Longitud,
-            npk_pct=NPKPercent(N=row.N, P=row.p, K=row.k),
+            latitude=row["Latitud"],
+            longitude=row["Longitud"],
+            npk_pct=NPKPercent(N=row["N"], P=row["p"], K=row["k"]),
             measured_at=datetime.now(timezone.utc),
             client_id=f"test-{index}",
         )
-        for index, row in frame.iterrows()
+        for index, row in enumerate(rows_from_excel(excel))
     ]
 
 

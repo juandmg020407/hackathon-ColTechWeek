@@ -1,23 +1,61 @@
-"""Excel/CSV ingestion that preserves the sensor's percentage readings."""
+"""Excel/CSV ingestion that preserves the sensor's percentage readings.
+
+Se lee con openpyxl y el csv de la libreria estandar, no con pandas: el unico
+uso de pandas aqui era abrir el archivo y recorrer las filas, y son ~66 MB en un
+bundle serverless que ya iba justo de tamano.
+"""
 
 from __future__ import annotations
 
+import csv
 import hashlib
 from datetime import datetime, timezone
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
+from openpyxl import load_workbook
 
 from ..domain.models import NPKPercent, Plot, Reading
 from ..ml.geometry import point_in_polygon
 from ..repositories import SQLiteRepository
 from ..repositories.sqlite import stable_id
 
+Row = dict[str, Any]
+
 
 class ImportValidationError(ValueError):
     pass
+
+
+def rows_from_excel(content: bytes) -> list[Row]:
+    """Filas de la primera hoja, con los encabezados tal como vienen."""
+    book = load_workbook(BytesIO(content), read_only=True, data_only=True)
+    try:
+        sheet = book.active
+        if sheet is None:
+            raise ImportValidationError("the workbook has no sheets")
+        stream = sheet.iter_rows(values_only=True)
+        header = next(stream, None)
+        if header is None:
+            raise ImportValidationError("the sheet is empty")
+        columns = [str(cell).strip() if cell is not None else "" for cell in header]
+        # Una hoja con formato arrastra filas vacias al final; se descartan.
+        return [
+            dict(zip(columns, values))
+            for values in stream
+            if any(value is not None for value in values)
+        ]
+    finally:
+        book.close()
+
+
+def rows_from_csv(content: bytes) -> list[Row]:
+    reader = csv.DictReader(StringIO(content.decode("utf-8-sig")))
+    if reader.fieldnames is None:
+        raise ImportValidationError("the file has no header row")
+    reader.fieldnames = [name.strip() for name in reader.fieldnames]
+    return [row for row in reader if any(value not in (None, "") for value in row.values())]
 
 
 class ReadingImporter:
@@ -42,18 +80,18 @@ class ReadingImporter:
         suffix = Path(filename or "").suffix.lower()
         try:
             if suffix in {".xlsx", ".xls"}:
-                frame = pd.read_excel(BytesIO(content))
+                rows = rows_from_excel(content)
             elif suffix == ".csv":
-                frame = pd.read_csv(StringIO(content.decode("utf-8-sig")))
+                rows = rows_from_csv(content)
             else:
                 raise ImportValidationError("only .xlsx, .xls and .csv files are accepted")
         except ImportValidationError:
             raise
-        except (ValueError, UnicodeDecodeError, OSError) as error:
+        except (ValueError, KeyError, UnicodeDecodeError, OSError) as error:
             raise ImportValidationError(f"could not parse tabular file: {error}") from error
-        return self.import_frame(
+        return self.import_rows(
             plot=plot,
-            frame=frame,
+            rows=rows,
             import_hash=hashlib.sha256(content).hexdigest(),
             measured_at=measured_at,
         )
@@ -67,22 +105,24 @@ class ReadingImporter:
             measured_at=datetime.fromtimestamp(file_path.stat().st_mtime, timezone.utc),
         )
 
-    def import_frame(
+    def import_rows(
         self,
         *,
         plot: Plot,
-        frame: pd.DataFrame,
+        rows: list[Row],
         import_hash: str,
         measured_at: datetime | None = None,
     ) -> dict[str, Any]:
-        normalised = {str(column).strip().lower(): column for column in frame.columns}
+        if not rows:
+            raise ImportValidationError("file contains no readings")
+        normalised = {str(column).strip().lower(): column for column in rows[0]}
         required = {"latitud", "longitud", "n", "p", "k"}
         if not required.issubset(normalised):
             missing = ", ".join(sorted(required - set(normalised)))
             raise ImportValidationError(f"missing columns: {missing}")
         timestamp = measured_at or datetime.now(timezone.utc)
         readings: list[Reading] = []
-        for position, (_, row) in enumerate(frame.iterrows(), start=1):
+        for position, row in enumerate(rows, start=1):
             try:
                 latitude = float(row[normalised["latitud"]])
                 longitude = float(row[normalised["longitud"]])

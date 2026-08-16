@@ -10,10 +10,16 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 httpx==0.28.1
 numpy==2.2.1
-pandas==2.2.3
 scikit-learn==1.6.0
 scipy==1.15.0
 openpyxl==3.1.5
 brotli-asgi==1.4.0
 PyYAML==6.0.3
 python-multipart==0.0.20
+# Explicador opcional. El import es perezoso: sin AI_EXPLAINER_ENABLED=true y
+# sin ANTHROPIC_API_KEY en las variables del despliegue, el SDK ni se carga.
+anthropic==0.122.0
+#
+# pandas se quito a proposito: solo abria el Excel y recorria filas, y eso lo
+# hacen openpyxl y el modulo csv. Eran ~66 MB en un bundle que Vercel ya
+# reportaba como "exceeds the standard size" (284.60 MB).

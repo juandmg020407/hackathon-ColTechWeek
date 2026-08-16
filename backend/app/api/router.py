@@ -383,7 +383,9 @@ def ask_agent(payload: AgentAsk, request: Request) -> dict:
     return contract_metadata(
         validation_status=package["validation_status"],
         sources=package["sources"],
-        model_versions=package["model_versions"] | {"agent": container.agent.version},
+        model_versions=package["model_versions"]
+        | {"agent": container.agent.version}
+        | ({"explainer": result["explainer"]["explainer_version"]} if "explainer" in result else {}),
         generated_at=package["generated_at"],
         degraded=package["degraded"],
         warnings=package["warnings"],

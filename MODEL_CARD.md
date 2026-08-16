@@ -90,8 +90,8 @@ está por debajo de 0.95 y no debe interpretarse como calibración perfecta.
 
 Cada plan se guarda como propuesta `pending`, `applied=false` y
 `requires_technical_validation`. Las decisiones y modificaciones se registran en
-auditoría append-only. El agente conversacional solo redacta evidencia del último
-snapshot y no recalcula dosis.
+auditoría append-only. El agente conversacional responde solo desde un resumen
+del último snapshot, rechaza cifras ausentes de la evidencia y no recalcula dosis.
 
 ## Reproducibilidad
 
