@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from pydantic import Field
@@ -11,6 +12,18 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 REPOSITORY_ROOT = BACKEND_ROOT.parent
 
 
+def _default_db_path() -> str:
+    """SQLite junto al backend, salvo en serverless.
+
+    En Vercel el sistema de archivos del bundle es de solo lectura y /tmp es
+    lo unico escribible. La base se reconstruye desde backend/config en cada
+    arranque en frio, asi que perderla entre invocaciones no pierde nada.
+    """
+    if os.getenv("VERCEL"):
+        return "/tmp/iomido.sqlite3"
+    return str(BACKEND_ROOT / "iomido.sqlite3")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False
@@ -18,7 +31,7 @@ class Settings(BaseSettings):
 
     app_name: str = "IOmido Soil Intelligence API"
     app_version: str = "2.0.0"
-    db_path: str = str(BACKEND_ROOT / "iomido.sqlite3")
+    db_path: str = Field(default_factory=_default_db_path)
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     write_api_key: str = ""
     demo_mode: bool = True

@@ -1,0 +1,25 @@
+# Cada MB cuenta: el bundle de la funcion no puede pasar de 250 MB.
+backend/tests
+backend/scripts
+backend/openapi-v2.json
+tools
+mock
+tmp
+*.md
+!README.md
+
+.env
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-journal
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+~$*.xlsx
+~$*.xls

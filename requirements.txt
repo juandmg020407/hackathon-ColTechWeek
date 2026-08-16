@@ -1,0 +1,19 @@
+# Dependencias de la funcion serverless. Vercel solo lee el requirements.txt
+# de la raiz, no el de backend/.
+#
+# Es una lista aparte a proposito: omite uvicorn (Vercel trae su propio
+# runtime ASGI) y pytest, porque el bundle de una funcion no puede pasar de
+# 250 MB descomprimido y estas librerias cientificas ya lo dejan al limite.
+# Si cambias backend/requirements.txt, actualiza tambien este archivo.
+fastapi==0.115.6
+pydantic==2.10.4
+pydantic-settings==2.7.0
+httpx==0.28.1
+numpy==2.2.1
+pandas==2.2.3
+scikit-learn==1.6.0
+scipy==1.15.0
+openpyxl==3.1.5
+brotli-asgi==1.4.0
+PyYAML==6.0.3
+python-multipart==0.0.20
