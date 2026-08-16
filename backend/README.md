@@ -1,77 +1,76 @@
-# IOmido — backend
+# IOmido backend 2.0
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+Backend FastAPI local-first. Requiere Python 3.11 o superior.
+
+## Instalar y arrancar
+
+Desde la raíz del repositorio:
+
+```powershell
+python -m pip install -r backend/requirements.txt
+Set-Location backend
+Copy-Item .env.example .env
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Documentación interactiva en http://localhost:8000/docs
+No se necesita `.env` para la demo. Por defecto no se consulta Internet y los
+fixtures climáticos se declaran degradados.
 
-No hace falta `.env` para arrancar: todas las claves son opcionales y el
-sistema degrada en vez de caerse. Open-Meteo no pide llave, así que los
-riesgos climáticos funcionan de una.
+## Tests
 
-## Qué corre hoy
-
-| | Estado |
-|---|---|
-| `GET /health` | ✅ |
-| `GET /v1/plots` | ✅ |
-| `GET /v1/plots/{id}/package` | ✅ suelo + riesgos + receta ajustada, **5,6 KB** con Brotli |
-| `GET /v1/plots/{id}/risk` | ✅ |
-| `POST /v1/readings` | ✅ con control de calidad e idempotencia |
-| `GET /v1/governance` | ✅ |
-| `POST /v1/decisions` | ⬜ pendiente |
-| `POST /v1/agent/ask` | ⬜ pendiente |
-| Voz Azure `es-CO` | ⬜ pendiente |
-| Persistencia Supabase | ⬜ hoy es memoria; el Excel es la fuente |
-
-## Estructura
-
-```
-app/
-├── main.py            API y router v1
-├── config.py          settings; todo tiene default
-├── schemas.py         espejo de los tipos de FRONTEND.md
-├── adjust.py          ajusta la receta según los riesgos activos
-├── ml/
-│   ├── soil.py        M1 calidad · M2 calibración · M3 GP · M4 balance · M5 mezcla
-│   └── package.py     ensambla el paquete completo
-├── risk/
-│   ├── frost.py       R1 helada
-│   ├── drought.py     R2 déficit hídrico
-│   ├── blight.py      R3 gota (tizón tardío)
-│   ├── seasonal.py    R4 ENSO + SEAS5
-│   └── engine.py      orquesta y recorta a 3
-├── sources/
-│   ├── openmeteo.py   forecast, seasonal, archive; caché con degradación
-│   └── enso.py        boletín NOAA CPC vigente
-└── governance/
-    └── disclosure.py  qué es, qué no hace, bajo qué marco
+```powershell
+python -m pytest backend/tests -q
 ```
 
-## Notas de diseño
+Resultado de referencia: `26 passed`. Todos los tests usan SQLite temporal,
+fixtures o clientes falsos. Ninguno habilita APIs externas o un LLM.
 
-**Nada de red en el camino crítico.** Todo lo externo pasa por caché con TTL.
-Si una fuente falla, el paquete se sirve igual con lo último bueno y marca
-`degradado: true`. En el Wi-Fi de un hackathon esto no es opcional.
+## Demo sin red
 
-**Los ajustes nunca son silenciosos.** Cuando un riesgo cambia la dosis, el
-cambio viaja en `receta.ajustes` con su factor y su motivo. El agricultor ve
-que le movimos la receta y por qué.
+```powershell
+python backend/scripts/demo_backend.py
+```
 
-**El semáforo se deriva del faltante**, no de umbrales de ppm sueltos, para
-que la tarjeta y la receta no puedan contradecirse.
+El script crea una base temporal y ejecuta el pipeline entero. Para regenerar los
+mocks contractuales desde el mismo motor:
 
-**Calidad de datos: dos cosas distintas.** `descartado` es geometría (regla
-dura, se excluye). `sospechoso` es estadística (solo se marca). Con 19
-muestras, un valor alto es información, no un error.
+```powershell
+python tools/build_mock.py
+```
 
-## Pendiente antes de la entrega
+## Variables principales
 
-- `POST /v1/decisions` con el umbral de doble firma
-- Voz Azure `es-CO-SalomeNeural` y los `.opus` precomputados del paquete
-- Agente con tool-use sobre los endpoints
-- Reemplazar precios de referencia por SIPSA
-- Persistir en Supabase
+Ver `.env.example`. Las de mayor impacto son:
+
+- `DB_PATH`;
+- `EXTERNAL_SOURCES_ENABLED=false`;
+- `WRITE_API_KEY`;
+- `MAX_IMPORT_BYTES`;
+- `CORS_ORIGINS`;
+- `AI_EXPLAINER_ENABLED=false`;
+- `AI_TOTAL_BUDGET_USD=1.00`.
+
+## Importar el Excel
+
+Con el servidor activo:
+
+```powershell
+curl.exe -X POST "http://localhost:8000/v1/readings/import?plot_id=nar-001" `
+  -F "file=@../data/data_ejemplo.csv.xlsx"
+curl.exe -X POST "http://localhost:8000/v1/plots/nar-001/recompute"
+curl.exe "http://localhost:8000/v1/plots/nar-001/package"
+```
+
+El primer response de importación debe mostrar N 2 %, P 1 %, K 1 %, con
+`conversion_applied=false`.
+
+## Base de datos
+
+El archivo local por defecto es `backend/iomido.sqlite3` y está ignorado por Git.
+Las migraciones viven en `app/repositories/migrations/`. No edite `audit_log`:
+triggers de SQLite rechazan cambios y borrados.
+
+## Limitación de uso
+
+El perfil demo está `demo_unvalidated`. Los planes son candidatos pendientes y
+requieren un técnico; no son una receta lista para aplicar.

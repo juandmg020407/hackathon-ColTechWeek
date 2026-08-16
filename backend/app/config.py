@@ -1,38 +1,55 @@
-"""Configuración desde entorno. Todo tiene default para que arranque sin .env."""
+"""Environment-driven backend configuration."""
 
-from pydantic_settings import BaseSettings
+from __future__ import annotations
+
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
+REPOSITORY_ROOT = BACKEND_ROOT.parent
 
 
 class Settings(BaseSettings):
-    # --- externos (opcionales: sin ellos el sistema degrada, no cae) ---
-    azure_speech_key: str = ""
-    azure_speech_region: str = "eastus"
-    azure_tts_voice: str = "es-CO-SalomeNeural"
-    anthropic_api_key: str = ""
-    firms_map_key: str = ""
-    supabase_url: str = ""
-    supabase_service_key: str = ""
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False
+    )
 
-    # --- gobernanza ---
-    # por encima de este gasto, la propuesta necesita visto bueno de un tecnico
-    umbral_revision_cop: int = 1_500_000
-
-    # --- red ---
+    app_name: str = "IOmido Soil Intelligence API"
+    app_version: str = "2.0.0"
+    db_path: str = str(BACKEND_ROOT / "iomido.sqlite3")
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    write_api_key: str = ""
+    demo_mode: bool = True
+    demo_auto_import: bool = False
+    external_sources_enabled: bool = False
+    external_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    external_max_retries: int = Field(default=2, ge=0, le=5)
+    max_import_bytes: int = Field(default=5_000_000, gt=0)
+    grid_cell_size_m: float = Field(default=10.0, gt=0, le=100)
+    random_seed: int = 42
+    log_level: str = "INFO"
 
-    # --- caches, en segundos ---
-    ttl_clima: int = 3 * 3600
-    ttl_estacional: int = 24 * 3600
-    ttl_enso: int = 7 * 24 * 3600
-    ttl_incendios: int = 6 * 3600
+    ai_explainer_enabled: bool = False
+    ai_total_budget_usd: float = Field(default=1.0, ge=0, le=4)
+    ai_max_input_tokens: int = Field(default=2_000, gt=0)
+    ai_max_output_tokens: int = Field(default=500, gt=0)
+    ai_model: str = "disabled"
+    ai_input_price_usd_per_million: float = Field(default=0.0, ge=0)
+    ai_output_price_usd_per_million: float = Field(default=0.0, ge=0)
 
     @property
-    def origenes(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+    def origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    @property
+    def config_root(self) -> Path:
+        return BACKEND_ROOT / "config"
+
+    @property
+    def demo_excel_path(self) -> Path:
+        return REPOSITORY_ROOT / "data" / "data_ejemplo.csv.xlsx"
 
 
 settings = Settings()
