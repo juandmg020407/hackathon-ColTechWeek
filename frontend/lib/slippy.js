@@ -22,14 +22,28 @@ export function fitZoom(boundsGeo, widthPx, heightPx, maxZoom = 19) {
   return 2;
 }
 
-export function renderTiles(container, boundsGeo, widthPx, heightPx) {
-  const zoom = fitZoom(boundsGeo, widthPx, heightPx);
+// Absolute limits of the tile service, not of the view: the fitted zoom is the
+// floor a lot needs, while the network map legitimately sits much further out.
+export const MIN_ZOOM = 2;
+export const MAX_ZOOM = 19;
+
+export function unproject(x, y, zoom) {
+  const scale = TILE_SIZE * 2 ** zoom;
+  const lon = (x / scale) * 360 - 180;
+  const n = Math.PI - 2 * Math.PI * (y / scale);
+  return { lat: (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))), lon };
+}
+
+export function renderTiles(container, boundsGeo, widthPx, heightPx, view = {}) {
+  const { zoomOffset = 0, panX = 0, panY = 0 } = view;
+  const base = fitZoom(boundsGeo, widthPx, heightPx);
+  const zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, base + zoomOffset));
   const topLeft = project(boundsGeo.north, boundsGeo.west, zoom);
   const bottomRight = project(boundsGeo.south, boundsGeo.east, zoom);
   const spanX = bottomRight.x - topLeft.x;
   const spanY = bottomRight.y - topLeft.y;
-  const originX = topLeft.x - (widthPx - spanX) / 2;
-  const originY = topLeft.y - (heightPx - spanY) / 2;
+  const originX = topLeft.x - (widthPx - spanX) / 2 - panX;
+  const originY = topLeft.y - (heightPx - spanY) / 2 - panY;
 
   const fromTile = { x: Math.floor(originX / TILE_SIZE), y: Math.floor(originY / TILE_SIZE) };
   const toTile = {
@@ -56,9 +70,13 @@ export function renderTiles(container, boundsGeo, widthPx, heightPx) {
 
   return {
     zoom,
+    baseZoom: base,
     toPixel(lat, lon) {
       const point = project(lat, lon, zoom);
       return { x: point.x - originX, y: point.y - originY };
+    },
+    toLatLon(x, y) {
+      return unproject(x + originX, y + originY, zoom);
     },
   };
 }

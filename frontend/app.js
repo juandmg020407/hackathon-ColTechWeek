@@ -4,7 +4,7 @@ import {
   getPackage, apiBase, postDecision, getProposalWhy, getDecisionHistory,
 } from './lib/api.js';
 import { getNetwork } from './lib/network.js';
-import { adapt } from './lib/adapt.js';
+import { adapt, latLonToCell } from './lib/adapt.js';
 import { NUTRIENTS, RANGES } from './lib/plotmap.js';
 import { plasmaGradient } from './lib/colormap.js';
 import { renderTiles, ATTRIBUTION } from './lib/slippy.js';
@@ -13,6 +13,9 @@ import { ask, speak, stopSpeaking, listen, canSpeak, canListen } from './lib/ass
 
 const state = {
   nutrient: 'K',
+  map: { zoomOffset: 0, panX: 0, panY: 0 },
+  projector: null,
+  probe: null,
   nav: 'resumen',
   mapMode: 'red',
   riesgoFiltro: 'todos',
@@ -47,11 +50,20 @@ const SEVERITY_MARK = {
 const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
 const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
+// Every view still routes: #mapa and #productores stay reachable by URL.
 const NAV_VIEWS = ['resumen', 'mapa', 'productores', 'lote'];
+// The MVP menu shows only these two. Widening it is a one-line change.
+const MENU_VIEWS = ['resumen', 'lote'];
 
 function navFromHash() {
   const target = decodeURIComponent(location.hash.slice(1));
   return NAV_VIEWS.includes(target) ? target : 'resumen';
+}
+
+// A jump into a view the menu hides would strand the user, so it lands on the
+// summary instead. The target view itself is untouched.
+function reachable(view) {
+  return MENU_VIEWS.includes(view) ? view : 'resumen';
 }
 
 function colorbar() {
@@ -97,7 +109,8 @@ function drawMap() {
   const showNetwork = state.nav === 'resumen' || (state.nav === 'mapa' && state.mapMode === 'red');
   try {
     if (showNetwork) {
-      const projector = renderTiles(tiles, networkBounds(), rect.width, rect.height);
+      const projector = renderTiles(tiles, networkBounds(), rect.width, rect.height, state.map);
+      state.projector = projector;
       const producers = state.riesgoFiltro === 'todos'
         ? state.network.productores
         : state.network.productores.filter((p) => p.riesgo_nivel === state.riesgoFiltro);
@@ -107,7 +120,8 @@ function drawMap() {
       }
     } else {
       const view = state.view;
-      const projector = renderTiles(tiles, gridGeoBounds(view.grid), rect.width, rect.height);
+      const projector = renderTiles(tiles, gridGeoBounds(view.grid), rect.width, rect.height, state.map);
+      state.projector = projector;
       paintSurface(document.getElementById('heat'), view.grid, state.nutrient, projector);
       paintOverlay(overlay, view, projector);
       if (overlay) for (const circle of overlay.querySelectorAll('circle[fill="none"]')) circle.remove();
@@ -120,6 +134,115 @@ function drawMap() {
       status.textContent = `No se pudo dibujar el mapa: ${error.message}`;
     }
   }
+}
+
+const DRAG_SLOP_PX = 5;
+const ZOOM_LIMIT = 4;
+
+function resetMapView() {
+  state.map = { zoomOffset: 0, panX: 0, panY: 0 };
+  state.probe = null;
+  drawMap();
+  showProbe();
+}
+
+function zoomBy(step) {
+  const next = Math.max(-2, Math.min(ZOOM_LIMIT, state.map.zoomOffset + step));
+  if (next === state.map.zoomOffset) return;
+  state.map = { ...state.map, zoomOffset: next };
+  drawMap();
+}
+
+// Reads the grid cell under a point of the stage, so a tap answers "what is here".
+function probeAt(clientX, clientY) {
+  const stage = document.getElementById('stage');
+  const view = state.view;
+  if (!stage || !state.projector || !view || state.nav === 'resumen') return null;
+  const rect = stage.getBoundingClientRect();
+  const { lat, lon } = state.projector.toLatLon(clientX - rect.left, clientY - rect.top);
+  const { grid } = view;
+  const { c, r } = latLonToCell(lat, lon, grid);
+  if (c < 0 || c >= grid.cols || r < 0 || r >= grid.rows) return null;
+  const index = r * grid.cols + c;
+  if (!grid.mask[index]) return null;
+  return {
+    index,
+    N: grid.N[index],
+    P: grid.P[index],
+    K: grid.K[index],
+    sigma: grid.sigma[index],
+    incierto: grid.sigma[index] > grid.sigma_umbral,
+  };
+}
+
+function showProbe() {
+  const box = document.getElementById('map-probe');
+  if (!box) return;
+  const p = state.probe;
+  if (!p) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = `<b>N ${fmt(p.N)} % · P ${fmt(p.P)} % · K ${fmt(p.K)} %</b>`
+    + `<span>${p.incierto ? 'el modelo no tiene certeza aquí' : `incertidumbre ${fmt(p.sigma)} %`}</span>`;
+}
+
+function wireMapGestures() {
+  const stage = document.getElementById('stage');
+  if (!stage || stage.dataset.wired === '1') return;
+  stage.dataset.wired = '1';
+
+  const layers = () => [document.getElementById('tiles'), document.getElementById('heat'), document.getElementById('overlay')].filter(Boolean);
+  let dragging = false;
+  let moved = 0;
+  let startX = 0;
+  let startY = 0;
+
+  stage.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    dragging = true;
+    moved = 0;
+    startX = event.clientX;
+    startY = event.clientY;
+    stage.setPointerCapture(event.pointerId);
+    stage.classList.add('grabbing');
+  });
+
+  stage.addEventListener('pointermove', (event) => {
+    if (!dragging) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    moved = Math.max(moved, Math.hypot(dx, dy));
+    // Translate the painted layers while dragging; the tiles are rebuilt on release.
+    for (const layer of layers()) layer.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+
+  const release = (event) => {
+    if (!dragging) return;
+    dragging = false;
+    stage.classList.remove('grabbing');
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    for (const layer of layers()) layer.style.transform = '';
+    if (moved > DRAG_SLOP_PX) {
+      state.map = { ...state.map, panX: state.map.panX - dx, panY: state.map.panY - dy };
+      drawMap();
+      return;
+    }
+    state.probe = probeAt(event.clientX, event.clientY);
+    showProbe();
+  };
+
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', () => { dragging = false; stage.classList.remove('grabbing'); });
+
+  stage.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    zoomBy(event.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+
+  stage.addEventListener('dblclick', () => zoomBy(1));
 }
 
 function paintNutrientToggle() {
@@ -528,6 +651,12 @@ function viewResumen() {
           <canvas id="heat"></canvas>
           <svg id="overlay"></svg>
           <div class="dot-legend"><span class="pdot pdot-alto"></span> alto <span class="pdot pdot-medio"></span> medio <span class="pdot pdot-bajo"></span> bajo</div>
+          <div class="map-ctl">
+            <button type="button" data-map="in" aria-label="Acercar">+</button>
+            <button type="button" data-map="out" aria-label="Alejar">−</button>
+            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+          </div>
+          <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
           <div class="attribution">${ATTRIBUTION}</div>
         </div>
@@ -590,7 +719,13 @@ function viewMapa() {
         <svg id="overlay"></svg>
         ${state.mapMode === 'lot' ? `<div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${state.view.grid.celda_m} m · ✛ mida aquí</span></div>
         <div id="colorbar-slot"></div>` : `<div class="dot-legend"><span class="pdot pdot-alto"></span> alto <span class="pdot pdot-medio"></span> medio <span class="pdot pdot-bajo"></span> bajo</div>`}
-        <div class="map-status" id="map-status" hidden></div>
+        <div class="map-ctl">
+            <button type="button" data-map="in" aria-label="Acercar">+</button>
+            <button type="button" data-map="out" aria-label="Alejar">−</button>
+            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+          </div>
+          <div class="map-probe" id="map-probe" hidden></div>
+          <div class="map-status" id="map-status" hidden></div>
         <div class="attribution">${ATTRIBUTION}</div>
       </div>
     </section>
@@ -633,7 +768,7 @@ function viewLote() {
   const view = state.view;
   const worstZone = view.zonas[0];
 
-  return `<div class="bcrumb"><button class="btn ghost" type="button" data-nav="productores">← Red del acopio</button></div>
+  return `<div class="bcrumb"><button class="btn ghost" type="button" data-nav="${reachable('productores')}">← Red del acopio</button></div>
     <div class="grid">
       <section class="card map-card">
         <div class="nutrients">
@@ -647,6 +782,12 @@ function viewLote() {
           <svg id="overlay"></svg>
           <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
           <div id="colorbar-slot"></div>
+          <div class="map-ctl">
+            <button type="button" data-map="in" aria-label="Acercar">+</button>
+            <button type="button" data-map="out" aria-label="Alejar">−</button>
+            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+          </div>
+          <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
           <div class="attribution">${ATTRIBUTION}</div>
         </div>
@@ -701,7 +842,7 @@ function render() {
     </div>
 
     <nav class="nav" aria-label="Vistas del acopio">
-      ${['resumen', 'mapa', 'productores', 'lote'].map((n) =>
+      ${MENU_VIEWS.map((n) =>
         `<button class="nav-btn ${state.nav === n ? 'on' : ''}" type="button" data-nav="${n}">
            ${n === 'lote' ? 'Lote El Rosal' : n[0].toUpperCase() + n.slice(1)}
          </button>`).join('')}
@@ -735,13 +876,21 @@ function render() {
     button.addEventListener('click', () => go('lote'));
   }
   for (const button of document.querySelectorAll('.rail-go')) {
-    button.addEventListener('click', () => go(button.dataset.go));
+    button.addEventListener('click', () => go(reachable(button.dataset.go)));
+  }
+
+  for (const button of document.querySelectorAll('[data-map]')) {
+    button.addEventListener('click', () => {
+      if (button.dataset.map === 'reset') resetMapView();
+      else zoomBy(button.dataset.map === 'in' ? 1 : -1);
+    });
   }
 
   if (state.nav === 'lote') wireTabs(state.tabInicial);
   if (state.nav === 'resumen' || state.nav === 'mapa' || state.nav === 'lote') {
     paintNutrientToggle();
     observeStage();
+    wireMapGestures();
   }
 }
 
