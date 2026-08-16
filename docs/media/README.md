@@ -7,8 +7,8 @@ una lleva su imagen. Copia aquí los archivos con **exactamente** estos nombres:
 |---|---|---|
 | `1.jpg` | ① La medición en campo | **Foto real.** El agricultor o el técnico insertando el sensor NPK en el suelo del lote de papa. Es la primera imagen que ve quien abre el proyecto y la única que debe ser fotografía auténtica |
 | `2.jpg` | ② Recolección y envío a la nube | La lectura viajando del sensor al teléfono del técnico y de ahí a la nube. Idempotencia (`client_id`), captura offline, importación por Excel |
-| `3.jpg` | ③ La IA procesa y cruza fuentes | El motor cruzando las seis fuentes externas. **Nómbralas en la imagen** con lo que aporta cada una (ver tabla abajo) |
-| `4.jpg` | ④ Decisión entendible | Una composición que reúna el mapa con incertidumbre, la receta **recomendada** y el QR que abre el acta humanizada. Debe quedar claro que la IA explica sobre evidencia y que una persona valida |
+| `3.jpg` | ③ El sistema le suma el clima | El motor cruzando las seis fuentes externas. **Nómbralas en la imagen** con lo que aporta cada una (ver tabla abajo) |
+| `4.jpg` | ④ Sale un mapa y una receta que se entiende | Una composición que reúna el mapa con incertidumbre, la receta **recomendada** y el QR que abre el acta humanizada. Debe quedar claro que la IA explica sobre evidencia y que una persona valida |
 | `5.jpg` | ⑤ Aplicación precisa y anticipación | Aplicación por zona y alerta anticipada de riesgo climático estacional (El Niño, sequía, helada, gota tardía). Es la imagen que antes se llamaba `6.jpg` |
 
 ## Las seis fuentes para la imagen `3.jpg`
