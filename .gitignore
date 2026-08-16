@@ -28,6 +28,14 @@ dist/
 Thumbs.db
 desktop.ini
 
+# Excel abierto deja archivos de bloqueo
+~$*.xlsx
+~$*.xls
+
+# Persistencia local del registro append-only
+*.sqlite3
+*.sqlite3-journal
+
 # Editores
 .vscode/
 .idea/
