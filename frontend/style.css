@@ -224,6 +224,15 @@ body {
 }
 .map-title span { display: block; font-weight: 400; color: var(--muted); font-size: 0.86em; }
 
+/* ── MVP summary: a decision queue, not a network board ── */
+.rwrap-mvp { display: grid; gap: var(--gap); align-content: start; max-width: 820px; margin: 0 auto; }
+/* In a column flex card, flex-basis:0 beats height, so the stage needs flex:none. */
+.rwrap-mvp .map-card .map-stage { flex: none; height: clamp(220px, 32vh, 380px); }
+.open-lote {
+  width: 100%; min-height: 56px; font-size: 1.05em; font-weight: 700;
+  border-radius: var(--radius);
+}
+
 /* ── interactive map ──────────────────────────────────── */
 .map-stage { cursor: grab; touch-action: none; }
 .map-stage.grabbing { cursor: grabbing; }

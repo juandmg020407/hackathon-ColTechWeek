@@ -118,7 +118,7 @@ function adaptRisks(climate) {
     ventana: risk.window,
     entradas: risk.inputs,
     fuentes: risk.sources || [],
-    accion: risk.action,
+    accion: risk.recommended_action,
     limitaciones: risk.limitations,
   }));
 }
