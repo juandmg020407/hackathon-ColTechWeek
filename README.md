@@ -94,28 +94,28 @@ La lectura fuera del polígono no se borra: se **conserva y se anota**. De las 1
 18 entran al modelo y una queda marcada por geometría, con su motivo. Un dato mal
 ubicado que desaparece en silencio es un dato que nadie puede auditar después.
 
-### ③ La IA procesa, y cruza seis fuentes externas
+### ③ El sistema le suma el clima
 
 <img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
 
+Saber qué tiene el suelo no basta: también importa qué clima viene. El sistema
+consulta seis fuentes abiertas y las junta con la lectura del sensor.
+
 | Fuente | Qué aporta |
 |---|---|
-| **IDEAM** | La **observación real** de estaciones meteorológicas colombianas. Para El Rosal, la estación *Universidad de Nariño – AUT* está a **2,47 km** y publicó ayer. Es el único dato medido por un instrumento; las demás fuentes climáticas son estimaciones. |
-| **Open-Meteo** | Pronóstico de 16 días para la **ubicación exacta del lote**, no para la cabecera municipal. Permite anticipar heladas, sequía y condiciones favorables para la gota tardía. |
-| **NASA POWER** | 20 años de historia climática del mismo punto. Es la **memoria**: sin ella, «va a llover poco» no significa nada. Permite comparar la temporada actual con años anteriores. |
-| **NOAA** | Informa si hay **El Niño o La Niña**, fenómenos que pueden cambiar la temporada más allá de lo que muestra un pronóstico de 16 días. |
-| **Anthropic Claude** | Redacta la respuesta del asistente en español claro. **No calcula, no decide y no puede añadir cifras que no estén en los datos**. |
-| **OpenStreetMap** | Proporciona el mapa de fondo. Es **opcional**: si no carga por falta de señal, el mapa de suelo sigue siendo legible. |
+| **IDEAM** | El clima **medido** por una estación colombiana real. La de El Rosal está a 2,47 km. |
+| **Open-Meteo** | El pronóstico de 16 días para el punto exacto del lote, no para el pueblo. |
+| **NASA POWER** | 20 años de historia del mismo punto, para saber si esta temporada es rara. |
+| **NOAA** | Si estamos en El Niño o La Niña. |
+| **Anthropic Claude** | Escribe las explicaciones en español claro. No calcula ni decide. |
+| **OpenStreetMap** | El mapa de fondo. Si no carga, todo lo demás se sigue viendo. |
 
-Usar los datos del IDEAM exigió una precaución: su conjunto de datos **repite la misma lectura hasta
-19 veces**. Sumar sin deduplicar inflaba la lluvia acumulada un **31 %** (45,4 mm
-frente a los 34,6 mm reales). El sistema elimina esas copias, informa cuántas
-descartó y conserva el valor correcto.
+Los datos públicos llegan sucios: el IDEAM repite la misma lectura hasta 19
+veces, y sumarlas sin revisar inflaba la lluvia un 31 %. El sistema quita esas
+copias y avisa cuántas quitó.
 
-Si una fuente externa tarda o falla, el sistema vuelve a intentarlo y, cuando es
-necesario, usa la última copia válida. Si no hay Internet, **sigue funcionando
-con datos de respaldo e indica claramente que la información puede no estar
-actualizada**.
+Si una fuente falla o no hay Internet, sigue funcionando con la última copia
+guardada **y lo dice en pantalla**.
 
 ### ④ La IA convierte los datos en una decisión entendible
 
