@@ -213,7 +213,7 @@ python backend/scripts/demo_backend.py   # el proceso entero sin Internet
 
 ## Lo que afirmamos y lo que no
 
-Un jurado puede verificar esto en el código, no solo leerlo aquí.
+Cualquiera puede verificar esto en el código, no solo leerlo aquí.
 
 **Sí:**
 

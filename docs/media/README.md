@@ -5,7 +5,7 @@ una lleva su imagen. Copia aquí los archivos con **exactamente** estos nombres:
 
 | Archivo | Etapa | Qué debe mostrar |
 |---|---|---|
-| `1.jpg` | ① La medición en campo | **Foto real.** El agricultor o el técnico insertando el sensor NPK en el suelo del lote de papa. Es la primera imagen que ve el jurado y la única que debe ser fotografía auténtica |
+| `1.jpg` | ① La medición en campo | **Foto real.** El agricultor o el técnico insertando el sensor NPK en el suelo del lote de papa. Es la primera imagen que ve quien abre el proyecto y la única que debe ser fotografía auténtica |
 | `2.jpg` | ② Recolección y envío a la nube | La lectura viajando del sensor al teléfono del técnico y de ahí a la nube. Idempotencia (`client_id`), captura offline, importación por Excel |
 | `3.jpg` | ③ La IA procesa y cruza fuentes | El motor cruzando las seis fuentes externas. **Nómbralas en la imagen** con lo que aporta cada una (ver tabla abajo) |
 | `4.jpg` | ④ Decisión entendible | Una composición que reúna el mapa con incertidumbre, la receta **recomendada** y el QR que abre el acta humanizada. Debe quedar claro que la IA explica sobre evidencia y que una persona valida |
@@ -29,7 +29,7 @@ climáticas son productos de modelo.
 ## Recomendaciones
 
 - **Comprime cada archivo por debajo de 500 KB.** GitHub sirve el README entero y
-  cinco imágenes pesadas lo vuelven lento justo cuando el jurado lo abre.
+  cinco imágenes pesadas lo vuelven lento justo cuando alguien lo abre.
 - Ancho útil: **1400–1600 px**. Todas se muestran a ancho completo, así que un
   formato horizontal consistente (16:9 o 3:2) hace que el README se lea parejo.
 - Si alguna persona es identificable, confirma que dio permiso para publicar la

@@ -549,7 +549,7 @@ OpenAPI, un esquema con triggers de auditoría y un model card con métricas
 reproducidas. Con asistencia de IA en el desarrollo, dentro de la ventana de 24
 horas de la hackathon.
 
-Lo decimos porque es relevante para el jurado: el diferencial no fue escribir
+Lo decimos porque es la parte que importa: el diferencial no fue escribir
 código más rápido, fue tener tiempo sobrante para hacer el benchmark contra IDW
 —y para dejarlo publicado cuando salió en contra.
 
