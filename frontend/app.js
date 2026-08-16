@@ -756,6 +756,7 @@ function viewResumen() {
       <div class="hero-sub">${view.plot.name} · ${view.cultivo?.crop || ''} ${view.cultivo?.variety || ''} · medido ${new Date(view.generado).toLocaleDateString('es-CO')}</div>
     </section>
 
+<<<<<<< HEAD
     <section class="card facts-card">
       <div class="facts-head">
         <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
@@ -765,6 +766,17 @@ function viewResumen() {
       </div>
       <div class="kpi-grid">${kpis}</div>
     </section>
+=======
+    ${net?.real ? `<section class="card real-plots">
+      <h2>Lotes del centro · datos reales</h2>
+      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
+        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
+      </li>`).join('')}</ul>
+      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
+    </section>` : ''}
+
+    <div class="kpi-grid">${kpis}</div>
+>>>>>>> c109039d5cd69fecbc881e578e00de629f9eb824
 
     <div class="mvp-main">
       <section class="card map-card">
@@ -789,7 +801,7 @@ function viewResumen() {
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -890,7 +902,7 @@ function viewResumenRed() {
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -960,7 +972,7 @@ function viewMapa() {
         <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -1023,7 +1035,7 @@ function viewLote() {
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
