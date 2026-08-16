@@ -71,7 +71,7 @@ evidencia más útil, trazable y oportuna para decidir juntos.
 
 ### ① La medición en campo
 
-<img src="docs/media/1.jpg" alt="Agricultor insertando el sensor NPK en el suelo de un lote de papa en Pasto, Nariño" width="100%">
+<img src="docs/media/1.jpg" alt="Agricultor insertando el sensor NPK en el suelo de un lote de papa en Pasto, Nariño" width="40%">
 
 El técnico del centro de acopio recorre las fincas con **un solo sensor
 compartido por toda la red**. Lo clava en la tierra y anota N, P, K y la
@@ -84,7 +84,7 @@ generados.
 
 ### ② Recolección y envío a la nube
 
-<img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="100%">
+<img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="40%">
 
 Cada lectura lleva un identificador único. Si el técnico pierde señal y vuelve a
 enviarla, el sistema la reconoce y **no la duplica**. También se pueden cargar
@@ -96,7 +96,7 @@ ubicado que desaparece en silencio es un dato que nadie puede auditar después.
 
 ### ③ La IA procesa, y cruza seis fuentes externas
 
-<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
+<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="40%">
 
 | Fuente | Qué aporta |
 |---|---|
@@ -118,6 +118,8 @@ con datos de respaldo e indica claramente que la información puede no estar
 actualizada**.
 
 ### ④ La IA convierte los datos en una decisión entendible
+
+<img src="docs/media/4.jpg" alt="DSupervisión humana, trazabilidad y decisiones explicables con IA" width="40%">
 
 Tres modelos estadísticos —uno por nutriente— convierten 18 mediciones en un mapa
 de 140 celdas de 10 × 10 m. El mapa no solo estima qué hay en cada celda: también
@@ -182,7 +184,7 @@ depende de una promesa:
 
 ### ⑤ Aplicación precisa y anticipación al clima
 
-<img src="docs/media/5.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="100%">
+<img src="docs/media/5.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="40%">
 
 La receta llega a la zona que la necesita, en la cantidad que le corresponde, y
 **en el momento en que tiene sentido aplicarla**. Tres motores de riesgo
