@@ -26,7 +26,6 @@ const state = {
   historialMsg: '',
   view: null,
   network: null,
-  dataOrigin: '',
   live: false,
 };
 
@@ -756,27 +755,9 @@ function viewResumen() {
       <div class="hero-sub">${view.plot.name} · ${view.cultivo?.crop || ''} ${view.cultivo?.variety || ''} · medido ${new Date(view.generado).toLocaleDateString('es-CO')}</div>
     </section>
 
-<<<<<<< HEAD
     <section class="card facts-card">
-      <div class="facts-head">
-        <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
-        <p class="note">${net?.real
-          ? `Medido ${new Date(view.generado).toLocaleDateString('es-CO')}`
-          : 'Del paquete descargado, sin conexión'}</p>
-      </div>
       <div class="kpi-grid">${kpis}</div>
     </section>
-=======
-    ${net?.real ? `<section class="card real-plots">
-      <h2>Lotes del centro · datos reales</h2>
-      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
-        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
-      </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
-    </section>` : ''}
-
-    <div class="kpi-grid">${kpis}</div>
->>>>>>> c109039d5cd69fecbc881e578e00de629f9eb824
 
     <div class="mvp-main">
       <section class="card map-card">
@@ -814,8 +795,6 @@ function viewResumen() {
       <h2>Prioridad hoy</h2>
       <div class="prio-grid">${rail || '<p class="note">Sin acciones pendientes.</p>'}</div>
     </section>
-
-    <button class="btn open-lote" type="button" data-nav="lote">Abrir ${view.plot.name} →</button>
 
   </div>`;
 }
@@ -876,14 +855,6 @@ function viewResumenRed() {
 
   return `<div class="rwrap resumen-c">
     <section class="hero">${hero}<span class="demo-chip">productores demostrativos</span></section>
-
-    ${net.real ? `<section class="card real-plots">
-      <h2>Lotes del centro · datos reales</h2>
-      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
-        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
-      </li>`).join('')}</ul>
-      <p class="note">Conteos del centro, tal como los guarda el sistema.</p>
-    </section>` : ''}
 
     <div class="kpi-grid">${kpis}</div>
 
@@ -1346,7 +1317,7 @@ function render() {
 
     <div class="content">
       <div class="sync">
-        <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones · ${state.dataOrigin}
+        <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones
         ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
         <span class="spacer"></span>
         <button class="icon-btn bell" type="button" data-nav="alertas" aria-label="${alertas} alertas activas">
@@ -1442,7 +1413,6 @@ async function boot() {
   const [pkg, net] = await Promise.all([getPackage(), getNetwork()]);
   state.view = adapt(pkg.data);
   state.network = net.data;
-  state.dataOrigin = pkg.origin;
   state.live = pkg.live;
   state.nav = navFromHash();
   render();
