@@ -851,14 +851,18 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .moves-list li { display: flex; gap: .5em; align-items: baseline; }
 
 .dot-legend { position: absolute; right: 8px; bottom: 8px; z-index: 3; display: flex; gap: 6px; align-items: center; font-size: .68em; color: var(--muted); background: rgb(255 255 255 / .82); border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; }
+/* The legend swatches are HTML boxes, so they colour with `background`. */
 .pdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
-/* The same class marks the legend swatches and the clickable map dots. */
-#overlay .pdot { cursor: pointer; stroke: #fff; stroke-width: 1.5; }
-#overlay .pdot:hover { stroke: var(--brand-deep); stroke-width: 2.5; }
 .pdot-alto { background: var(--low); }
 .pdot-medio { background: var(--mid); }
 .pdot-bajo { background: var(--high); }
-#overlay .pdot { cursor: pointer; stroke: #fff; stroke-width: 1.5; }
+
+/* The map dots are SVG circles: `background` does nothing on them, which is why
+   they all rendered black. They need `fill`. */
+#overlay .pdot { cursor: pointer; stroke: #fff; stroke-width: 1.5; fill: var(--muted); }
+#overlay .pdot-alto { fill: var(--low); }
+#overlay .pdot-medio { fill: var(--mid); }
+#overlay .pdot-bajo { fill: var(--high); }
 #overlay .pdot:hover { stroke: var(--brand-deep); stroke-width: 2.5; }
 
 .fchip {

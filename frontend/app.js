@@ -277,7 +277,12 @@ function wireMapGestures() {
   // The zoom and home controls sit inside the stage. Starting a drag on them
   // captures the pointer and the button never receives its click, which made
   // them look dead to a real mouse while synthetic clicks still worked.
-  const onControl = (target) => Boolean(target?.closest?.('.map-ctl, .map-probe, .colorbar, .map-panel'));
+  // Producer dots are clickable too: capturing the pointer for a drag would
+  // swallow their click exactly as it swallowed the buttons'.
+  const onControl = (target) => Boolean(
+    target?.closest?.('.map-ctl, .map-probe, .colorbar, .map-panel')
+    || target?.classList?.contains('pdot'),
+  );
 
   stage.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || onControl(event.target)) return;
@@ -1037,7 +1042,10 @@ function viewProductores() {
     })()
     : '';
 
+  // Reached from a dot on the map, and absent from the sidebar, so it needs its
+  // own way back or it is a dead end.
   return `<div class="rwrap">
+    <div class="bcrumb"><button class="btn ghost" type="button" data-nav="mapa">← Volver al mapa</button></div>
     <div class="prod-grid">${cards}</div>
     <div class="prod-detail-slot">${detail}</div>
   </div>`;
