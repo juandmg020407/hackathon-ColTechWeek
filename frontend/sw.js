@@ -1,6 +1,6 @@
 // Cache-first service worker: after the first load the app opens without network.
 
-const CACHE = 'iomido-v9';
+const CACHE = 'iomido-v10';
 const SHELL = [
   '/',
   '/index.html',
@@ -19,6 +19,8 @@ const SHELL = [
   '/lib/slippy.js',
   '/lib/heatsurface.js',
   '/lib/assistant.js',
+  '/lib/qr.js',
+  '/informes/acta-plan-el-rosal.pdf',
   '/mock/package-nar-001.json',
   '/mock/network.json',
 ];
