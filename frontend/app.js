@@ -183,7 +183,8 @@ function drawMap() {
   } catch (error) {
     if (status) {
       status.hidden = false;
-      status.textContent = `No se pudo dibujar el mapa: ${error.message}`;
+      console.warn('[mapa] no se pudo dibujar:', error.message);
+      status.textContent = 'No se pudo dibujar el mapa.';
     }
   }
 }
@@ -271,8 +272,13 @@ function wireMapGestures() {
   let startX = 0;
   let startY = 0;
 
+  // The zoom and home controls sit inside the stage. Starting a drag on them
+  // captures the pointer and the button never receives its click, which made
+  // them look dead to a real mouse while synthetic clicks still worked.
+  const onControl = (target) => Boolean(target?.closest?.('.map-ctl, .map-probe, .colorbar, .map-panel'));
+
   stage.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || onControl(event.target)) return;
     dragging = true;
     moved = 0;
     startX = event.clientX;
@@ -316,7 +322,10 @@ function wireMapGestures() {
     zoomBy(event.deltaY < 0 ? 1 : -1);
   }, { passive: false });
 
-  stage.addEventListener('dblclick', () => zoomBy(1));
+  stage.addEventListener('dblclick', (event) => {
+    if (onControl(event.target)) return;
+    zoomBy(1);
+  });
 }
 
 function paintNutrientToggle() {
@@ -661,7 +670,10 @@ async function decide(action) {
     }
     wireTabs('propuesta');
   } catch (error) {
-    state.decisionMsg = `No se pudo registrar: ${error.message}`;
+    console.warn('[decision] no se pudo registrar:', error.message);
+    state.decisionMsg = /respondió 4\d\d/.test(error.message)
+      ? 'Este backend no aceptó la decisión. Avise al responsable del sistema.'
+      : 'No se pudo registrar la decisión. Revise la conexión y vuelva a intentarlo.';
     showDecisionMsg();
     for (const b of buttons) b.disabled = false;
   }
@@ -686,9 +698,11 @@ async function showWhy(proposalId) {
     const why = remote.why || remote.explanation || remote;
     box.innerHTML = renderWhy(why);
   } catch (error) {
+    // The URL and status go to the console; the screen says what it is showing.
+    console.warn('[propuesta] explicación remota no disponible:', error.message);
     box.innerHTML = explanation
-      ? `${renderWhy(explanation)}<p class="note">Del paquete descargado: ${error.message}</p>`
-      : `<p class="note">No se pudo consultar la explicación: ${error.message}</p>`;
+      ? `${renderWhy(explanation)}<p class="note">Explicación del paquete descargado.</p>`
+      : '<p class="note">No se pudo consultar la explicación ahora mismo.</p>';
   }
 }
 
