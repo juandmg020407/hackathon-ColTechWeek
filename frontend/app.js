@@ -1,8 +1,10 @@
 // Command-center shell: the acopio network first, the lot package as drill-down.
 
-import { getPackage } from './lib/api.js';
+import {
+  getPackage, apiBase, postDecision, getProposalWhy, getDecisionHistory,
+} from './lib/api.js';
 import { getNetwork } from './lib/network.js';
-import { adapt, formatCop } from './lib/adapt.js';
+import { adapt } from './lib/adapt.js';
 import { NUTRIENTS, RANGES } from './lib/plotmap.js';
 import { plasmaGradient } from './lib/colormap.js';
 import { renderTiles, ATTRIBUTION } from './lib/slippy.js';
@@ -15,6 +17,8 @@ const state = {
   mapMode: 'red',
   riesgoFiltro: 'todos',
   productor: null,
+  decision: null,
+  decisionMsg: '',
   view: null,
   network: null,
   dataOrigin: '',
@@ -25,7 +29,23 @@ const fmt = (value, decimals = 1) => Number(value)
   .toLocaleString('es-CO', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const NIVEL_LABEL = { critico: 'crítico', bajo: 'bajo', adecuado: 'bien' };
-const SEVERITY_MARK = { critica: '▲', alta: '▲', media: '●', baja: '○', aviso: '○' };
+const DECISION_LABEL = {
+  pending: 'pendiente', accepted: 'aceptada', rejected: 'rechazada',
+  deferred: 'derivada', referred: 'derivada', modified: 'modificada',
+  pending_review: 'pendiente de revisión',
+  pending_technical_review: 'pendiente de revisión técnica',
+  referred_to_technician: 'derivada a un técnico',
+};
+const VALIDATION_LABEL = {
+  requires_technical_validation: 'Plan candidato: requiere validación técnica antes de aplicarse.',
+  demo_unvalidated: 'Perfil de demostración sin validar.',
+};
+const SEVERITY_MARK = {
+  critica: '▲', alta: '▲', media: '●', baja: '○', aviso: '○',
+  critical: '▲', high: '▲', medium: '●', low: '○',
+};
+const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
+const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
 const NAV_VIEWS = ['resumen', 'mapa', 'productores', 'lote'];
 
@@ -37,7 +57,7 @@ function navFromHash() {
 function colorbar() {
   const [min, max] = RANGES[state.nutrient];
   const ticks = [1, 0.75, 0.5, 0.25, 0]
-    .map((t) => `<span>${Math.round(min + (max - min) * t)}</span>`).join('');
+    .map((t) => `<span>${Math.round(min + (max - min) * t)} %</span>`).join('');
   return `<div class="colorbar">
     <div class="ramp" style="background:linear-gradient(to top, ${plasmaGradient()})"></div>
     <div class="ticks">${ticks}</div>
@@ -143,31 +163,59 @@ function observeStage() {
   scheduleDraw();
 }
 
-function panelReceta() {
-  const { receta, zonas } = state.view;
-  const bags = new Map();
-  for (const zona of zonas) {
-    for (const producto of zona.productos) {
-      bags.set(producto.nombre, (bags.get(producto.nombre) || 0) + producto.bultos);
-    }
+function panelPropuesta() {
+  const { propuesta } = state.view;
+  if (!propuesta || !propuesta.zonas.length) {
+    return '<p class="note">Todavía no hay una propuesta para este lote.</p>';
   }
 
-  const rows = [...bags.entries()].map(([name, count]) => `<div class="bag-row">
-      <span class="bags" aria-hidden="true">${'▬'.repeat(Math.min(count, 8))}</span>
-      <span class="bag-name"><b>${count}</b> ${count === 1 ? 'bulto' : 'bultos'} ${name}</span>
-    </div>`).join('');
+  const zones = propuesta.zonas.map((zona) => {
+    const formulations = zona.formulaciones.map((f) => `<div class="form-row">
+        <span class="grade">${f.label}</span>
+        <span class="form-qty"><b>${f.bags}</b> ${f.bags === 1 ? 'bulto' : 'bultos'} de ${f.bag_weight.value} ${f.bag_weight.unit}</span>
+      </div>`).join('');
 
-  const adjustments = (receta.ajustes || []).map((a) => `<li>
-      <b>${a.nutriente} ${a.factor < 1 ? '−' : '+'}${Math.round(Math.abs(1 - a.factor) * 100)}%</b> ${a.motivo}
-    </li>`).join('');
+    const need = zona.evaluacion?.crop_requirement;
+    const have = zona.evaluacion?.estimated_crop_available;
+    const balance = need && have ? NUTRIENTS.map((n) => `<li>
+        <b>${n}</b> ${fmt(have[n])} de ${fmt(need[n])} kg/ha disponibles
+        <span class="lv-${zona.nivel[n]}">${NIVEL_LABEL[zona.nivel[n]]}</span>
+      </li>`).join('') : '';
 
-  return `<div class="recipe">
-    ${rows}
-    <div class="price">${formatCop(receta.costo_total_cop)}</div>
-    <div class="price-was">antes ${formatCop(receta.costo_generico_cop)} · ahorra <b>${formatCop(receta.ahorro_cop)}</b></div>
-    <p class="window"><b>Aplique entre ${receta.ventana.desde} y ${receta.ventana.hasta}.</b> ${receta.ventana.motivo}</p>
-    ${adjustments ? `<div class="adjust"><h3>Le cambiamos la receta</h3><ul>${adjustments}</ul></div>` : ''}
-    <p class="note">Genérico equivalente: ${receta.generico_detalle}.</p>
+    return `<article class="zone-prop">
+      <header><b>Zona ${zona.id.replace('zone-', '')}</b> · ${fmt(zona.area_ha, 2)} ha</header>
+      <p class="note">Formulación NPK sugerida</p>
+      ${formulations}
+      ${balance ? `<ul class="balance">${balance}</ul>` : ''}
+    </article>`;
+  }).join('');
+
+  return `<div class="proposal">
+    ${zones}
+    <p class="note">Un grado <b>30-30-40</b> es 30 % N, 30 % P y 40 % K de la masa del bulto.</p>
+    ${decisionBlock(propuesta)}
+  </div>`;
+}
+
+function decisionBlock(propuesta) {
+  const estado = state.decision?.resulting_status || propuesta.estado;
+  const aplicada = state.decision ? state.decision.applied : propuesta.aplicada;
+
+  return `<div class="decision" id="decision">
+    <div class="decision-state">
+      <span class="pill pill-${estado}">${DECISION_LABEL[estado] || estado}</span>
+      ${aplicada ? '<span class="pill pill-applied">aplicada</span>' : '<span class="note">no aplicada</span>'}
+    </div>
+    ${propuesta.validacion ? `<p class="note">${VALIDATION_LABEL[propuesta.validacion] || propuesta.validacion}</p>` : ''}
+    ${propuesta.requiere_decision ? `<p class="note">Requiere la decisión de un técnico antes de aplicarse.</p>
+      <div class="decision-actions">
+        <button class="btn" type="button" data-decide="accept" ${apiBase ? '' : 'disabled'}>Aceptar</button>
+        <button class="btn ghost" type="button" data-decide="refer" ${apiBase ? '' : 'disabled'}>Pedir revisión</button>
+        <button class="btn ghost" type="button" data-why="${propuesta.id}">¿Por qué?</button>
+      </div>
+      ${apiBase ? '' : '<p class="note">Sin conexión no se puede registrar una decisión.</p>'}` : ''}
+    <div class="decision-msg" id="decision-msg" ${state.decisionMsg ? '' : 'hidden'}>${state.decisionMsg || ''}</div>
+    <div class="why-body" id="why-body" hidden></div>
   </div>`;
 }
 
@@ -178,31 +226,33 @@ function panelRiesgos() {
   const cards = riesgos.map((r, index) => `<article class="risk sev-${r.severidad} ${index === 0 ? 'open' : ''}">
       <button class="risk-head" type="button" aria-expanded="${index === 0}">
         <span class="mark">${SEVERITY_MARK[r.severidad] || '●'}</span>
-        <span class="sev-label">${r.severidad}</span>
-        <span class="risk-title">${r.titulo}</span>
+        <span class="sev-label">${SEVERITY_WORD[r.severidad] || r.severidad}</span>
+        <span class="risk-title">${RISK_TITLE[r.tipo] || r.tipo}</span>
       </button>
       <div class="risk-body">
-        <p>${r.resumen}</p>
-        <ul>${r.que_hacer.map((step) => `<li>${step}</li>`).join('')}</ul>
-        ${r.confianza === 'baja' ? '<p class="low-conf">Esto todavía puede cambiar.</p>' : ''}
-        <button class="why" type="button" data-risk="${r.id}">¿Por qué?</button>
-        <div class="why-body" id="why-${r.id}" hidden>
-          <p><b>Modelo:</b> ${r.por_que.modelo}</p>
-          <p><b>Regla:</b> ${r.por_que.regla}</p>
-          <p><b>Datos:</b> ${Object.entries(r.por_que.entradas).map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`).join(' · ')}</p>
-          <p><b>Fuentes:</b> ${r.por_que.fuentes.map((f) => `${f.nombre}${f.consultado ? ` (${f.consultado.slice(0, 10)})` : ''}`).join(', ')}</p>
+        <p>Ventana ${r.ventana?.start} a ${r.ventana?.end} · confianza ${Math.round((r.confianza ?? 0) * 100)}%</p>
+        ${r.accion ? `<ul><li>${r.accion}</li></ul>` : ''}
+        ${(r.confianza ?? 1) < 0.5 ? '<p class="low-conf">Esto todavía puede cambiar.</p>' : ''}
+        <button class="why" type="button" data-risk="${r.tipo}">¿Por qué?</button>
+        <div class="why-body" id="why-${r.tipo}" hidden>
+          <p><b>Probabilidad estimada:</b> ${Math.round((r.score ?? 0) * 100)}%</p>
+          <p><b>Datos:</b> ${Object.entries(r.entradas || {}).map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`).join(' · ')}</p>
+          <p><b>Fuentes:</b> ${r.fuentes.map((f) => `${f.name}${f.fetched_at ? ` (${f.fetched_at.slice(0, 10)})` : ''}${f.stale || f.failed ? ' · no actual' : ''}`).join(', ')}</p>
+          ${r.limitaciones ? `<p><b>Límites:</b> ${r.limitaciones}</p>` : ''}
         </div>
       </div>
     </article>`).join('');
 
   return `<div class="scroll-y">${cards}
-    ${estacional ? `<p class="note"><b>${estacional.fenomeno}:</b> ${estacional.estado}. ${estacional.implicacion_local}</p>` : ''}
-    ${degradado ? '<p class="note warn-text">Datos de hace unas horas: no pude conectarme a alguna fuente.</p>' : ''}
+    ${estacional?.enso ? `<p class="note"><b>ENSO:</b> ${estacional.enso.phase ?? estacional.enso.status ?? ''}</p>` : ''}
+    ${degradado ? '<p class="note warn-text">Alguna fuente no respondió: el clima se muestra como no actual.</p>' : ''}
   </div>`;
 }
 
+const ASK_SUGGESTIONS = ['dónde debo medir', 'qué formulación sugieren', 'por qué hay incertidumbre'];
+
 function panelAsistente() {
-  const suggestions = state.view.voz.slice(0, 4).map((v) => v.claves.slice(0, 2).join(' '));
+  const suggestions = ASK_SUGGESTIONS;
   return `<div class="chat" id="chat"></div>
     <div class="suggest">${suggestions.map((s) => `<button class="chip as-suggest" type="button">¿${s}?</button>`).join('')}</div>
     <form class="ask" id="ask">
@@ -233,7 +283,7 @@ async function answer(question) {
 }
 
 function wireTabs(initial) {
-  const panels = { receta: panelReceta, riesgos: panelRiesgos, asistente: panelAsistente };
+  const panels = { propuesta: panelPropuesta, riesgos: panelRiesgos, asistente: panelAsistente };
   const body = document.getElementById('tab-body');
 
   const show = (name) => {
@@ -242,6 +292,16 @@ function wireTabs(initial) {
     for (const tab of document.querySelectorAll('.tab')) {
       tab.classList.toggle('on', tab.dataset.tab === name);
       tab.setAttribute('aria-selected', String(tab.dataset.tab === name));
+    }
+
+    if (name === 'propuesta') {
+      showDecisionMsg();
+      for (const button of body.querySelectorAll('[data-decide]')) {
+        button.addEventListener('click', () => decide(button.dataset.decide));
+      }
+      const why = body.querySelector('[data-why]');
+      if (why) why.addEventListener('click', () => showWhy(why.dataset.why));
+      return;
     }
 
     if (name === 'riesgos') {
@@ -290,13 +350,87 @@ function wireTabs(initial) {
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => show(tab.dataset.tab));
   }
-  show(initial || 'receta');
+  show(initial || 'propuesta');
 }
 
 function healthHeadline(pct) {
   if (pct >= 80) return 'Tu abastecimiento está estable.';
   if (pct >= 60) return 'Tu abastecimiento aguanta, con puntos que vigilar.';
   return 'Tu abastecimiento está comprometido.';
+}
+
+// The screen never invents the outcome: it shows what the backend resolved.
+async function decide(action) {
+  const { propuesta } = state.view;
+  const buttons = document.querySelectorAll('[data-decide]');
+  for (const b of buttons) b.disabled = true;
+  state.decisionMsg = 'Registrando la decisión…';
+  showDecisionMsg();
+
+  try {
+    const response = await postDecision({
+      proposalId: propuesta.id,
+      action,
+      actor: { type: 'technician', id: 'demo-technician' },
+      note: action === 'refer' ? 'Revisión pedida desde el tablero del acopio.' : null,
+    });
+    const decision = response.decision || response;
+    state.decision = {
+      id: decision.id,
+      resulting_status: decision.resulting_status,
+      applied: propuesta.aplicada,
+    };
+    state.decisionMsg = `Decisión <b>${decision.id}</b> registrada.`;
+    try {
+      // history is one object holding the proposal, its decisions and the audit trail.
+      const { history } = await getDecisionHistory(propuesta.id);
+      if (history?.proposal) state.decision.applied = history.proposal.applied;
+      const count = history?.decisions?.length || 0;
+      if (count) {
+        state.decisionMsg += ` ${count} ${count === 1 ? 'decisión' : 'decisiones'} en el historial.`;
+      }
+    } catch (error) {
+      console.warn('[decision] historial no disponible:', error.message);
+    }
+    wireTabs('propuesta');
+  } catch (error) {
+    state.decisionMsg = `No se pudo registrar: ${error.message}`;
+    showDecisionMsg();
+    for (const b of buttons) b.disabled = false;
+  }
+}
+
+function showDecisionMsg() {
+  const box = document.getElementById('decision-msg');
+  if (!box) return;
+  box.innerHTML = state.decisionMsg;
+  box.hidden = !state.decisionMsg;
+}
+
+async function showWhy(proposalId) {
+  const box = document.getElementById('why-body');
+  if (!box) return;
+  if (!box.hidden) { box.hidden = true; return; }
+  box.hidden = false;
+  box.textContent = 'Consultando…';
+  const explanation = state.view.propuesta?.explicacion;
+  try {
+    const remote = await getProposalWhy(proposalId);
+    const why = remote.why || remote.explanation || remote;
+    box.innerHTML = renderWhy(why);
+  } catch (error) {
+    box.innerHTML = explanation
+      ? `${renderWhy(explanation)}<p class="note">Del paquete descargado: ${error.message}</p>`
+      : `<p class="note">No se pudo consultar la explicación: ${error.message}</p>`;
+  }
+}
+
+function renderWhy(why) {
+  const steps = (why.steps || []).map((s) => `<li><b>${s.step}</b> ${s.detail || ''}</li>`).join('');
+  const unknowns = (why.unknowns || []).map((u) => `<li>${u}</li>`).join('');
+  return `${why.summary ? `<p>${why.summary}</p>` : ''}
+    ${steps ? `<ul>${steps}</ul>` : ''}
+    ${unknowns ? `<p class="note"><b>Lo que no se sabe</b></p><ul>${unknowns}</ul>` : ''}`;
 }
 
 function riskBar(pct) {
@@ -344,7 +478,15 @@ function viewResumen() {
     </div>`).join('');
 
   return `<div class="rwrap">
-    <section class="hero">${hero}<span class="demo-chip">red demostrativa</span></section>
+    <section class="hero">${hero}<span class="demo-chip">productores demostrativos</span></section>
+
+    ${net.real ? `<section class="card real-plots">
+      <h2>Lotes del centro · datos reales</h2>
+      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
+        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
+      </li>`).join('')}</ul>
+      <p class="note">Del backend: <code>/v1/centers</code> y <code>/v1/plots</code>.</p>
+    </section>` : ''}
 
     <div class="kpi-grid">${kpis}</div>
 
@@ -420,7 +562,7 @@ function viewMapa() {
         <div class="tiles" id="tiles"></div>
         <canvas id="heat"></canvas>
         <svg id="overlay"></svg>
-        ${state.mapMode === 'lot' ? `<div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>ppm · celda ${state.view.grid.celda_m} m · ✛ mida aquí</span></div>
+        ${state.mapMode === 'lot' ? `<div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${state.view.grid.celda_m} m · ✛ mida aquí</span></div>
         <div id="colorbar-slot"></div>` : `<div class="dot-legend"><span class="pdot pdot-alto"></span> alto <span class="pdot pdot-medio"></span> medio <span class="pdot pdot-bajo"></span> bajo</div>`}
         <div class="map-status" id="map-status" hidden></div>
         <div class="attribution">${ATTRIBUTION}</div>
@@ -477,7 +619,7 @@ function viewLote() {
           <div class="tiles" id="tiles"></div>
           <canvas id="heat"></canvas>
           <svg id="overlay"></svg>
-          <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>ppm · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
+          <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
           <div id="colorbar-slot"></div>
           <div class="map-status" id="map-status" hidden></div>
           <div class="attribution">${ATTRIBUTION}</div>
@@ -498,7 +640,7 @@ function viewLote() {
 
         <section class="card tabs-card">
           <div class="tabs" role="tablist">
-            <button class="tab" data-tab="receta" role="tab" aria-selected="true">Receta</button>
+            <button class="tab" data-tab="propuesta" role="tab" aria-selected="true">Propuesta</button>
             <button class="tab" data-tab="riesgos" role="tab" aria-selected="false">Lo que viene${view.riesgos.length ? ` <span class="badge-n">${view.riesgos.length}</span>` : ''}</button>
             <button class="tab" data-tab="asistente" role="tab" aria-selected="false">Preguntar</button>
           </div>
@@ -511,7 +653,7 @@ function viewLote() {
 function render() {
   const view = state.view;
   const net = state.network;
-  const syncLabel = view.stale ? 'vencido' : state.live ? 'al día' : 'sin red · paquete local';
+  const syncLabel = view.stale ? 'paquete degradado' : state.live ? 'al día' : 'sin red · paquete local';
 
   document.getElementById('app').innerHTML = `<div class="shell">
     <div class="sync ${view.stale ? 'stale' : ''}">
@@ -522,7 +664,9 @@ function render() {
 
     <div class="topbar">
       <div class="mark">iO</div>
-      <div class="brand-name">${net.acopio.nombre}<small>${net.kpis.productores} productores · ${net.kpis.lotes} lotes · Nariño</small></div>
+      <div class="brand-name">${net.acopio.nombre}<small>${net.real
+        ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
+        : `${net.kpis.productores} productores · ${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</small></div>
       <span class="spacer"></span>
       <span class="bell" title="${net.prioridades.length} prioridades activas">🔔 ${net.prioridades.length > 0 ? `<b>${net.prioridades.length}</b>` : ''}</span>
       <button class="btn ghost ask-cta" type="button" title="Preguntar a IOmido">🎙 Preguntar</button>

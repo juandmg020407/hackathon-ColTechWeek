@@ -2,16 +2,13 @@
 
 export const NUTRIENTS = ['N', 'P', 'K'];
 
-export const RANGES = {
-  N: [10, 50],
-  P: [4, 28],
-  K: [60, 300],
-};
+// Elemental mass percent, covering the observed span of readings and grid means.
+export const UNIT_LABEL = '%';
 
-export const LEVELS = {
-  N: { critico: 20, bajo: 40 },
-  P: { critico: 10, bajo: 20 },
-  K: { critico: 100, bajo: 200 },
+export const RANGES = {
+  N: [0, 28],
+  P: [0, 10],
+  K: [0, 14],
 };
 
 export function color(value, [min, max]) {
@@ -19,13 +16,6 @@ export function color(value, [min, max]) {
   const lightness = 94 - t * 56;
   const saturation = 22 + t * 42;
   return `hsl(96 ${saturation}% ${lightness}%)`;
-}
-
-export function levelOf(value, nutrient) {
-  const level = LEVELS[nutrient];
-  if (value < level.critico) return 'critico';
-  if (value < level.bajo) return 'bajo';
-  return 'adecuado';
 }
 
 export function renderMap({ grid, nutrient, nextSample, contour, points, origin }) {
@@ -57,7 +47,7 @@ export function renderMap({ grid, nutrient, nextSample, contour, points, origin 
     ? points.map((p) => {
       const c = toCell(p.lat, p.lon);
       return `<circle cx="${c.x.toFixed(2)}" cy="${c.y.toFixed(2)}" r="0.3" fill="#1b1d1a" opacity="${p.sospechoso ? 0.45 : 0.8}">`
-        + `<title>N ${p.N} · P ${p.P} · K ${p.K}${p.sospechoso ? ' · lectura rara' : ''}</title></circle>`;
+        + `<title>N ${p.N} % · P ${p.P} % · K ${p.K} %${p.sospechoso ? ' · lectura rara' : ''}</title></circle>`;
     }).join('')
     : '';
 
