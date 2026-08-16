@@ -748,7 +748,7 @@ function viewResumen() {
       <div class="facts-head">
         <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
         <p class="note">${net?.real
-          ? `Del backend: <code>/v1/plots/${view.plot.id}/package</code>`
+          ? 'Del backend: <code>/v1/centers/{id}/dashboard</code>'
           : 'Del paquete descargado, sin conexión'}</p>
       </div>
       <div class="kpi-grid">${kpis}</div>

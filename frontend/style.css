@@ -38,10 +38,12 @@ body {
    :root { --field-image: url("/assets/field.webp"); }                    */
 :root {
   --field-image:
-    radial-gradient(120% 60% at 50% 108%, #b98a52 0%, #a8763f 26%, transparent 62%),
-    radial-gradient(80% 34% at 18% 92%, #7aa04a 0%, transparent 60%),
-    radial-gradient(80% 34% at 82% 92%, #7aa04a 0%, transparent 60%),
-    linear-gradient(180deg, #cfe9f5 0%, #dff0f7 34%, #cfe4b6 52%, #a9c877 66%, #8fae5c 74%, #a67c46 100%);
+    radial-gradient(58% 22% at 12% 30%, rgb(255 255 255 / 82%) 0%, transparent 70%),
+    radial-gradient(46% 18% at 82% 20%, rgb(255 255 255 / 78%) 0%, transparent 70%),
+    radial-gradient(130% 54% at 50% 110%, #9c6b3a 0%, #b0824a 30%, transparent 66%),
+    radial-gradient(70% 30% at 20% 88%, #6f9a41 0%, transparent 62%),
+    radial-gradient(70% 30% at 80% 88%, #6f9a41 0%, transparent 62%),
+    linear-gradient(180deg, #a9dcef 0%, #c4e7f4 30%, #bcd98f 50%, #93bd5c 62%, #7ba648 70%, #a3763f 100%);
 }
 
 body::before {
@@ -52,25 +54,23 @@ body::before {
   background: var(--field-image) center / cover no-repeat fixed;
 }
 
-/* A light veil: enough for the cards to read, not so much that the field
-   disappears. The cards carry the real contrast, so this can stay gentle. */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 38%));
-}
+/* No veil over the whole page: every card is already ~94% opaque and carries
+   its own contrast, so washing the illustration out buys nothing. */
 
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-columns: clamp(196px, 15vw, 232px) minmax(0, 1fr);
+  grid-template-columns: clamp(180px, 13vw, 212px) minmax(0, 1fr);
   gap: var(--gap);
-  padding: var(--gap) clamp(10px, 1.4vw, 20px);
+  /* Generous inset: the illustration is part of the design, not wallpaper
+     hidden behind the frame. */
+  padding: clamp(10px, 2vh, 26px) clamp(12px, 2.6vw, 48px);
 }
 
-.content { display: grid; grid-template-rows: auto auto 1fr; gap: var(--gap); min-height: 0; }
+/* The last row is auto, not 1fr: the column stops at its content so the
+   illustration keeps the strip below it instead of being covered by filler. */
+.content { display: grid; grid-template-rows: auto auto minmax(0, auto); gap: var(--gap); min-height: 0; align-content: start; }
+.main { min-height: 0; }
 
 /* ── sidebar ──────────────────────────────────────────── */
 .side {
@@ -275,7 +275,7 @@ table.data tr.row-out td { color: var(--low); }
   background: rgb(255 255 255 / 94%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: clamp(9px, 1.1vh, 15px);
+  padding: clamp(8px, 0.9vh, 12px) clamp(9px, 1vw, 14px);
   box-shadow: var(--shadow);
   min-height: 0;
   display: flex;
@@ -412,7 +412,8 @@ table.data tr.row-out td { color: var(--low); }
    Doubled class so it beats the plain .rwrap rule declared further down. */
 .rwrap.rwrap-mvp {
   min-height: 0;
-  flex: 1;
+  /* Sizes to its content, so the illustration keeps the strip underneath. */
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -712,8 +713,9 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 }
 
 .hero {
-  display: grid; gap: .15em; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: clamp(10px, 1.6vh, 16px); box-shadow: var(--shadow);
+  display: grid; gap: .1em; background: rgb(255 255 255 / 94%); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: clamp(8px, 1.1vh, 13px) clamp(10px, 1.1vw, 16px);
+  box-shadow: var(--shadow); backdrop-filter: blur(4px);
 }
 .hero .demo-chip { justify-self: start; margin-top: .35em; }
 .hero-title { font-size: clamp(17px, 2vw, 24px); font-weight: 700; line-height: 1.2; }
@@ -736,14 +738,16 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 @media (min-width: 1100px) {
   .resumen-c,
   .rwrap-mvp {
-    max-width: 1560px;
+    max-width: 1180px;
     margin-inline: auto;
     width: 100%;
   }
 
   .resumen-c { grid-template-rows: auto auto minmax(340px, 1fr) auto; }
   /* The map absorbs whatever the other bands leave, down to a readable floor. */
-  .rwrap.rwrap-mvp .mvp-main { min-height: 240px; }
+  .rwrap.rwrap-mvp .mvp-main { min-height: 210px; }
+  .kpi-icon { width: 30px; height: 30px; }
+  .kpi .value { font-size: clamp(16px, 1.7vw, 22px); }
   /* Inset the frame so the illustrated ground stays visible around it. */
   .shell { padding: clamp(10px, 1.6vh, 18px) clamp(16px, 2.2vw, 34px); }
 
@@ -766,7 +770,7 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   .rwrap-mvp .mvp-main .map-stage {
     flex: 1;
     height: auto;
-    min-height: 340px;
+    min-height: 230px;
   }
 
   .kpi-grid .kpi { min-height: 92px; }
