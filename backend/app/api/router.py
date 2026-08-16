@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 
-from ..domain.models import Formulation, NPKPercent, Plot, Producer, Reading
+from ..domain.models import Formulation, Plot, Producer, Reading
 from ..ml.geometry import point_in_polygon
 from ..repositories.sqlite import stable_id
 from ..services.contracts import contract_metadata
@@ -57,12 +56,22 @@ def live() -> dict:
 def ready(request: Request) -> dict:
     container = _container(request)
     if not container.repository.ready():
-        raise HTTPException(status_code=503, detail="SQLite is not ready")
+        raise HTTPException(status_code=503, detail="SQLite no está lista")
+    # Un "ready" que solo mira la conexión miente en serverless: la base de /tmp
+    # se reconstruye vacía y el lote se queda sin lecturas. Se reporta el estado
+    # real de la evidencia para poder diagnosticar un despliegue desde fuera.
+    plots = container.repository.list_plots()
     return _response(
         {
             "status": "ready",
             "database": "sqlite",
             "external_sources_enabled": container.settings.external_sources_enabled,
+            "data": {
+                "centers": len(container.repository.list_centers()),
+                "plots": len(plots),
+                "plots_with_readings": sum(1 for plot in plots if plot["reading_count"]),
+                "readings": sum(plot["reading_count"] for plot in plots),
+            },
         },
         validation_status="operational",
     )
@@ -101,7 +110,7 @@ def model_versions_from_runs(runs: list[dict]) -> dict[str, str]:
 def model_metrics(model_id: str, request: Request) -> dict:
     run = _container(request).repository.get_model_run(model_id)
     if run is None:
-        raise HTTPException(status_code=404, detail=f"model run {model_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"la ejecución de modelo {model_id} no existe")
     return contract_metadata(
         model_versions={"spatial": f"{run['model_name']}/{run['model_version']}"},
         warnings=run["limitations"],
@@ -117,7 +126,7 @@ def centers(request: Request) -> dict:
 def center(center_id: str, request: Request) -> dict:
     item = _container(request).repository.get_center(center_id)
     if item is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     return _response({"center": item}, validation_status=item["validation_status"])
 
 
@@ -126,7 +135,7 @@ def center_dashboard(center_id: str, request: Request) -> dict:
     container = _container(request)
     center_item = container.repository.get_center(center_id)
     if center_item is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     dashboard = container.network.dashboard(center_id)
     plot_rows = [
         plot
@@ -149,7 +158,7 @@ def producers(center_id: str, request: Request) -> dict:
     container = _container(request)
     center_item = container.repository.get_center(center_id)
     if center_item is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     items = [
         producer.model_dump(mode="json")
         for producer in container.repository.list_producers(center_id)
@@ -165,7 +174,7 @@ def producers(center_id: str, request: Request) -> dict:
 def create_producer(center_id: str, payload: ProducerPayload, request: Request) -> dict:
     container = _container(request)
     if container.repository.get_center(center_id) is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     producer_id = payload.id or stable_id(
         "producer", f"{center_id}|{payload.display_name}|{payload.municipality}"
     )
@@ -182,7 +191,7 @@ def create_producer(center_id: str, payload: ProducerPayload, request: Request) 
 def producer(producer_id: str, request: Request) -> dict:
     item = _container(request).repository.get_producer(producer_id)
     if item is None:
-        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el productor {producer_id} no existe")
     return _response({"producer": item.model_dump(mode="json")})
 
 
@@ -195,9 +204,9 @@ def update_producer(
     container = _container(request)
     current = container.repository.get_producer(producer_id)
     if current is None:
-        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el productor {producer_id} no existe")
     if payload.id and payload.id != producer_id:
-        raise HTTPException(status_code=409, detail="payload id does not match path id")
+        raise HTTPException(status_code=409, detail="el id del cuerpo no coincide con el de la ruta")
     updated = Producer(
         id=producer_id,
         center_id=current.center_id,
@@ -211,7 +220,7 @@ def update_producer(
 def producer_plots(producer_id: str, request: Request) -> dict:
     container = _container(request)
     if container.repository.get_producer(producer_id) is None:
-        raise HTTPException(status_code=404, detail=f"producer {producer_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el productor {producer_id} no existe")
     return _response({"plots": container.repository.list_plots(producer_id=producer_id)})
 
 
@@ -219,7 +228,7 @@ def producer_plots(producer_id: str, request: Request) -> dict:
 def formulations(center_id: str, request: Request) -> dict:
     container = _container(request)
     if container.repository.get_center(center_id) is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     items = [item.model_dump(mode="json") for item in container.repository.list_formulations(center_id)]
     return _response({"formulations": items})
 
@@ -232,7 +241,7 @@ def formulations(center_id: str, request: Request) -> dict:
 def create_formulation(center_id: str, payload: FormulationPayload, request: Request) -> dict:
     container = _container(request)
     if container.repository.get_center(center_id) is None:
-        raise HTTPException(status_code=404, detail=f"center {center_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el centro {center_id} no existe")
     formulation_id = payload.id or stable_id("formulation", f"{center_id}|{payload.label}")
     formulation = Formulation(
         id=formulation_id,
@@ -255,9 +264,9 @@ def update_formulation(
 ) -> dict:
     container = _container(request)
     if container.repository.get_formulation(center_id, formulation_id) is None:
-        raise HTTPException(status_code=404, detail=f"formulation {formulation_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"la formulación {formulation_id} no existe")
     if payload.id and payload.id != formulation_id:
-        raise HTTPException(status_code=409, detail="payload id does not match path id")
+        raise HTTPException(status_code=409, detail="el id del cuerpo no coincide con el de la ruta")
     formulation = Formulation(
         id=formulation_id,
         center_id=center_id,
@@ -276,7 +285,7 @@ def crop_profiles(request: Request) -> dict:
 def crop_profile(profile_id: str, request: Request) -> dict:
     profile = _container(request).repository.get_crop_profile(profile_id)
     if profile is None:
-        raise HTTPException(status_code=404, detail=f"crop profile {profile_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el perfil de cultivo {profile_id} no existe")
     return _response(
         {"crop_profile": profile.model_dump(mode="json")},
         validation_status=profile.validation_status,
@@ -303,17 +312,17 @@ def create_plot(payload: PlotCreate, request: Request) -> dict:
         producer_item = container.repository.get_producer(payload.producer_id)
         if producer_item is None:
             raise HTTPException(
-                status_code=409, detail=f"producer {payload.producer_id} does not exist"
+                status_code=409, detail=f"el productor {payload.producer_id} no existe"
             )
         if producer_item.center_id != payload.center_id:
             raise HTTPException(
-                status_code=409, detail="producer and plot must belong to the same center"
+                status_code=409, detail="el productor y el lote deben pertenecer al mismo centro"
             )
     plot = Plot.model_validate(payload.model_dump())
     try:
         container.repository.upsert_plot(plot)
     except sqlite3.IntegrityError as error:
-        raise HTTPException(status_code=409, detail=f"invalid center or crop profile: {error}") from error
+        raise HTTPException(status_code=409, detail=f"centro o perfil de cultivo inválido: {error}") from error
     return _response({"plot": plot.model_dump(mode="json")})
 
 
@@ -321,7 +330,7 @@ def create_plot(payload: PlotCreate, request: Request) -> dict:
 def plot(plot_id: str, request: Request) -> dict:
     item = _container(request).repository.get_plot(plot_id)
     if item is None:
-        raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {plot_id} no existe")
     return _response({"plot": item.model_dump(mode="json")})
 
 
@@ -329,7 +338,7 @@ def plot(plot_id: str, request: Request) -> dict:
 def plot_readings(plot_id: str, request: Request, valid_only: bool = False) -> dict:
     container = _container(request)
     if container.repository.get_plot(plot_id) is None:
-        raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {plot_id} no existe")
     readings = [
         item.model_dump(mode="json")
         for item in container.repository.list_readings(plot_id, valid_only=valid_only)
@@ -346,7 +355,7 @@ def plot_readings(plot_id: str, request: Request, valid_only: bool = False) -> d
 async def package(plot_id: str, request: Request, refresh: bool = False) -> dict:
     container = _container(request)
     if container.repository.get_plot(plot_id) is None:
-        raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {plot_id} no existe")
     result = None if refresh else container.repository.latest_package(plot_id)
     if result is None:
         result = await container.engine.recompute(plot_id)
@@ -398,7 +407,7 @@ def reading(payload: ReadingCreate, request: Request) -> dict:
     container = _container(request)
     plot_item = container.repository.get_plot(payload.plot_id)
     if plot_item is None:
-        raise HTTPException(status_code=404, detail=f"plot {payload.plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {payload.plot_id} no existe")
     stored, created = container.repository.create_reading(_reading(payload, plot_item))
     return _response({
         "reading": stored.model_dump(mode="json"),
@@ -413,10 +422,10 @@ def readings_bulk(payload: BulkReadings, request: Request) -> dict:
     container = _container(request)
     plot_ids = {item.plot_id for item in payload.readings}
     if len(plot_ids) != 1:
-        raise HTTPException(status_code=400, detail="all bulk readings must belong to one plot")
+        raise HTTPException(status_code=400, detail="todas las lecturas del lote masivo deben pertenecer al mismo lote")
     plot_item = container.repository.get_plot(next(iter(plot_ids)))
     if plot_item is None:
-        raise HTTPException(status_code=404, detail="plot does not exist")
+        raise HTTPException(status_code=404, detail="el lote no existe")
     stored, created = container.repository.create_readings([
         _reading(item, plot_item) for item in payload.readings
     ])
@@ -437,7 +446,7 @@ async def readings_import(
     container = _container(request)
     plot_item = container.repository.get_plot(plot_id)
     if plot_item is None:
-        raise HTTPException(status_code=404, detail=f"plot {plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {plot_id} no existe")
     content = await file.read(container.settings.max_import_bytes + 1)
     result = container.importer.import_file(
         plot=plot_item,
@@ -451,7 +460,7 @@ async def readings_import(
 def proposal(proposal_id: str, request: Request) -> dict:
     item = _container(request).repository.get_proposal(proposal_id)
     if item is None:
-        raise HTTPException(status_code=404, detail=f"proposal {proposal_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"la propuesta {proposal_id} no existe")
     return _response({"proposal": item}, validation_status=item["validation_status"])
 
 
@@ -459,7 +468,7 @@ def proposal(proposal_id: str, request: Request) -> dict:
 def proposal_why(proposal_id: str, request: Request) -> dict:
     explanation = _container(request).governance.explanation(proposal_id)
     if explanation is None:
-        raise HTTPException(status_code=404, detail=f"proposal {proposal_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"la propuesta {proposal_id} no existe")
     return _response({"proposal_id": proposal_id, "explanation": explanation})
 
 
@@ -480,7 +489,7 @@ def decision(payload: DecisionCreate, request: Request) -> dict:
 def get_decision(decision_id: str, request: Request) -> dict:
     item = _container(request).repository.get_decision(decision_id)
     if item is None:
-        raise HTTPException(status_code=404, detail=f"decision {decision_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"la decisión {decision_id} no existe")
     return _response({"decision": item}, validation_status="human_review_recorded")
 
 
@@ -488,7 +497,7 @@ def get_decision(decision_id: str, request: Request) -> dict:
 def decision_history(identifier: str, request: Request) -> dict:
     history = _container(request).governance.history(identifier)
     if history is None:
-        raise HTTPException(status_code=404, detail=f"history {identifier} does not exist")
+        raise HTTPException(status_code=404, detail=f"no hay historial para {identifier}")
     return _response({"history": history}, validation_status="human_review_recorded")
 
 
@@ -506,10 +515,16 @@ def audit(
 def ask_agent(payload: AgentAsk, request: Request) -> dict:
     container = _container(request)
     if container.repository.get_plot(payload.plot_id) is None:
-        raise HTTPException(status_code=404, detail=f"plot {payload.plot_id} does not exist")
+        raise HTTPException(status_code=404, detail=f"el lote {payload.plot_id} no existe")
     result = container.agent.ask(payload.plot_id, payload.question)
     package = container.repository.latest_package(payload.plot_id)
-    assert package is not None  # GroundedAgent refuses to answer without this evidence.
+    if package is None:
+        # GroundedAgent.ask ya se niega a responder sin package, así que llegar
+        # aquí solo es posible si el paquete desaparece entre ambas lecturas.
+        raise HTTPException(
+            status_code=409,
+            detail=f"el lote {payload.plot_id} no tiene un paquete calculado",
+        )
     return contract_metadata(
         validation_status=package["validation_status"],
         sources=package["sources"],

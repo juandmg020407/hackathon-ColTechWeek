@@ -14,10 +14,10 @@
     "rainfall_anomaly_pct": -22.0,
     "mean_temperature_c": 12.1,
     "horizon_months": 6,
-    "source": "Versioned IOmido demo fixture derived from seasonal context; refresh before field use."
+    "source": "Fixture versionado de demostración IOmido derivado del contexto estacional; actualícelo antes de usarlo en campo."
   },
   "enso": {
-    "phase": "El Nino",
+    "phase": "El Niño",
     "index_c": 0.7,
     "persistence_probability": 0.97,
     "published_at": "2026-08-04T00:00:00Z",
@@ -25,7 +25,7 @@
     "validation_status": "demo_unvalidated"
   },
   "nasa_power": {
-    "resolution_warning": "The 0.5 degree pixel smooths mountain extremes and is used for context, not next-day frost prediction.",
+    "resolution_warning": "El píxel de 0,5 grados suaviza los extremos de montaña: sirve como contexto, no para pronosticar la helada de mañana.",
     "historical_years": [
       {"year": 2004, "rainfall_mm": 510, "minimum_temperature_c": 5.9, "mean_temperature_c": 11.2, "enso_index": 0.2},
       {"year": 2006, "rainfall_mm": 265, "minimum_temperature_c": 7.7, "mean_temperature_c": 12.0, "enso_index": 1.0},

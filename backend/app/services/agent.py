@@ -10,6 +10,10 @@ from ..repositories import SQLiteRepository
 from .explainer import EvidenceExplainer
 
 
+class NoPackageEvidenceError(ValueError):
+    """Se preguntó por un lote que todavía no tiene evidencia calculada."""
+
+
 def _normalise(value: str) -> str:
     decomposed = unicodedata.normalize("NFKD", value.lower())
     return "".join(character for character in decomposed if not unicodedata.combining(character))
@@ -31,8 +35,9 @@ class GroundedAgent:
     def ask(self, plot_id: str, question: str) -> dict[str, Any]:
         package = self.repository.latest_package(plot_id)
         if package is None:
-            raise ValueError(
-                "no package evidence exists for this plot; import readings and recompute first"
+            raise NoPackageEvidenceError(
+                "este lote todavía no tiene un paquete calculado: importe mediciones "
+                "y recalcule antes de preguntar"
             )
         intent = self._intent(question)
         builders = {

@@ -35,6 +35,42 @@ No existe una segunda lógica para fabricar recomendaciones.
 | `app/api/` | Rutas y schemas Pydantic |
 | `app/governance/` | Propuestas, explicaciones, decisiones e historial |
 
+## Idioma del contrato
+
+El sistema tiene un solo público: un centro de acopio colombiano. Por eso la
+regla es explícita y verificable:
+
+- **En español** todo el texto que una persona lee tal cual: acciones
+  recomendadas, limitaciones, motivos de una anotación de calidad, explicación
+  de la propuesta, avisos y mensajes de error.
+- **En inglés** todo lo que es identificador de máquina: claves JSON, valores de
+  enumeración (`pending`, `high`, `elemental_mass_pct`), nombres y versiones de
+  modelo (`GaussianProcessRegressor-Matern`, `frost-rule/2.0.0`) y códigos de
+  error.
+
+`tests/test_operations.py` recorre el package y el tablero buscando prosa
+inglesa en los campos que se renderizan, así que la regla no depende de que
+alguien se acuerde.
+
+## Errores distinguibles
+
+Cada excepción de dominio tiene su propio código y estado; el cliente puede
+reaccionar en vez de mostrar un error genérico.
+
+| Excepción | HTTP | `error.code` |
+|---|---|---|
+| `PlotHasNoReadingsError` | 409 | `plot_has_no_readings` |
+| `NoPackageEvidenceError` | 409 | `no_package_evidence` |
+| `SpatialInferenceError` | 422 | `spatial_inference_error` |
+| `ImportValidationError` | 422 | `import_validation_error` |
+| `OptimizationError` | 422 | `optimization_error` |
+| `IncompatibleNPKBasis` | 422 | `incompatible_npk_basis` |
+| `GovernanceError` | 404 | `governance_error` |
+| `EngineError` | 400 | `engine_error` |
+
+Un lote sin mediciones no es un fallo: es el estado inicial de todo lote nuevo,
+y el frontend debe ofrecer la importación en lugar de una pantalla de error.
+
 ## Contrato NPK
 
 El núcleo usa N, P y K elementales.
@@ -113,6 +149,24 @@ Se respetan disponibilidad, límites por nutriente, zona y máximo de bultos. El
 resultado informa combinaciones evaluadas y óptimo dentro de los límites. No hay
 objetivo monetario.
 
+## Rendimiento y arranque
+
+- `spatial.run` corre en el pool de hilos. El GP y su validación leave-one-out
+  son CPU pura (~700 ms); dentro del event loop el proceso no atendía ni el
+  health check. Medido: `/health/live` responde en 1,9 ms mientras un recálculo
+  de 704 ms está en curso.
+- El tablero del centro lee dos proyecciones agregadas —`latest_package_digests`
+  y `reading_digests`— en vez de abrir el snapshot completo de cada lote. Con
+  61 lotes: 23 ms frente a 455 ms leyendo package por package.
+- Las anotaciones de calidad de un recálculo se persisten en una sola
+  transacción, no en una por lectura.
+- `DEMO_AUTO_IMPORT=true` siembra el Excel de demostración solo si el lote está
+  vacío. En serverless la base vive en `/tmp` y se pierde en cada arranque en
+  frío: sin esta siembra el despliegue servía el mock del frontend en vez del
+  backend.
+- `/health/ready` reporta centros, lotes, lotes con mediciones y total de
+  lecturas, para poder diagnosticar un despliegue desde fuera.
+
 ## Persistencia y gobernanza
 
 La migración `001_initial.sql` crea:
@@ -170,7 +224,8 @@ más de 0,036 USD usando el precio estándar conservador de Sonnet 5.
 ## Seguridad y presupuesto
 
 - CORS configurable.
-- `WRITE_API_KEY` opcional para endpoints mutables.
+- `WRITE_API_KEY` opcional para endpoints mutables, comparada con
+  `secrets.compare_digest`.
 - tamaño máximo de archivo configurable;
 - validación de nombres, extensiones, tipos y porcentajes;
 - no se registran secretos;
@@ -190,7 +245,7 @@ más de 0,036 USD usando el precio estándar conservador de Sonnet 5.
 ## Verificación
 
 ```powershell
-python -m pytest backend/tests -q
+python -m pytest backend/tests -q      # 57 pruebas offline
 python backend/scripts/demo_backend.py
 python tools/build_mock.py
 ```

@@ -85,7 +85,7 @@ def test_benchmark_has_per_nutrient_metrics_and_small_data_limitation(plot, demo
         assert set(metrics["per_nutrient"][nutrient]) == {"unit", "gp", "idw"}
         assert "interval_95_coverage" in metrics["per_nutrient"][nutrient]["gp"]
     assert isinstance(metrics["gp_better_than_idw"], bool)
-    assert any("Small dataset" in item for item in result["model_run"]["limitations"])
+    assert any("Conjunto pequeño" in item for item in result["model_run"]["limitations"])
 
 
 def test_seed_makes_zones_and_active_sample_reproducible(plot, demo_readings):

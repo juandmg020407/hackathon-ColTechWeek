@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 from dataclasses import dataclass
 
 from fastapi import Header, HTTPException, Request
@@ -102,5 +103,11 @@ def authorize_write(
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> None:
     expected = get_container(request).settings.write_api_key
-    if expected and x_api_key != expected:
-        raise HTTPException(status_code=401, detail="invalid or missing write API key")
+    if not expected:
+        return
+    # compare_digest en vez de != : el tiempo de comparación no debe filtrar
+    # cuántos caracteres iniciales de la llave acertó quien la envía.
+    if not secrets.compare_digest(x_api_key or "", expected):
+        raise HTTPException(
+            status_code=401, detail="la llave de escritura falta o es inválida"
+        )

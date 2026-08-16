@@ -24,7 +24,7 @@ def oxide_grade_to_elemental(
 ) -> NPKPercent:
     if basis != "fertilizer_oxide_mass_pct":
         raise IncompatibleNPKBasis(
-            "oxide conversion requires basis='fertilizer_oxide_mass_pct'"
+            "la conversión de óxidos exige basis='fertilizer_oxide_mass_pct'"
         )
     return NPKPercent(
         N=N_pct,
@@ -37,5 +37,6 @@ def oxide_grade_to_elemental(
 def require_elemental_basis(basis: str) -> None:
     if basis != "elemental_mass_pct":
         raise IncompatibleNPKBasis(
-            f"the core only accepts elemental_mass_pct, received {basis!r}; use an explicit adapter"
+            f"el núcleo solo acepta elemental_mass_pct y recibió {basis!r}; "
+            "use un adaptador explícito"
         )

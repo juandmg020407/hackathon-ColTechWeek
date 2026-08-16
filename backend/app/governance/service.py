@@ -29,9 +29,11 @@ class GovernanceService:
     ) -> dict[str, Any]:
         proposal = self.repository.get_proposal(proposal_id)
         if proposal is None:
-            raise GovernanceError(f"proposal {proposal_id} does not exist")
+            raise GovernanceError(f"la propuesta {proposal_id} no existe")
         if action == "modify" and not modification:
-            raise GovernanceError("modify requires a structured modification")
+            raise GovernanceError(
+                "modificar una propuesta exige enviar la modificación estructurada"
+            )
         resulting_status = {
             "accept": "accepted",
             "reject": "rejected",

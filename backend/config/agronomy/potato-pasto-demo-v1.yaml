@@ -2,7 +2,7 @@ id: potato-pasto-demo-v1
 crop: papa
 variety: Diacol Capiro
 stage: establecimiento y desarrollo
-scope: lote demostrativo de Pasto, Narino; no transferible sin validacion local
+scope: lote demostrativo de Pasto, Nariño; no transferible sin validación local
 requirement_kg_ha:
   N: 180
   P: 90
@@ -25,20 +25,20 @@ maximum_bags_per_zone: 40
 target_yield_t_ha: 25
 sources:
   - parameter: requirement_kg_ha
-    citation: Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.
-    note: No es una prescripcion validada.
+    citation: Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.
+    note: No es una prescripción validada.
   - parameter: sampling_depth_cm
-    citation: Supuesto de muestreo de demostracion IOmido v1.
+    citation: Supuesto de muestreo de demostración IOmido v1.
     note: Debe confirmarse con el protocolo de campo.
   - parameter: bulk_density_g_cm3
-    citation: Estimacion demostrativa para suelo volcanico; requiere medicion del lote.
+    citation: Estimación demostrativa para suelo volcánico; requiere medición del lote.
     note: No proviene de una muestra de densidad aparente del lote.
   - parameter: availability_fraction
-    citation: Factor operacional conservador de demostracion IOmido v1.
-    note: Debe calibrarse contra analisis de laboratorio y respuesta del cultivo.
+    citation: Factor operacional conservador de demostración IOmido v1.
+    note: Debe calibrarse contra análisis de laboratorio y respuesta del cultivo.
   - parameter: maximum_application_kg_ha
-    citation: Limite de seguridad de demostracion IOmido v1.
-    note: Requiere validacion tecnica antes de cualquier aplicacion.
+    citation: Límite de seguridad de demostración IOmido v1.
+    note: Requiere validación técnica antes de cualquier aplicación.
   - parameter: target_yield_t_ha
     citation: Objetivo ilustrativo de la demo IOmido.
 version: "1.0.0"

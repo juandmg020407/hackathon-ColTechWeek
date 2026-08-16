@@ -39,13 +39,15 @@ class SoilSpatialEngine:
     def run(self, plot: Plot, readings: list[Reading]) -> dict:
         started = time.perf_counter()
         if not readings:
-            raise SpatialInferenceError("at least one reading is required")
+            raise SpatialInferenceError("se requiere al menos una lectura")
 
         annotations = annotate_quality(plot, readings, seed=self.seed)
         quality_by_id = {item.reading_id: item for item in annotations}
         valid = [reading for reading in readings if quality_by_id[reading.id].valid_for_model]
         if not valid:
-            raise SpatialInferenceError("no readings fall inside the declared plot boundary")
+            raise SpatialInferenceError(
+                "ninguna lectura cae dentro del polígono declarado del lote"
+            )
 
         origin_latitude = float(np.mean([point[0] for point in plot.boundary]))
         origin_longitude = float(np.mean([point[1] for point in plot.boundary]))
@@ -188,7 +190,9 @@ class SoilSpatialEngine:
                     inside_indices.append(row * cols + col)
                     inside_coordinates.append((x, y))
         if not inside_coordinates:
-            raise SpatialInferenceError("plot boundary did not produce any grid cells")
+            raise SpatialInferenceError(
+                "el polígono del lote no produjo ninguna celda de la grilla"
+            )
         origin_lat, origin_lon = to_lat_lon(
             minimum[0], minimum[1], origin_latitude, origin_longitude
         )
@@ -241,7 +245,9 @@ class SoilSpatialEngine:
             "combined_uncertainty": {
                 "values": expand(combined_uncertainty),
                 "threshold": threshold,
-                "threshold_method": "75th percentile of in-plot predictive uncertainty",
+                "threshold_method": (
+                    "Percentil 75 de la incertidumbre predictiva dentro del lote."
+                ),
                 "unit": "percentage_points",
             },
         }
@@ -261,7 +267,7 @@ class SoilSpatialEngine:
         if observation_count < 3 or cluster_count < 2:
             labels = np.zeros(len(features), dtype=int)
             cluster_count = 1
-            method = "single-zone fallback"
+            method = "Zona única (respaldo por datos insuficientes para agrupar)"
         else:
             standardized = StandardScaler().fit_transform(features)
             labels = KMeans(
@@ -355,13 +361,15 @@ class SoilSpatialEngine:
                 "value": round(float(distances[selected]), 3), "unit": "m"
             },
             "reason": (
-                "Selected inside the plot by high predictive uncertainty and distance "
-                "from existing measurements."
+                "Se eligió dentro del lote combinando incertidumbre predictiva alta "
+                "y distancia a las mediciones existentes."
             ),
             "potential_coverage_improvement": {
                 "upper_bound_percentage_points": round(upper_bound, 2),
-                "method": "heuristic neighborhood of currently uncertain cells",
-                "limitation": "This is an upper bound, not a promised uncertainty reduction.",
+                "method": "Vecindario heurístico de las celdas hoy inciertas.",
+                "limitation": (
+                    "Es una cota superior, no una reducción de incertidumbre prometida."
+                ),
             },
         }
 
@@ -384,12 +392,13 @@ class SoilSpatialEngine:
     @staticmethod
     def _limitations(observation_count: int, benchmark: dict) -> list[str]:
         limitations = [
-            "Sensor percentages have not been calibrated against laboratory samples.",
-            "Spatial predictions support sampling and review; they are not laboratory measurements.",
+            "Los porcentajes del sensor no están calibrados contra muestras de laboratorio.",
+            "Las predicciones espaciales orientan el muestreo y la revisión; no son análisis de laboratorio.",
         ]
         if observation_count < 20:
             limitations.append(
-                f"Small dataset ({observation_count} in-plot observations); metrics have high variance."
+                f"Conjunto pequeño ({observation_count} observaciones dentro del lote): "
+                "las métricas tienen alta variabilidad."
             )
         if not benchmark["available"]:
             limitations.append(benchmark["reason"])

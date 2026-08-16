@@ -378,6 +378,13 @@ class SQLiteRepository:
                 created += 1
         return stored, created
 
+    def count_readings(self, plot_id: str) -> int:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS total FROM readings WHERE plot_id = ?", (plot_id,)
+            ).fetchone()
+            return int(row["total"])
+
     def list_readings(self, plot_id: str, valid_only: bool = False) -> list[Reading]:
         sql = "SELECT * FROM readings WHERE plot_id = ?"
         if valid_only:
@@ -386,22 +393,29 @@ class SQLiteRepository:
         with self.connect() as connection:
             return [self._reading_row(row) for row in connection.execute(sql, (plot_id,))]
 
-    def update_reading_quality(
-        self,
-        reading_id: str,
-        *,
-        valid_for_model: bool,
-        suspicious: bool,
-        method: str | None,
-        score: float | None,
-        reason: str | None,
-    ) -> None:
+    def update_reading_qualities(self, annotations: Sequence[dict[str, Any]]) -> int:
+        """Persiste las anotaciones de calidad de un recálculo en una sola transacción.
+
+        Antes cada lectura abría su propia conexión y su propio BEGIN IMMEDIATE:
+        19 transacciones por recálculo en la ruta caliente de la demo.
+        """
+
+        if not annotations:
+            return 0
+        rows = [
+            (
+                int(item["valid_for_model"]), int(item["suspicious"]), item["method"],
+                item["score"], item["reason"], item["reading_id"],
+            )
+            for item in annotations
+        ]
         with self.transaction() as connection:
-            connection.execute(
+            connection.executemany(
                 """UPDATE readings SET valid_for_model=?, suspicious=?, anomaly_method=?,
                                       anomaly_score=?, anomaly_reason=? WHERE id=?""",
-                (int(valid_for_model), int(suspicious), method, score, reason, reading_id),
+                rows,
             )
+        return len(rows)
 
     @staticmethod
     def _reading_row(row: sqlite3.Row) -> Reading:
@@ -471,6 +485,77 @@ class SQLiteRepository:
                    ORDER BY generated_at DESC, rowid DESC LIMIT 1""", (plot_id,)
             ).fetchone()
             return _loads(row["snapshot_json"]) if row else None
+
+    # Proyección del último package por lote para vistas de lista. Un snapshot
+    # completo lleva la grilla entera; el tablero del centro solo necesita seis
+    # campos y no puede pagar ese parseo una vez por lote de la red.
+    _PACKAGE_DIGEST_SQL = """
+        SELECT p.plot_id,
+               p.id                                            AS package_id,
+               p.generated_at,
+               p.degraded,
+               json_extract(p.snapshot_json, '$.plot.area.value')        AS area_ha,
+               json_extract(p.snapshot_json, '$.validation_status')      AS validation_status,
+               json_extract(p.snapshot_json, '$.proposal.status')        AS proposal_status,
+               json_extract(p.snapshot_json, '$.climate.risks')          AS risks_json
+        FROM packages p
+        JOIN (
+            SELECT plot_id, MAX(generated_at) AS generated_at, MAX(rowid) AS rowid
+            FROM packages GROUP BY plot_id
+        ) latest
+          ON latest.plot_id = p.plot_id AND latest.rowid = p.rowid
+    """
+
+    def latest_package_digests(self, plot_ids: Sequence[str]) -> dict[str, dict[str, Any]]:
+        if not plot_ids:
+            return {}
+        placeholders = ",".join("?" for _ in plot_ids)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"{self._PACKAGE_DIGEST_SQL} WHERE p.plot_id IN ({placeholders})",
+                list(plot_ids),
+            ).fetchall()
+        return {
+            row["plot_id"]: {
+                "id": row["package_id"],
+                "generated_at": row["generated_at"],
+                "degraded": bool(row["degraded"]),
+                "area_ha": row["area_ha"],
+                "validation_status": row["validation_status"],
+                "proposal_status": row["proposal_status"],
+                "risks": _loads(row["risks_json"], []),
+            }
+            for row in rows
+        }
+
+    def reading_digests(self, plot_ids: Sequence[str]) -> dict[str, dict[str, Any]]:
+        """Conteos y última fecha por lote sin traer las lecturas a memoria."""
+
+        if not plot_ids:
+            return {}
+        placeholders = ",".join("?" for _ in plot_ids)
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"""SELECT plot_id,
+                           COUNT(*)                                   AS total,
+                           SUM(valid_for_model)                       AS valid,
+                           SUM(suspicious)                            AS suspicious,
+                           SUM(CASE WHEN valid_for_model = 0 THEN 1 ELSE 0 END) AS outside,
+                           MAX(measured_at)                           AS latest_measured_at
+                    FROM readings WHERE plot_id IN ({placeholders})
+                    GROUP BY plot_id""",
+                list(plot_ids),
+            ).fetchall()
+        return {
+            row["plot_id"]: {
+                "total": int(row["total"]),
+                "valid": int(row["valid"] or 0),
+                "suspicious": int(row["suspicious"] or 0),
+                "outside": int(row["outside"] or 0),
+                "latest_measured_at": row["latest_measured_at"],
+            }
+            for row in rows
+        }
 
     def save_proposal(self, proposal: dict[str, Any]) -> None:
         with self.transaction() as connection:

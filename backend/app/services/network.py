@@ -9,6 +9,9 @@ from ..ml.geometry import polygon_area_ha
 from ..repositories import SQLiteRepository
 
 _SEVERITY_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+_EMPTY_READINGS = {
+    "total": 0, "valid": 0, "suspicious": 0, "outside": 0, "latest_measured_at": None,
+}
 _RISK_LABELS = {
     "frost": "Helada",
     "drought": "Sequía",
@@ -30,12 +33,26 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _newer_reading_exists(readings: list[Any], generated_at: str | None) -> bool:
-    if not readings or not generated_at:
-        return bool(readings and not generated_at)
-    package_time = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    measurement_times = [_utc(reading.measured_at) for reading in readings]
-    return max(measurement_times) > package_time
+def _parse_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return _utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
+    except ValueError:
+        return None
+
+
+def _newer_reading_exists(latest_measured_at: str | None, generated_at: str | None) -> bool:
+    """¿Hay evidencia posterior al último cálculo del lote?
+
+    Sin lecturas no hay nada que recalcular. Con lecturas y sin package, sí.
+    """
+
+    measured = _parse_time(latest_measured_at)
+    if measured is None:
+        return False
+    package_time = _parse_time(generated_at)
+    return package_time is None or measured > package_time
 
 
 class CenterNetworkService:
@@ -49,7 +66,7 @@ class CenterNetworkService:
     def dashboard(self, center_id: str) -> dict[str, Any]:
         center = self.repository.get_center(center_id)
         if center is None:
-            raise ValueError(f"center {center_id} does not exist")
+            raise ValueError(f"el centro {center_id} no existe")
 
         producers = self.repository.list_producers(center_id)
         producer_rows: dict[str, dict[str, Any]] = {
@@ -77,50 +94,53 @@ class CenterNetworkService:
         review_readings = 0
 
         plot_items = self.repository.list_plots(center_id=center_id)
+        plot_ids = [item["id"] for item in plot_items]
+        # Dos consultas agregadas en vez de tres por lote. El snapshot completo
+        # de un package lleva la grilla entera y aquí solo se necesitan seis
+        # campos: leerlo por cada lote hacía el tablero inviable con una red real.
+        digests = self.repository.latest_package_digests(plot_ids)
+        reading_digests = self.repository.reading_digests(plot_ids)
+
         for item in plot_items:
-            plot = self.repository.get_plot(item["id"])
-            assert plot is not None
-            readings = self.repository.list_readings(plot.id)
-            package = self.repository.latest_package(plot.id)
-            area = (
-                float(package["plot"]["area"]["value"])
-                if package
-                else float(polygon_area_ha(plot.boundary))
+            boundary = item["boundary"]
+            package = digests.get(item["id"])
+            counts = reading_digests.get(item["id"], _EMPTY_READINGS)
+            area = float(
+                (package or {}).get("area_ha") or polygon_area_ha(boundary)
             )
-            risks = (package or {}).get("climate", {}).get("risks", [])
+            risks = (package or {}).get("risks", [])
             top_risk = max(
                 risks,
                 key=lambda risk: (_SEVERITY_RANK.get(risk.get("severity", "none"), 0), _score(risk)),
                 default=None,
             )
-            suspicious = sum(reading.suspicious for reading in readings)
-            outside = sum(not reading.valid_for_model for reading in readings)
+            suspicious = counts["suspicious"]
+            outside = counts["outside"]
             needs_recompute = _newer_reading_exists(
-                readings, package.get("generated_at") if package else None
+                counts["latest_measured_at"],
+                package.get("generated_at") if package else None,
             )
-            latest_measurement = max(
-                (_utc(reading.measured_at) for reading in readings), default=None
-            )
-            pending = bool(package and package.get("proposal", {}).get("status") == "pending")
+            latest_measurement = _parse_time(counts["latest_measured_at"])
+            pending = bool(package and package.get("proposal_status") == "pending")
             risk_severity = top_risk.get("severity", "none") if top_risk else "none"
             plot_at_risk = _SEVERITY_RANK.get(risk_severity, 0) >= _SEVERITY_RANK["medium"]
 
             plot_row = {
-                "id": plot.id,
-                "name": plot.name,
-                "municipality": plot.municipality,
-                "producer_id": plot.producer_id,
+                "id": item["id"],
+                "name": item["name"],
+                "municipality": item["municipality"],
+                "producer_id": item["producer_id"],
                 "location": {
                     "latitude": round(
-                        sum(point[0] for point in plot.boundary) / len(plot.boundary), 7
+                        sum(point[0] for point in boundary) / len(boundary), 7
                     ),
                     "longitude": round(
-                        sum(point[1] for point in plot.boundary) / len(plot.boundary), 7
+                        sum(point[1] for point in boundary) / len(boundary), 7
                     ),
                 },
                 "area": {"value": round(area, 6), "unit": "ha"},
-                "measurement_count": len(readings),
-                "valid_measurement_count": sum(reading.valid_for_model for reading in readings),
+                "measurement_count": counts["total"],
+                "valid_measurement_count": counts["valid"],
                 "measurements_for_review": suspicious + outside,
                 "latest_measurement_at": latest_measurement,
                 "package_id": package.get("id") if package else None,
@@ -140,23 +160,23 @@ class CenterNetworkService:
                     "window": top_risk.get("window") if top_risk else None,
                 },
                 "links": {
-                    "plot": f"/v1/plots/{plot.id}",
-                    "package": f"/v1/plots/{plot.id}/package",
-                    "readings": f"/v1/plots/{plot.id}/readings",
-                    "risk": f"/v1/plots/{plot.id}/risk",
+                    "plot": f"/v1/plots/{item['id']}",
+                    "package": f"/v1/plots/{item['id']}/package",
+                    "readings": f"/v1/plots/{item['id']}/readings",
+                    "risk": f"/v1/plots/{item['id']}/risk",
                     "assistant": "/v1/agent/ask",
                 },
             }
 
             total_area += area
-            total_readings += len(readings)
-            measured_plots += bool(readings)
+            total_readings += counts["total"]
+            measured_plots += bool(counts["total"])
             computed_plots += bool(package)
             at_risk_plots += plot_at_risk
             pending_proposals += pending
             review_readings += suspicious + outside
 
-            if not readings:
+            if not counts["total"]:
                 priorities.append(self._priority(
                     plot_row, "high", "measurement_missing", "Lote sin mediciones",
                     "Registre mediciones para poder estimar suelo, incertidumbre y riesgo.",
@@ -193,7 +213,7 @@ class CenterNetworkService:
                     "plot_ids": set(),
                     "window": risk.get("window"),
                 })
-                group["plot_ids"].add(plot.id)
+                group["plot_ids"].add(item["id"])
                 if _SEVERITY_RANK.get(risk.get("severity", "none"), 0) > _SEVERITY_RANK.get(
                     group["severity"], 0
                 ):
@@ -201,7 +221,7 @@ class CenterNetworkService:
                     group["window"] = risk.get("window")
                 group["max_score"] = max(group["max_score"], _score(risk))
 
-            owner = producer_rows.get(plot.producer_id or "")
+            owner = producer_rows.get(item["producer_id"] or "")
             if owner is None:
                 unassigned_plots.append(plot_row)
             else:

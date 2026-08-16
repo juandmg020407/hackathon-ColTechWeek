@@ -16,9 +16,9 @@ class AIBudgetPolicy:
 
     def estimated_cost(self, input_tokens: int, output_tokens: int) -> float:
         if input_tokens < 0 or output_tokens < 0:
-            raise ValueError("token counts cannot be negative")
+            raise ValueError("el conteo de tokens no puede ser negativo")
         if input_tokens > self.max_input_tokens or output_tokens > self.max_output_tokens:
-            raise ValueError("token request exceeds configured per-call limits")
+            raise ValueError("la solicitud supera los límites de tokens configurados por llamada")
         return round(
             input_tokens * self.input_price_usd_per_million / 1_000_000
             + output_tokens * self.output_price_usd_per_million / 1_000_000,

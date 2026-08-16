@@ -49,7 +49,7 @@ def leave_one_out(
         return {
             "method": "spatial_leave_one_out",
             "available": False,
-            "reason": "at least 3 observations are required",
+            "reason": "Se requieren al menos 3 observaciones para validar el modelo espacial.",
             "observation_count": observation_count,
             "per_nutrient": {},
             "gp_better_than_idw": None,
@@ -94,8 +94,8 @@ def leave_one_out(
         "mean_rmse": {"gp": round(gp_rmse, 6), "idw": round(idw_rmse, 6)},
         "gp_better_than_idw": gp_rmse < idw_rmse,
         "claim": (
-            "GP has lower mean LOO RMSE than IDW for this input set."
+            "El GP tiene menor RMSE medio que IDW en esta validación cruzada."
             if gp_rmse < idw_rmse
-            else "GP is not claimed to outperform IDW for this input set."
+            else "No se afirma que el GP supere a IDW con este conjunto de datos."
         ),
     }

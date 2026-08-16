@@ -13,7 +13,7 @@ def _yaml(path: str | Path) -> dict:
     with Path(path).open("r", encoding="utf-8") as stream:
         payload = yaml.safe_load(stream)
     if not isinstance(payload, dict):
-        raise ValueError(f"{path} must contain a YAML object")
+        raise ValueError(f"{path} debe contener un objeto YAML")
     return payload
 
 
@@ -30,8 +30,8 @@ def load_formulation_catalog(path: str | Path) -> list[Formulation]:
     center_id = payload.get("center_id")
     raw = payload.get("formulations")
     if not isinstance(raw, list) or not raw:
-        raise ValueError("formulation catalog must contain a non-empty formulations list")
+        raise ValueError("el catálogo debe traer una lista de formulaciones no vacía")
     formulations = [Formulation.model_validate(item) for item in raw]
     if any(formulation.center_id != center_id for formulation in formulations):
-        raise ValueError("every formulation must belong to the catalog center_id")
+        raise ValueError("toda formulación debe pertenecer al center_id del catálogo")
     return formulations

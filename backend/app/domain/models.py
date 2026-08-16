@@ -38,11 +38,11 @@ class Producer(BaseModel):
     @model_validator(mode="after")
     def validate_consent(self) -> "Producer":
         if self.consent_status == "granted" and self.consent_updated_at is None:
-            raise ValueError("granted consent requires consent_updated_at")
+            raise ValueError("un consentimiento otorgado exige la fecha consent_updated_at")
         if self.data_origin == "demonstration" and self.consent_status != "demonstration":
-            raise ValueError("demonstration records must use demonstration consent status")
+            raise ValueError("los registros de demostración deben usar consentimiento de demostración")
         if self.data_origin != "demonstration" and self.consent_status == "demonstration":
-            raise ValueError("pilot and operational records require a real consent status")
+            raise ValueError("los registros de piloto y operación exigen un consentimiento real")
         return self
 
 
@@ -59,7 +59,7 @@ class NPKPercent(BaseModel):
     @model_validator(mode="after")
     def plausible_total(self) -> "NPKPercent":
         if self.N + self.P + self.K > 100 + 1e-9:
-            raise ValueError("N + P + K cannot exceed 100 mass percent")
+            raise ValueError("N + P + K no puede superar el 100 % de la masa")
         return self
 
     def as_dict(self) -> dict[str, float]:
@@ -116,9 +116,9 @@ class CropProfile(BaseModel):
     @model_validator(mode="after")
     def validate_assumptions(self) -> "CropProfile":
         if set(self.availability_fraction) != {"N", "P", "K"}:
-            raise ValueError("availability_fraction must define N, P and K")
+            raise ValueError("availability_fraction debe definir N, P y K")
         if any(not 0 <= value <= 1 for value in self.availability_fraction.values()):
-            raise ValueError("availability fractions must be between 0 and 1")
+            raise ValueError("las fracciones de disponibilidad deben estar entre 0 y 1")
         cited = {source.parameter for source in self.sources}
         required = {
             "requirement_kg_ha",
@@ -129,9 +129,9 @@ class CropProfile(BaseModel):
         }
         if not required.issubset(cited):
             missing = ", ".join(sorted(required - cited))
-            raise ValueError(f"missing sources for: {missing}")
+            raise ValueError(f"faltan fuentes citadas para: {missing}")
         if self.validation_status == "validated" and not self.validated_by_role:
-            raise ValueError("validated profiles require validated_by_role")
+            raise ValueError("un perfil validado exige declarar validated_by_role")
         return self
 
 
@@ -157,13 +157,13 @@ class Formulation(BaseModel):
     def label_matches_composition(self) -> "Formulation":
         match = _GRADE.fullmatch(self.label.strip())
         if not match:
-            raise ValueError("label must use the N-P-K grade format, for example 30-30-40")
+            raise ValueError("la etiqueta debe usar el formato de grado N-P-K, por ejemplo 30-30-40")
         grade = tuple(float(value) for value in match.groups())
         actual = (self.npk_pct.N, self.npk_pct.P, self.npk_pct.K)
         if any(abs(left - right) > 1e-6 for left, right in zip(grade, actual)):
-            raise ValueError("label does not match npk_pct")
+            raise ValueError("la etiqueta no coincide con los porcentajes de npk_pct")
         if self.npk_pct.basis != self.basis:
-            raise ValueError("formulation and npk_pct basis must match")
+            raise ValueError("la base de la formulación y la de npk_pct deben coincidir")
         return self
 
 
