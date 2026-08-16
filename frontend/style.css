@@ -523,7 +523,8 @@ table.data tr.row-out td { color: var(--low); }
 
 /* ── tabs ─────────────────────────────────────────────── */
 .tabs-card { min-height: 0; }
-.tabs { display: flex; gap: 3px; flex: none; border-bottom: 1px solid var(--border); margin-bottom: .7em; }
+/* Four tabs do not fit a narrow column; they scroll instead of being clipped. */
+.tabs { display: flex; gap: 3px; flex: none; border-bottom: 1px solid var(--border); margin-bottom: .7em; overflow-x: auto; scrollbar-width: thin; }
 .tab {
   background: none; border: 0; border-bottom: 2px solid transparent;
   padding: .4em .7em; font: inherit; font-size: .84em; font-weight: 600;
@@ -568,7 +569,8 @@ table.data tr.row-out td { color: var(--low); }
 .suggest { display: flex; gap: 4px; flex-wrap: wrap; margin: .5em 0 .4em; flex: none; }
 .as-suggest { cursor: pointer; background: var(--surface); }
 .as-suggest:hover { border-color: var(--brand-border); background: var(--brand-soft); color: var(--brand-deep); }
-.ask { display: flex; gap: 5px; flex: none; }
+.ask { display: flex; gap: 5px; flex: none; flex-wrap: wrap; }
+.ask input { flex: 1 1 8rem; }
 .ask input {
   flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border);
   border-radius: 7px; padding: .5em .65em; color: var(--ink); font: inherit; font-size: .86em;
@@ -626,6 +628,12 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   .side { grid-template-rows: none; grid-auto-flow: column; justify-content: start; align-items: center; overflow-x: auto; }
   .side-nav { grid-auto-flow: column; overflow-x: auto; overflow-y: hidden; }
   .side-brand, .side-foot { display: none; }
+}
+
+/* Below ~620px the two lot KPIs no longer fit side by side without clipping
+   their own labels, so they stack. */
+@media (max-width: 620px) {
+  .kpis { grid-template-columns: 1fr; }
 }
 
 /* En campo el teléfono manda. Nada de propuesta, riesgos o decisión se oculta:
@@ -831,6 +839,9 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 
 .dot-legend { position: absolute; right: 8px; bottom: 8px; z-index: 3; display: flex; gap: 6px; align-items: center; font-size: .68em; color: var(--muted); background: rgb(255 255 255 / .82); border: 1px solid var(--border); border-radius: 99px; padding: 2px 9px; }
 .pdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; }
+/* The same class marks the legend swatches and the clickable map dots. */
+#overlay .pdot { cursor: pointer; stroke: #fff; stroke-width: 1.5; }
+#overlay .pdot:hover { stroke: var(--brand-deep); stroke-width: 2.5; }
 .pdot-alto { background: var(--low); }
 .pdot-medio { background: var(--mid); }
 .pdot-bajo { background: var(--high); }
