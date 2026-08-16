@@ -117,68 +117,33 @@ copias y avisa cuántas quitó.
 Si una fuente falla o no hay Internet, sigue funcionando con la última copia
 guardada **y lo dice en pantalla**.
 
-### ④ La IA convierte los datos en una decisión entendible
+### ④ Sale un mapa y una receta que se entiende
 
-Tres modelos estadísticos —uno por nutriente— convierten 18 mediciones en un mapa
-de 140 celdas de 10 × 10 m. El mapa no solo estima qué hay en cada celda: también
-muestra **dónde tiene dudas**. Las franjas rayadas indican que hace falta medir
-más, no que el suelo sea pobre. El sistema también sugiere dónde tomar la
-siguiente muestra para reducir esas dudas.
+Con 18 mediciones el sistema arma un mapa del lote celda por celda. No solo dice
+qué hay en cada punto: también **dónde no está seguro**. Las franjas rayadas
+significan «aquí falta medir», no «aquí el suelo es pobre». Y le indica al
+técnico dónde conviene tomar la próxima muestra.
 
-La IA no es una caja negra ni un chatbot que inventa dosis. En el flujo actual
-cumple tareas separadas y verificables:
-
-- un modelo estadístico construye el mapa y muestra qué tan segura es cada
-  estimación;
-- otro método propone dónde conviene tomar la siguiente muestra;
-- las celdas parecidas se agrupan en zonas que el técnico sí puede manejar;
-- se buscan temporadas pasadas con condiciones climáticas similares;
-- Claude Sonnet 5, cuando está habilitado, **traduce la evidencia a español
-  claro**, pero no calcula ni decide.
-
-Después, un cálculo tradicional —no el modelo de lenguaje— prueba las 12 341
-combinaciones posibles del inventario del centro y devuelve la que mejor cubre
-la necesidad nutricional:
+Después prueba las 12 341 mezclas posibles con los bultos que hay en la bodega
+del centro y devuelve la que mejor cubre lo que necesita cada zona:
 
 ```text
 Zona 1 · 0,67 ha        8 bultos de 20-10-30  +  1 bulto de 30-30-40
                         faltante 0,0 kg  ·  exceso 48,9 kg
 ```
 
-Bultos enteros, porque nadie aplica 2,7 bultos. Sin marcas, sin nombres químicos
-y **sin precios**: el objetivo es nutricional, no monetario, y no publicamos un
-ahorro que no podemos sustentar.
+Bultos enteros, porque nadie aplica 2,7 bultos. Sin marcas y **sin precios**: el
+objetivo es nutricional, y no publicamos un ahorro que no podemos sustentar.
 
-El resultado es siempre una receta **recomendada, no prescrita**. Primero queda
-pendiente de validación técnica y marcada como no aplicada. Una persona puede
-**aceptarla, rechazarla, modificarla o remitirla** a otro profesional.
+La receta se propone, no se ordena: nace pendiente de validación y una persona la
+**acepta, la cambia, la rechaza o la remite** a otro profesional. Cuando alguien
+la acepta, el tablero genera un **QR** que abre el acta de campo en el celular,
+con cada tecnicismo traducido al lado. El QR se arma dentro de la aplicación y no
+manda datos a ningún servicio externo.
 
-Cuando el técnico la acepta, el tablero genera un **QR humanizado** que abre el
-acta de campo en el celular. El documento conserva las cifras calculadas por el
-motor, reparte los bultos por zona y pone cada tecnicismo al lado de su traducción
-cotidiana: por ejemplo, «incertidumbre predictiva sobre el umbral» se convierte
-en «las franjas rayadas son lugares donde hace falta medir». El QR se genera
-dentro de la aplicación, apunta al PDF del mismo proyecto y no envía información
-a un servicio externo.
-
-Claude puede mejorar la redacción del asistente sobre evidencia ya estructurada,
-pero un verificador compara todas sus cifras con las permitidas. Si introduce un
-número que no estaba en la evidencia, se descarta la respuesta completa y se usa
-la explicación generada mediante reglas verificables. Si no hay llave, Internet
-o presupuesto, el sistema sigue funcionando.
-
-Esta supervisión humana está alineada con el enfoque del **AI Act** europeo, y no
-depende de una promesa:
-
-- el sistema **propone**, una persona **decide** — el esquema de la base no
-  permite otra cosa;
-- toda salida trae su explicación, su modelo, sus fuentes y una **huella digital
-  de los datos de entrada** para comprobar que no cambiaron;
-- la incertidumbre es visible, no se esconde detrás de un color bonito;
-- lo que el sistema **no sabe** viaja en la misma respuesta que la recomendación;
-- las decisiones quedan en un historial que no se puede editar ni borrar;
-- se registra de dónde viene cada dato y si existe consentimiento para usarlo;
-  no puntuamos agricultores ni evaluamos crédito.
+Claude redacta esas explicaciones, pero no inventa: un verificador compara cada
+cifra que escribe contra las cifras permitidas y, si aparece un número que no
+estaba en los datos, descarta la respuesta entera.
 
 ### ⑤ Aplicación precisa y anticipación al clima
 
