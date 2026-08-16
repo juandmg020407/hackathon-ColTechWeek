@@ -540,6 +540,20 @@ function wireTabs(initial) {
       return;
     }
 
+    if (name === 'mediciones') {
+      // Hover-only would strand touch users, so the mark toggles a real row.
+      for (const dot of body.querySelectorAll('.why-dot')) {
+        dot.addEventListener('click', () => {
+          const row = dot.closest('tr')?.nextElementSibling;
+          if (row?.classList.contains('motivo-row')) {
+            row.hidden = !row.hidden;
+            dot.setAttribute('aria-expanded', String(!row.hidden));
+          }
+        });
+      }
+      return;
+    }
+
     if (name === 'riesgos') {
       for (const head of body.querySelectorAll('.risk-head')) {
         head.addEventListener('click', () => {

@@ -585,11 +585,15 @@ table.readings th, table.readings td { text-align: left; padding: .32em .5em; bo
 table.readings th { color: var(--muted); font-weight: 700; font-size: .88em; position: sticky; top: 0; background: var(--surface); }
 table.readings td.num, table.readings th.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.readings tr.rejected td { color: var(--low); background: #fdf2f1; }
+/* A real button, not a hover-only hint: it opens the reason on touch too. */
 .why-dot {
-  display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: .35em;
-  border-radius: 50%; background: var(--border); color: var(--ink);
-  font-size: 9px; font-weight: 700; cursor: help;
+  display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: .4em;
+  border: 0; border-radius: 50%; background: var(--border); color: var(--ink);
+  font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; vertical-align: -3px;
 }
+.why-dot:hover { background: var(--brand-deep); color: #fff; }
+.why-dot:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.motivo-row td { background: #fff8e6; }
 
 .scroll-y { overflow-y: auto; min-height: 0; }
 
