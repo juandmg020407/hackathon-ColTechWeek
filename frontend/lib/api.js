@@ -1,4 +1,4 @@
-// Contract client. One round-trip per screen, per FRONTEND.md.
+// Contract client. Every call to the v2 backend goes through here.
 
 const DEFAULT_PLOT = 'nar-001';
 const REQUEST_TIMEOUT_MS = 8000;
@@ -15,10 +15,33 @@ function resolveBase() {
 
 export const apiBase = resolveBase();
 
-async function fetchJson(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+// Only needed when the backend runs with WRITE_API_KEY set.
+const writeKey = () => (typeof window !== 'undefined' && window.NPK_WRITE_KEY) || '';
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), ...options });
   if (!response.ok) throw new Error(`${url} respondió ${response.status}`);
   return response.json();
+}
+
+function requireBase() {
+  if (!apiBase) throw new Error('Sin backend: esta operación necesita conexión.');
+  return apiBase;
+}
+
+function get(path) {
+  return fetchJson(`${requireBase()}${path}`);
+}
+
+function send(path, body, { raw = false } = {}) {
+  const headers = raw ? {} : { 'content-type': 'application/json' };
+  const key = writeKey();
+  if (key) headers['X-API-Key'] = key;
+  return fetchJson(`${requireBase()}${path}`, {
+    method: 'POST',
+    headers,
+    ...(body === undefined ? {} : { body: raw ? body : JSON.stringify(body) }),
+  });
 }
 
 export async function getPackage(plotId = DEFAULT_PLOT) {
@@ -38,18 +61,37 @@ export async function getPackage(plotId = DEFAULT_PLOT) {
   }
 }
 
-export async function listPlots() {
-  const url = apiBase ? `${apiBase}/v1/plots` : '/mock/plots.json';
-  return fetchJson(url);
-}
+// Configuración
+export const getCenters = () => get('/v1/centers');
+export const getPlots = () => get('/v1/plots');
 
-export async function askAgent(plotId, texto, quiereAudio = false) {
-  if (!apiBase) throw new Error('Sin backend: responde el cache local de voz.');
-  const response = await fetch(`${apiBase}/v1/agent/ask`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ plot_id: plotId, texto, quiere_audio: quiereAudio }),
+// Lecturas
+export const postReading = (reading) => send('/v1/readings', reading);
+export const postReadingsBulk = (readings) => send('/v1/readings/bulk', { readings });
+export const importReadings = (plotId, file) => {
+  const form = new FormData();
+  form.append('file', file);
+  return send(`/v1/readings/import?plot_id=${encodeURIComponent(plotId)}`, form, { raw: true });
+};
+export const recompute = (plotId) => send(`/v1/plots/${plotId}/recompute`);
+
+// Gobernanza
+export const getProposalWhy = (proposalId) => get(`/v1/proposals/${proposalId}/why`);
+export const postDecision = ({ proposalId, action, actor, modification = null, note = null }) =>
+  send('/v1/decisions', {
+    proposal_id: proposalId, action, actor, modification, note,
   });
-  if (!response.ok) throw new Error(`agent/ask respondió ${response.status}`);
-  return response.json();
+export const getDecision = (decisionId) => get(`/v1/decisions/${decisionId}`);
+export const getDecisionHistory = (identifier) => get(`/v1/decisions/${identifier}/history`);
+export const getGovernance = () => get('/v1/governance');
+export const getAudit = () => get('/v1/audit');
+
+// Modelos
+export const getModels = () => get('/v1/models');
+export const getModelMetrics = (modelId) => get(`/v1/models/${modelId}/metrics`);
+
+// Conversación. La respuesta útil vive en response.agent.answer.
+export async function askAgent(plotId, question) {
+  const response = await send('/v1/agent/ask', { plot_id: plotId, question });
+  return response.agent;
 }

@@ -1,6 +1,6 @@
 // Cache-first service worker: after the first load the app opens without network.
 
-const CACHE = 'iomido-v2';
+const CACHE = 'iomido-v3';
 const SHELL = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const SHELL = [
   '/app.js',
   '/manifest.webmanifest',
   '/lib/api.js',
+  '/lib/network.js',
   '/lib/adapt.js',
   '/lib/plotmap.js',
   '/lib/colormap.js',
@@ -17,6 +18,7 @@ const SHELL = [
   '/lib/heatsurface.js',
   '/lib/assistant.js',
   '/mock/package-nar-001.json',
+  '/mock/network.json',
 ];
 const PACKAGE_PATH = '/v1/plots/';
 

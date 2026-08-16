@@ -100,7 +100,7 @@ export function paintOverlay(svg, view, projector) {
   const dots = puntos.map((p) => {
     const c = point(p.lat, p.lon);
     return `<g><circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3" fill="#111" stroke="#fff" stroke-width="1.1"/>`
-      + `<title>N ${p.N} · P ${p.P} · K ${p.K}${p.sospechoso ? ' · lectura rara' : ''}</title></g>`;
+      + `<title>N ${p.N} % · P ${p.P} % · K ${p.K} %${p.sospechoso ? ' · lectura rara' : ''}</title></g>`;
   }).join('');
 
   const cross = nextSample

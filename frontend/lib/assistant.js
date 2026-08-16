@@ -27,23 +27,33 @@ export function matchLocal(question, voz) {
   return hits >= MIN_KEY_HITS ? best : null;
 }
 
+// The offline cache is whatever the package still carries; the v2 contract does
+// not ship one, so in practice this asks the agent and degrades to a local note.
 export async function ask(question, view) {
-  const local = matchLocal(question, view.voz);
+  const local = matchLocal(question, view.voz || []);
   if (local) return { texto: local.texto, fuente: 'paquete descargado' };
 
   if (apiBase) {
     try {
-      const remote = await askAgent(view.plot.id, question, false);
-      return { texto: remote.texto, fuente: (remote.fuentes || []).join(', ') };
-    } catch {
-      // falls through to the offline notice
+      const agent = await askAgent(view.plot.id, question);
+      return {
+        texto: agent.answer,
+        fuente: (agent.sources || []).map((s) => s.name || s).join(', ') || 'agente del backend',
+      };
+    } catch (error) {
+      console.warn('[assistant] el agente no respondió:', error.message);
     }
   }
 
-  return {
-    texto: 'Eso no lo tengo guardado en el teléfono. Pregúnteme por el abono, cuándo aplicar, cuánto cuesta o qué viene con el clima.',
-    fuente: 'sin conexión',
-  };
+  return { texto: offlineAnswer(view), fuente: 'sin conexión · paquete descargado' };
+}
+
+// Without the agent we still answer from the package instead of saying nothing.
+function offlineAnswer(view) {
+  const next = view.nextSample;
+  if (!next) return 'Sin conexión no puedo responder eso. El paquete descargado sí trae el mapa, la propuesta y los riesgos.';
+  return `Sin conexión, del paquete descargado: mida cerca de ${next.punto[0].toFixed(6)}, ${next.punto[1].toFixed(6)}, `
+    + `a ${Math.round(next.distancia_m)} m de la medición más cercana.`;
 }
 
 export const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in window;

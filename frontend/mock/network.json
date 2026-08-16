@@ -1,0 +1,194 @@
+{
+  "generado": "2026-08-15T21:51:37.281051Z",
+  "ttl_horas": 72,
+  "degradado": false,
+  "aviso": null,
+  "acopio": {
+    "id": "ac-pasto",
+    "nombre": "Acopio Pasto",
+    "municipio": "Pasto, Nariño",
+    "demo": true
+  },
+  "kpis": {
+    "productores": 10,
+    "lotes": 21,
+    "area_ha": 12.59,
+    "lotes_riesgo": 11
+  },
+  "salud": {
+    "pct": 71,
+    "lotes_ok": 15,
+    "lotes_criticos": 6,
+    "pct_semana_pasada": 79,
+    "delta_semana": -8
+  },
+  "area_riesgo": {
+    "ha": 6.7,
+    "pct": 53
+  },
+  "proximos_7d": 28,
+  "prioridades": [
+    {
+      "id": "pr-helada",
+      "severidad": "alta",
+      "titulo": "Riesgo de helada",
+      "lotes": 6,
+      "productores": 4,
+      "detalle": "Noches despejadas por El Niño: heladas probables en el altiplano narinense.",
+      "meta": "Ver en el mapa"
+    },
+    {
+      "id": "pr-fertilidad",
+      "severidad": "media",
+      "titulo": "Fertilidad crítica",
+      "lotes": 4,
+      "productores": 3,
+      "detalle": "Lotes con zonas en nivel crítico, como en El Rosal.",
+      "meta": "Ver lotes"
+    },
+    {
+      "id": "pr-medicion",
+      "severidad": "baja",
+      "titulo": "Medición sospechosa",
+      "lotes": 1,
+      "productores": 1,
+      "detalle": "Una muestra quedó a 1,2 km de su lote.",
+      "meta": "Revisar"
+    }
+  ],
+  "horizonte": [
+    { "id": "helada", "icono": "🌡", "etiqueta": "Helada", "nivel": "alto", "barras": 9 },
+    { "id": "gota", "icono": "🍃", "etiqueta": "Gota", "nivel": "alto", "barras": 8 },
+    { "id": "sequia", "icono": "💧", "etiqueta": "Sequía", "nivel": "medio", "barras": 6 }
+  ],
+  "productores": [
+    {
+      "id": "p01",
+      "nombre": "MARÍA LÓPEZ",
+      "piloto": true,
+      "lotes": 1,
+      "area_ha": 0.69,
+      "lotes_riesgo": 1,
+      "riesgo_nivel": "alto",
+      "riesgo_pct": 78,
+      "ultima_medicion": "Hoy · 09:42",
+      "lat": 1.247993,
+      "lon": -77.267192,
+      "pkg": "nar-001"
+    },
+    {
+      "id": "p02",
+      "nombre": "ANA BENAVIDES",
+      "lotes": 3,
+      "area_ha": 2.0,
+      "lotes_riesgo": 2,
+      "riesgo_nivel": "alto",
+      "riesgo_pct": 71,
+      "ultima_medicion": "Hoy · 08:15",
+      "lat": 1.2315,
+      "lon": -77.2831
+    },
+    {
+      "id": "p03",
+      "nombre": "CARLOS ROSERO",
+      "lotes": 2,
+      "area_ha": 1.3,
+      "lotes_riesgo": 1,
+      "riesgo_nivel": "medio",
+      "riesgo_pct": 54,
+      "ultima_medicion": "Ayer · 17:20",
+      "lat": 1.2688,
+      "lon": -77.2409
+    },
+    {
+      "id": "p04",
+      "nombre": "ROSA GUERRERO",
+      "lotes": 3,
+      "area_ha": 1.7,
+      "lotes_riesgo": 2,
+      "riesgo_nivel": "alto",
+      "riesgo_pct": 66,
+      "ultima_medicion": "Hoy · 07:50",
+      "lat": 1.2220,
+      "lon": -77.2984
+    },
+    {
+      "id": "p05",
+      "nombre": "LUIS ANDRADE",
+      "lotes": 2,
+      "area_ha": 0.8,
+      "lotes_riesgo": 1,
+      "riesgo_nivel": "medio",
+      "riesgo_pct": 41,
+      "ultima_medicion": "Ayer · 11:02",
+      "lat": 1.2761,
+      "lon": -77.2217
+    },
+    {
+      "id": "p06",
+      "nombre": "JORGE VALLEJO",
+      "lotes": 1,
+      "area_ha": 0.6,
+      "lotes_riesgo": 0,
+      "riesgo_nivel": "bajo",
+      "riesgo_pct": 22,
+      "ultima_medicion": "Hoy · 06:30",
+      "lat": 1.2145,
+      "lon": -77.2719
+    },
+    {
+      "id": "p07",
+      "nombre": "TERESA CORAL",
+      "lotes": 3,
+      "area_ha": 2.1,
+      "lotes_riesgo": 2,
+      "riesgo_nivel": "alto",
+      "riesgo_pct": 74,
+      "ultima_medicion": "Ayer · 16:45",
+      "lat": 1.2596,
+      "lon": -77.3021
+    },
+    {
+      "id": "p08",
+      "nombre": "PEDRO TIMANÁ",
+      "lotes": 2,
+      "area_ha": 1.1,
+      "lotes_riesgo": 1,
+      "riesgo_nivel": "medio",
+      "riesgo_pct": 58,
+      "ultima_medicion": "Hace 2 días · 09:10",
+      "lat": 1.2047,
+      "lon": -77.2550
+    },
+    {
+      "id": "p09",
+      "nombre": "LUCÍA RAMÍREZ",
+      "lotes": 2,
+      "area_ha": 1.2,
+      "lotes_riesgo": 0,
+      "riesgo_nivel": "bajo",
+      "riesgo_pct": 18,
+      "ultima_medicion": "Hoy · 10:05",
+      "lat": 1.2873,
+      "lon": -77.2624
+    },
+    {
+      "id": "p10",
+      "nombre": "HUGO MEJÍA",
+      "lotes": 2,
+      "area_ha": 1.1,
+      "lotes_riesgo": 1,
+      "riesgo_nivel": "medio",
+      "riesgo_pct": 47,
+      "ultima_medicion": "Hace 2 días · 14:22",
+      "lat": 1.2401,
+      "lon": -77.2448
+    }
+  ],
+  "movimientos": [
+    { "icono": "📦", "cantidad": 9, "texto": "lotes listos para cosecha" },
+    { "icono": "🚚", "cantidad": 7, "texto": "requieren visita técnica" },
+    { "icono": "🧪", "cantidad": 12, "texto": "requieren medición" }
+  ],
+  "demo_note": "Red demostrativa para la demo: los productores sintéticos acompañan al piloto real, el lote El Rosal de María López."
+}

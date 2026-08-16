@@ -1,8 +1,8 @@
 # IOmido — frontend
 
-SPA ligera para centros de acopio, técnicos y pequeños productores. La demo actual
-abre directamente el lote de papa de Pasto; la migración `v0.2` añadirá el contexto
-centro → red → lote.
+SPA ligera para centros de acopio, técnicos y pequeños productores. La interfaz
+abre en el centro de acopio y baja al lote: **centro → productores → lotes →
+mediciones**.
 
 ## Correr
 
@@ -24,56 +24,65 @@ Este frontend no usa Vite. Configurar la URL antes de `app.js`:
 En localhost, `index.html` intenta `http://127.0.0.1:8000`. Si falla, carga
 `mock/package-nar-001.json`.
 
-## Pantallas actuales
+## Pantallas
 
 | Archivo | Contenido |
 |---|---|
-| `index.html` | Tablero del lote: mapa, recomendación, riesgos y preguntas |
-| `pitch.html` | Herramienta visual para grabar; no sustituye el video final |
+| `index.html` | Centro de control del acopio. Cuatro vistas sin scroll, una por hash |
+| `pitch.html` | Solo el demo en vivo y el audio narrado; no sustituye el video final |
 | `login.html` y `register.html` | Prototipos sin backend de identidad |
+
+### Vistas del centro de control
+
+| Hash | Vista | Qué responde |
+|---|---|---|
+| `#resumen` | Resumen | Estado del centro, lotes que requieren atención y prioridades |
+| `#mapa` | Mapa | Red del centro o N/P/K del lote en porcentaje, con incertidumbre |
+| `#productores` | Productores | Productores del centro con sus lotes y su última medición |
+| `#lote` | Lote El Rosal | Suelo, incertidumbre, propuesta por zona, clima y decisión |
+
+Cada vista tiene su hash, así que el botón Atrás funciona y las vistas se pueden
+enlazar. Un hash desconocido cae en `#resumen`. `pitch.html` embebe
+`index.html#lote`.
 
 ## Módulos
 
 | Archivo | Responsabilidad |
 |---|---|
-| `lib/api.js` | Package y llamadas remotas |
-| `lib/adapt.js` | Contrato → modelo de vista |
+| `lib/api.js` | Única puerta de red: package, lecturas, propuestas, decisiones, agente y gobernanza |
+| `lib/adapt.js` | Contrato v2 → modelo de vista. No modifica el JSON de origen |
+| `lib/network.js` | Contexto del centro a partir de `/v1/centers` y `/v1/plots` |
 | `lib/heatsurface.js` | Superficie e incertidumbre |
 | `lib/slippy.js` | Basemap opcional |
 | `lib/plotmap.js` | Render local sin tiles |
-| `lib/assistant.js` | Respuesta local y Web Speech |
+| `lib/assistant.js` | Respuesta del agente y Web Speech |
+| `lib/auth.js` | Sesión simulada mientras no exista `/v1/auth` |
 
-## Advertencia de contrato
+## Datos: qué es real y qué no
 
-La UI `v0.1` todavía muestra ppm, nombres de fertilizantes y costos porque consume
-el package heredado. El dato original no está en ppm: `2,1,1` significa N 2 %, P
-1 %, K 1 %.
+El único lote con datos reales es **El Rosal**, y sus valores salen siempre del
+package v2 del backend o de su mock. `mock/network.json` es **contexto sintético
+de demostración** para poblar la vista de red mientras el backend no expone un
+listado de centro; la interfaz lo rotula como tal y no lo usa nunca para El Rosal.
 
-La UI `v0.2` mostrará:
+No se publica exposición en pesos: no existe un modelo de producción validado.
+
+## Contrato
+
+El frontend consume `contract_version` **2.0** y solo estas raíces:
 
 ```text
-N 2 % · P 1 % · K 1 %
-Formulación sugerida: 30-30-40
-Cantidad: 2 bultos de 50 kg
+pkg.plot · pkg.measurements · pkg.spatial.{grid, zones, next_sample}
+pkg.climate · pkg.crop_profile · pkg.proposal
 ```
 
-No mostrará marca, nombre químico, precio ni ahorro monetario.
+El dato del sensor **no está en ppm**: `2,1,1` significa N 2 %, P 1 %, K 1 %.
+Una formulación `30-30-40` es 30 % N, 30 % P y 40 % K de la masa del bulto, en
+convención elemental.
 
-## Trabajo pendiente
+No se muestran marcas, nombres químicos, precios ni ahorro monetario.
 
-1. Adaptador temporal para contratos `v0.1` y `v0.2`.
-2. Escalas, labels y tooltips en porcentaje.
-3. Panel de formulación por grado NPK.
-4. Contexto del centro de acopio y lista de lotes.
-5. Botones reales de aceptar, rechazar y derivar.
-6. Outbox de lecturas en IndexedDB.
-7. Último package vivo para uso offline entre dominios.
-8. Manifest con iconos y pruebas de accesibilidad.
-
-Detalles en [`../FRONTEND.md`](../FRONTEND.md) y roadmap en
-[`../TAREAS.md`](../TAREAS.md).
-
-## Criterios de aceptación `v0.2`
+## Criterios de aceptación
 
 - No aparece la cadena `ppm`.
 - No aparecen marcas, nombres químicos, precios o costos.
@@ -81,5 +90,14 @@ Detalles en [`../FRONTEND.md`](../FRONTEND.md) y roadmap en
 - La primera medición aparece como `2 % · 1 % · 1 %`.
 - El mapa es legible sin OpenStreetMap.
 - La app identifica centro, productor, lote, municipio y cultivo.
-- Una decisión se persiste contra el backend.
+- Una decisión se persiste contra el backend y la UI respeta su `resulting_status`.
 - La app sigue abriendo con el mock offline.
+
+## Trabajo pendiente
+
+1. Outbox de lecturas en IndexedDB con `client_id`.
+2. Último package vivo para uso offline entre dominios.
+3. Manifest con iconos y pruebas de accesibilidad.
+
+Detalles en [`../FRONTEND.md`](../FRONTEND.md) y roadmap en
+[`../TAREAS.md`](../TAREAS.md).
