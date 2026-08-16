@@ -22,6 +22,8 @@ const state = {
   productor: null,
   decision: null,
   decisionMsg: '',
+  historial: null,
+  historialMsg: '',
   view: null,
   network: null,
   dataOrigin: '',
@@ -50,20 +52,42 @@ const SEVERITY_MARK = {
 const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
 const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
-// Every view still routes: #mapa and #productores stay reachable by URL.
-const NAV_VIEWS = ['resumen', 'mapa', 'productores', 'lote'];
-// The MVP menu shows only these two. Widening it is a one-line change.
-const MENU_VIEWS = ['resumen', 'lote'];
+// Every view routes; the sidebar shows the ones with a screen of their own.
+const NAV_VIEWS = [
+  'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
+  'recomendaciones', 'historial', 'reportes', 'configuracion',
+  'lote', 'productores',
+];
+const MENU_VIEWS = [
+  'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
+  'recomendaciones', 'historial', 'reportes', 'configuracion',
+];
+const MENU_LABEL = {
+  resumen: 'Resumen', lotes: 'Lotes', mediciones: 'Mediciones', mapa: 'Mapas',
+  alertas: 'Alertas', recomendaciones: 'Recomendaciones', historial: 'Historial',
+  reportes: 'Reportes', configuracion: 'Configuración',
+};
+// Inline so the shell needs no request; the contract forbids external hosts.
+const MENU_ICON = {
+  resumen: 'M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  lotes: 'M4 5h16v4H4zM4 11h16v3H4zM4 16h16v3H4z',
+  mediciones: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4',
+  mapa: 'm9 4 6 2 5-2v14l-5 2-6-2-5 2V6zM9 4v14M15 6v14',
+  alertas: 'M12 3a5 5 0 0 0-5 5v4l-2 3h14l-2-3V8a5 5 0 0 0-5-5zM10 19a2 2 0 0 0 4 0',
+  recomendaciones: 'M12 3v3M5 7l2 2M19 7l-2 2M6 14a6 6 0 1 1 12 0c0 3-2 4-2 6H8c0-2-2-3-2-6z',
+  historial: 'M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4',
+  reportes: 'M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 17h6',
+  configuracion: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5 8 8M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5',
+};
 
 function navFromHash() {
   const target = decodeURIComponent(location.hash.slice(1));
   return NAV_VIEWS.includes(target) ? target : 'resumen';
 }
 
-// A jump into a view the menu hides would strand the user, so it lands on the
-// summary instead. The target view itself is untouched.
+// Every view now has a screen; an unknown target still lands on the summary.
 function reachable(view) {
-  return MENU_VIEWS.includes(view) ? view : 'resumen';
+  return NAV_VIEWS.includes(view) ? view : 'resumen';
 }
 
 function colorbar() {
@@ -984,45 +1008,246 @@ function viewLote() {
     </div>`;
 }
 
+// The history screen is the only one that needs its own round-trip.
+async function loadHistorial() {
+  const id = state.view.propuesta?.id;
+  if (!apiBase || !id) {
+    state.historial = [];
+    state.historialMsg = apiBase
+      ? 'Este lote no tiene propuesta, así que no hay decisiones que mostrar.'
+      : 'Sin conexión no se puede leer el historial: vive en el backend, no en el paquete.';
+    render();
+    return;
+  }
+  try {
+    const { history } = await getDecisionHistory(id);
+    state.historial = history?.decisions || [];
+    state.historialMsg = state.historial.length ? '' : 'Sin decisiones registradas todavía.';
+  } catch (error) {
+    state.historial = [];
+    state.historialMsg = `No se pudo leer el historial: ${error.message}`;
+  }
+  render();
+}
+
+function viewFor(nav) {
+  const screens = {
+    resumen: viewResumen,
+    lotes: viewLotes,
+    mediciones: viewMediciones,
+    mapa: viewMapa,
+    alertas: viewAlertas,
+    recomendaciones: viewRecomendaciones,
+    historial: viewHistorial,
+    reportes: viewReportes,
+    configuracion: viewConfiguracion,
+    productores: viewProductores,
+    lote: viewLote,
+  };
+  return (screens[nav] || viewResumen)();
+}
+
+function panelCard(title, body, note) {
+  return `<div class="rwrap"><section class="card wide-card">
+    <h2>${title}</h2>${body}
+    ${note ? `<p class="note">${note}</p>` : ''}
+  </section></div>`;
+}
+
+function viewLotes() {
+  const net = state.network;
+  const view = state.view;
+  const lotes = net.real?.lotes || [];
+  const rows = lotes.length
+    ? lotes.map((l) => `<tr>
+        <td><b>${l.name}</b></td><td>${l.municipality}</td>
+        <td class="num">${l.reading_count}</td>
+        <td>${l.id === view.plot.id ? `${fmt(view.plot.area_ha, 2)} ha` : '—'}</td>
+        <td><button class="btn ghost" type="button" data-nav="lote">Abrir</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" class="note">Sin backend no hay listado de lotes: el paquete local trae solo
+        <b>${view.plot.name}</b>.</td></tr>`;
+
+  return panelCard('Lotes del centro', `<div class="table-wrap"><table class="data">
+      <thead><tr><th>Lote</th><th>Municipio</th><th class="num">Mediciones</th><th>Área</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`, 'Del backend: <code>GET /v1/plots</code>.');
+}
+
+function viewMediciones() {
+  const view = state.view;
+  const all = [...view.puntos.map((p) => ({ ...p, usada: true })),
+    ...view.descartados.map((p) => ({ ...p, usada: false }))];
+  const rows = all.map((p, i) => `<tr class="${p.usada ? '' : 'row-out'}">
+      <td class="num">${String(i + 1).padStart(2, '0')}</td>
+      <td class="num">${p.N} %</td><td class="num">${p.P} %</td><td class="num">${p.K} %</td>
+      <td>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</td>
+      <td>${p.usada ? 'usada' : `fuera <span class="note">${p.motivo || 'geometría'}</span>`}</td>
+    </tr>`).join('');
+
+  return panelCard(`Mediciones · ${view.sampling.valid} de ${view.sampling.total} alimentan el modelo`,
+    `<div class="table-wrap"><table class="data">
+      <thead><tr><th class="num">#</th><th class="num">N</th><th class="num">P</th><th class="num">K</th>
+        <th>Coordenadas</th><th>Estado</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`,
+    `Porcentaje de masa, base ${view.grid.base || 'elemental'}. Del paquete: <code>measurements.points</code>.`);
+}
+
+function viewAlertas() {
+  const view = state.view;
+  if (!view.riesgos.length) return panelCard('Alertas', '<p class="note">Sin riesgos activos para este lote.</p>');
+  const cards = view.riesgos.map((r) => `<article class="alert-row sev-${r.severidad}">
+      <span class="alert-mark">${SEVERITY_MARK[r.severidad] || '●'}</span>
+      <div>
+        <b>${RISK_TITLE[r.tipo] || r.tipo} · severidad ${SEVERITY_WORD[r.severidad] || r.severidad}</b>
+        <p class="note">Ventana del ${r.ventana?.start} al ${r.ventana?.end}
+          · confianza ${Math.round((r.confianza ?? 0) * 100)} %
+          · probabilidad ${Math.round((r.score ?? 0) * 100)} %</p>
+        <p class="note">Fuentes: ${r.fuentes.map((f) => `${f.name}${f.stale || f.failed ? ' (no actual)' : ''}`).join(' · ')}</p>
+      </div>
+      <button class="btn ghost" type="button" data-nav="lote" data-tab-go="riesgos">Ver detalles →</button>
+    </article>`).join('');
+  return panelCard('Alertas climáticas', cards, 'Del paquete: <code>climate.risks</code>.');
+}
+
+function viewRecomendaciones() {
+  const view = state.view;
+  if (!view.propuesta?.zonas.length) return panelCard('Recomendaciones', '<p class="note">Todavía no hay propuesta.</p>');
+  const zones = view.propuesta.zonas.map((z) => `<article class="zone-prop">
+      <header><b>Zona ${z.id.replace('zone-', '')}</b> · ${fmt(z.area_ha, 2)} ha · ${NIVEL_LABEL[z.peor]}</header>
+      ${z.formulaciones.map((f) => `<div class="form-row">
+        <span class="grade">${f.label}</span>
+        <span class="form-qty"><b>${f.bags}</b> ${f.bags === 1 ? 'bulto' : 'bultos'} de ${f.bag_weight.value} ${f.bag_weight.unit}</span>
+      </div>`).join('')}
+    </article>`).join('');
+  return panelCard('Recomendaciones por zona', `<div class="proposal">${zones}
+    <button class="btn" type="button" data-nav="lote" data-tab-go="propuesta">Abrir la propuesta y decidir →</button></div>`,
+  'Del paquete: <code>proposal.recommendations</code>. Un grado <b>30-30-40</b> es 30 % N, 30 % P y 40 % K de la masa del bulto.');
+}
+
+function viewHistorial() {
+  const rows = (state.historial || []).map((d) => `<tr>
+      <td>${new Date(d.created_at).toLocaleString('es-CO')}</td>
+      <td>${DECISION_LABEL[d.action] || d.action}</td>
+      <td>${DECISION_LABEL[d.resulting_status] || d.resulting_status}</td>
+      <td>${d.actor_type || ''} ${d.actor_id || ''}</td>
+    </tr>`).join('');
+  const body = rows
+    ? `<div class="table-wrap"><table class="data"><thead><tr>
+        <th>Cuándo</th><th>Acción</th><th>Estado resultante</th><th>Quién</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`
+    : `<p class="note">${state.historialMsg || 'Sin decisiones registradas todavía.'}</p>`;
+  return panelCard('Historial de decisiones', body, 'Del backend: <code>GET /v1/decisions/{id}/history</code>.');
+}
+
+function viewReportes() {
+  const view = state.view;
+  const m = view.modelo;
+  const metrics = m?.metrics || {};
+  const rows = Object.entries(metrics).map(([k, v]) => `<tr><td>${k.replace(/_/g, ' ')}</td>
+      <td class="num">${typeof v === 'number' ? fmt(v, 3) : JSON.stringify(v)}</td></tr>`).join('');
+  return panelCard('Reportes del modelo', `
+    <p class="note"><b>${m?.model_name || 'modelo'}</b> ${m?.model_version || ''}
+      · ${m?.observation_count ?? view.sampling.valid} observaciones
+      · ${m?.inference_ms ? `${fmt(m.inference_ms, 0)} ms` : ''}</p>
+    ${rows ? `<div class="table-wrap"><table class="data"><tbody>${rows}</tbody></table></div>` : ''}
+    ${m?.limitations ? `<p class="note"><b>Límites:</b> ${m.limitations}</p>` : ''}
+    ${view.avisos.length ? `<h2>Advertencias del paquete</h2><ul class="balance">${view.avisos.map((a) => `<li>${a}</li>`).join('')}</ul>` : ''}`,
+  'Del paquete: <code>model_run</code>. En vivo también <code>GET /v1/models</code> y <code>/v1/governance</code>.');
+}
+
+function viewConfiguracion() {
+  const view = state.view;
+  const net = state.network;
+  const p = view.cultivo || {};
+  const req = p.requirement_kg_ha || {};
+  return panelCard('Configuración y perfil', `
+    <div class="table-wrap"><table class="data"><tbody>
+      <tr><td>Centro</td><td><b>${net.acopio.nombre}</b> · ${net.acopio.municipio}</td></tr>
+      <tr><td>Lote</td><td>${view.plot.name} · ${fmt(view.plot.area_ha, 2)} ha</td></tr>
+      <tr><td>Cultivo</td><td>${p.crop || ''} ${p.variety || ''} · etapa ${p.stage || ''}</td></tr>
+      <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
+      <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
+      <tr><td>Densidad aparente</td><td>${p.bulk_density_g_cm3 ?? '—'} g/cm³</td></tr>
+      <tr><td>Unidad de suelo</td><td>${view.grid.unidad} · ${view.grid.base}</td></tr>
+      <tr><td>Contrato</td><td>${view.contrato}</td></tr>
+      <tr><td>Validación</td><td>${VALIDATION_LABEL[view.validacion] || view.validacion}</td></tr>
+    </tbody></table></div>`,
+  `Perfil <code>${p.id || ''}</code>, estado <b>${p.validation_status || ''}</b>.`);
+}
+
 function render() {
   const view = state.view;
   const net = state.network;
   const syncLabel = view.stale ? 'paquete degradado' : state.live ? 'al día' : 'sin red · paquete local';
 
+  const alertas = view.riesgos.length;
+
   document.getElementById('app').innerHTML = `<div class="shell">
-    <div class="sync ${view.stale ? 'stale' : ''}">
-      <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones · ${state.dataOrigin}
-      ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
-      <span class="aviso">${view.aviso || ''}</span>
+    <aside class="side" id="side">
+      <div class="side-brand">
+        <span class="mark">iO</span>
+        <span class="side-brand-name">IOmido<small>Inteligencia Operativa</small></span>
+      </div>
+
+      <nav class="side-nav" aria-label="Secciones">
+        ${MENU_VIEWS.map((n) => `<button class="side-item ${state.nav === n ? 'on' : ''}" type="button"
+            data-nav="${n}" aria-current="${state.nav === n ? 'page' : 'false'}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MENU_ICON[n]}"/></svg>
+            <span>${MENU_LABEL[n]}</span>
+            ${n === 'alertas' && alertas ? `<b class="side-badge">${alertas}</b>` : ''}
+          </button>`).join('')}
+      </nav>
+
+      <div class="side-foot">
+        <div class="side-center">
+          <span class="side-label">Centro de acopio</span>
+          <b>${net.acopio.nombre}</b>
+          <span class="note">${net.acopio.municipio}</span>
+          <button class="btn ghost" type="button" data-nav="configuracion">Ver perfil</button>
+        </div>
+        <div class="side-user">
+          <span class="side-avatar" aria-hidden="true">JM</span>
+          <span class="side-user-name">Juan Morales<small>Administrador</small></span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="sync ${view.stale ? 'stale' : ''}">
+        <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones · ${state.dataOrigin}
+        ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
+        <span class="spacer"></span>
+        <button class="icon-btn bell" type="button" data-nav="alertas" aria-label="${alertas} alertas activas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MENU_ICON.alertas}"/></svg>
+          ${alertas ? `<b class="side-badge">${alertas}</b>` : ''}
+        </button>
+        <button class="btn ghost ask-cta" type="button">Preguntar</button>
+        <button class="icon-btn" type="button" data-nav="configuracion" aria-label="Perfil del centro">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg>
+        </button>
+      </div>
+
+      <header class="page-head">
+        <span class="page-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21c5-2 8-6 8-11V5l-8-2-8 2v5c0 5 3 9 8 11z"/></svg>
+        </span>
+        <div>
+          <h1>${net.acopio.nombre}</h1>
+          <p>${net.real
+            ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
+            : `${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</p>
+        </div>
+        ${view.aviso ? `<span class="head-aviso">${view.aviso}</span>` : ''}
+      </header>
+
+      <main class="main" id="main">${viewFor(state.nav)}</main>
     </div>
-
-    <div class="topbar">
-      <div class="mark">iO</div>
-      <div class="brand-name">${net.acopio.nombre}<small>${net.real
-        ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
-        : `${net.kpis.productores} productores · ${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</small></div>
-      <span class="spacer"></span>
-      <span class="bell" title="${net.prioridades.length} prioridades activas">🔔 ${net.prioridades.length > 0 ? `<b>${net.prioridades.length}</b>` : ''}</span>
-      <button class="btn ghost ask-cta" type="button" title="Preguntar a IOmido">🎙 Preguntar</button>
-      <span class="user" title="Acopio Pasto">👤</span>
-    </div>
-
-    <nav class="nav" aria-label="Vistas del acopio">
-      ${MENU_VIEWS.map((n) =>
-        `<button class="nav-btn ${state.nav === n ? 'on' : ''}" type="button" data-nav="${n}">
-           ${n === 'lote' ? 'Lote El Rosal' : n[0].toUpperCase() + n.slice(1)}
-         </button>`).join('')}
-    </nav>
-
-    <main class="main" id="main">${state.nav === 'resumen' ? viewResumen() : state.nav === 'mapa' ? viewMapa() : state.nav === 'productores' ? viewProductores() : viewLote()}</main>
   </div>`;
 
-  for (const button of document.querySelectorAll('.nav-btn')) {
-    button.addEventListener('click', () => go(button.dataset.nav));
-  }
   for (const button of document.querySelectorAll('[data-nav]')) {
-    if (!button.classList.contains('nav-btn')) button.addEventListener('click', () => go(button.dataset.nav));
+    button.addEventListener('click', () => go(reachable(button.dataset.nav), button.dataset.tabGo || null));
   }
+  if (state.nav === 'historial' && !state.historial) loadHistorial();
   const askCta = document.querySelector('.ask-cta');
   if (askCta) askCta.addEventListener('click', () => go('lote', 'asistente'));
 

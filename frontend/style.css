@@ -25,19 +25,144 @@
 html, body { height: 100%; overflow: hidden; }
 
 body {
-  background: var(--bg);
+  /* Transparent so the illustrated layer below shows; auth pages set their own. */
+  background: transparent;
   color: var(--ink);
   font: 400 clamp(12px, 1.05vw, 15px)/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── illustrated ground ───────────────────────────────────
+   Self-contained: no external host, per FRONTEND.md §2. Swap the whole
+   look by pointing --field-image at a file you drop in the folder, e.g.
+   :root { --field-image: url("/assets/field.webp"); }                    */
+:root {
+  --field-image:
+    radial-gradient(120% 60% at 50% 108%, #b98a52 0%, #a8763f 26%, transparent 62%),
+    radial-gradient(80% 34% at 18% 92%, #7aa04a 0%, transparent 60%),
+    radial-gradient(80% 34% at 82% 92%, #7aa04a 0%, transparent 60%),
+    linear-gradient(180deg, #cfe9f5 0%, #dff0f7 34%, #cfe4b6 52%, #a9c877 66%, #8fae5c 74%, #a67c46 100%);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--field-image) center / cover no-repeat fixed;
+}
+
+/* A light veil: enough for the cards to read, not so much that the field
+   disappears. The cards carry the real contrast, so this can stay gentle. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 38%));
+}
+
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-columns: clamp(196px, 15vw, 232px) minmax(0, 1fr);
   gap: var(--gap);
   padding: var(--gap) clamp(10px, 1.4vw, 20px);
 }
+
+.content { display: grid; grid-template-rows: auto auto 1fr; gap: var(--gap); min-height: 0; }
+
+/* ── sidebar ──────────────────────────────────────────── */
+.side {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+  min-height: 0;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(10px, 1.2vh, 16px) 10px;
+  backdrop-filter: blur(6px);
+}
+.side-brand { display: flex; align-items: center; gap: 9px; padding: 0 6px; }
+.side-brand-name { font-weight: 700; font-size: .95em; line-height: 1.1; }
+.side-brand-name small { display: block; font-size: .72em; font-weight: 400; color: var(--muted); }
+
+.side-nav { display: grid; gap: 2px; align-content: start; min-height: 0; overflow-y: auto; }
+.side-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 0 10px;
+  background: none; border: 0; border-radius: 8px;
+  font: inherit; font-size: .92em; color: var(--ink); text-align: left; cursor: pointer;
+}
+.side-item svg { width: 19px; height: 19px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.side-item span { flex: 1; }
+.side-item:hover { background: var(--brand-soft); }
+.side-item.on { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand-deep); }
+.side-item.on svg { stroke: var(--brand-deep); }
+.side-item:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -2px; }
+.side-badge {
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px;
+  background: var(--low); color: #fff; font-size: .72em; font-weight: 700;
+  display: grid; place-items: center;
+}
+
+.side-foot { display: grid; gap: 8px; }
+.side-center {
+  display: grid; gap: 2px; padding: 10px;
+  background: var(--bg); border-radius: 8px; font-size: .86em;
+}
+.side-label { font-size: .78em; color: var(--muted); }
+.side-center .btn { margin-top: 6px; min-height: 36px; font-size: .92em; }
+.side-user { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.side-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  background: var(--brand-deep); color: #fff; font-size: .78em; font-weight: 700;
+  display: grid; place-items: center;
+}
+.side-user-name { font-size: .86em; font-weight: 600; line-height: 1.15; }
+.side-user-name small { display: block; font-weight: 400; color: var(--muted); font-size: .82em; }
+
+/* ── page header ──────────────────────────────────────── */
+.page-head { display: flex; align-items: center; gap: 11px; flex: none; }
+.page-head h1 { font-size: clamp(15px, 1.4vw, 20px); font-weight: 700; line-height: 1.2; }
+.page-head p { font-size: .84em; color: var(--muted); }
+.page-mark {
+  width: 38px; height: 38px; border-radius: 50%; flex: none;
+  background: var(--high); display: grid; place-items: center;
+}
+.page-mark svg { width: 21px; height: 21px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linejoin: round; }
+.head-aviso { margin-left: auto; font-size: .78em; color: var(--muted); text-align: right; max-width: 46ch; }
+
+.icon-btn {
+  position: relative; display: grid; place-items: center;
+  width: 38px; height: 38px; flex: none;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+}
+.icon-btn svg { width: 19px; height: 19px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn:hover { background: var(--brand-soft); border-color: var(--brand-border); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.icon-btn .side-badge { position: absolute; top: -6px; right: -6px; }
+
+/* ── data tables and list screens ─────────────────────── */
+.wide-card { min-height: 0; overflow: hidden; }
+.table-wrap { overflow: auto; min-height: 0; }
+table.data { width: 100%; border-collapse: collapse; font-size: .86em; }
+table.data th, table.data td { text-align: left; padding: .45em .6em; border-bottom: 1px solid var(--border); }
+table.data th { font-size: .82em; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tr.row-out td { color: var(--low); }
+
+.alert-row {
+  display: flex; align-items: center; gap: .8em;
+  border: 1px solid var(--border); border-radius: 8px; padding: .6em .75em; margin-bottom: .5em;
+}
+.alert-row > div { flex: 1; }
+.alert-mark { font-size: 1.1em; }
+.alert-row.sev-high, .alert-row.sev-critical { border-left: 3px solid var(--low); }
+.alert-row.sev-medium { border-left: 3px solid var(--mid); }
+.alert-row.sev-low { border-left: 3px solid var(--muted); }
 
 /* ── header ───────────────────────────────────────────── */
 .topbar { display: flex; align-items: center; gap: 11px; flex: none; }
@@ -93,7 +218,8 @@ body {
 .col { display: grid; gap: var(--gap); min-height: 0; grid-template-rows: auto auto 1fr; }
 
 .card {
-  background: var(--surface);
+  /* Slightly translucent so the illustration reads behind, never through text. */
+  background: rgb(255 255 255 / 94%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: clamp(9px, 1.1vh, 15px);
@@ -101,6 +227,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(4px);
 }
 
 .card h2 {
@@ -117,9 +244,11 @@ body {
 .sync {
   display: flex; align-items: center; gap: .5em; flex: none;
   font-size: .78em; color: var(--muted);
-  background: var(--surface); border: 1px solid var(--border);
+  background: rgb(255 255 255 / 92%); border: 1px solid var(--border);
   border-radius: 8px; padding: .35em .7em;
+  backdrop-filter: blur(4px);
 }
+.sync .spacer { flex: 1; }
 .sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--high); flex: none; }
 .sync.stale .dot { background: var(--mid); }
 .sync .aviso { margin-left: auto; text-align: right; }
@@ -429,6 +558,28 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   .colorbar { height: min(58%, 150px); }
 }
 
+/* Under 1100 px the sidebar keeps its icons and loses its labels; nothing is
+   removed, so every section stays one tap away. */
+@media (max-width: 1099px) {
+  .shell { grid-template-columns: 60px minmax(0, 1fr); }
+  .side { padding: 10px 6px; }
+  .side-item { justify-content: center; padding: 0; }
+  .side-item span, .side-brand-name, .side-center, .side-user-name { display: none; }
+  .side-item.on { box-shadow: inset 0 -3px 0 var(--brand-deep); }
+  .side-badge { position: absolute; margin: -18px 0 0 16px; }
+  .side-item { position: relative; }
+  .side-foot { justify-items: center; }
+  .head-aviso { display: none; }
+}
+
+/* On a phone the sidebar becomes a scrollable strip along the top. */
+@media (max-width: 700px) {
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .side { grid-template-rows: none; grid-auto-flow: column; justify-content: start; align-items: center; overflow-x: auto; }
+  .side-nav { grid-auto-flow: column; overflow-x: auto; overflow-y: hidden; }
+  .side-brand, .side-foot { display: none; }
+}
+
 /* En campo el teléfono manda. Nada de propuesta, riesgos o decisión se oculta:
    la pantalla deja de ser de altura fija y se recorre. */
 @media (max-width: 560px) {
@@ -474,7 +625,7 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .real-plots code { font-size: .9em; background: var(--brand-soft); border-radius: 4px; padding: 0 .25em; }
 
 /* ── command center (acopio) ──────────────────────────── */
-.shell { grid-template-rows: auto auto auto 1fr; }
+/* The shell is a sidebar plus a content column; rows live on .content. */
 
 .nav { display: flex; gap: 4px; flex: none; }
 .nav-btn {
