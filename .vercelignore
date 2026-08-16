@@ -1,10 +1,13 @@
 # Cada MB cuenta: el bundle de la funcion no puede pasar de 250 MB.
+# Los patrones van anclados con "/": sin la barra inicial coinciden a cualquier
+# profundidad y, por ejemplo, "mock" tambien se llevaba frontend/mock, que es lo
+# que la pagina pide en /mock/network.json.
 backend/tests
 backend/scripts
 backend/openapi-v2.json
-tools
-mock
-tmp
+/tools
+/mock
+/tmp
 *.md
 !README.md
 
