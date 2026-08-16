@@ -24,6 +24,7 @@
   <img alt="Contrato v2.0" src="https://img.shields.io/badge/contrato-v2.0%20·%2035%20endpoints-1F6FEB?style=flat-square">
   <img alt="Human in the loop" src="https://img.shields.io/badge/decisión-humana%20obligatoria-6E56CF?style=flat-square">
   <img alt="Track 04" src="https://img.shields.io/badge/CTW%202026-Track%2004-EAB308?style=flat-square">
+  <a href="LICENSE"><img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-0F766E?style=flat-square"></a>
 </p>
 
 ---
@@ -294,6 +295,13 @@ automatizar más decisiones sin control.
 Ninguno de esos pendientes autoriza presentar el perfil de demo como una
 prescripción validada. Por eso, el sistema marca toda propuesta como pendiente
 de validación técnica.
+
+## Licencia
+
+Código bajo [licencia MIT](LICENSE): cualquiera puede usarlo, modificarlo y
+distribuirlo, incluso comercialmente, siempre que conserve el aviso de autoría.
+Se entrega **sin garantía**, y eso importa aquí más que en otros proyectos: nada
+de lo que produce este sistema es una prescripción agronómica validada.
 
 ## El equipo
 
