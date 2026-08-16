@@ -1,0 +1,17 @@
+center:
+  id: center-pasto-demo
+  name: Centro de acopio Pasto demo
+  municipality: Pasto, Narino
+  version: "1.0.0"
+  validation_status: demo_unvalidated
+plot:
+  id: nar-001
+  center_id: center-pasto-demo
+  crop_profile_id: potato-pasto-demo-v1
+  name: Lote El Rosal
+  municipality: Pasto, Narino
+  boundary:
+    - [1.24750, -77.26767]
+    - [1.24872, -77.26767]
+    - [1.24872, -77.26682]
+    - [1.24750, -77.26682]
