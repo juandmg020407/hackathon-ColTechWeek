@@ -501,25 +501,98 @@ function panelRiesgos() {
 }
 
 const ASK_SUGGESTIONS = [
-  'qué debo priorizar',
-  'dónde debo medir',
-  'qué formulación sugieren',
-  'por qué hay incertidumbre',
+  {
+    title: 'Prioridad de hoy',
+    detail: 'Qué revisar primero',
+    question: '¿Qué debo priorizar hoy en este lote?',
+  },
+  {
+    title: 'Siguiente medición',
+    detail: 'Dónde reduce más la incertidumbre',
+    question: '¿Dónde debo medir para reducir la incertidumbre?',
+  },
+  {
+    title: 'Plan de bultos',
+    detail: 'Cuánto llevar a cada zona',
+    question: '¿Qué formulación sugieren y cómo reparto los bultos?',
+  },
+  {
+    title: 'Confianza del mapa',
+    detail: 'Qué significa el área rayada',
+    question: '¿Por qué hay incertidumbre y qué debo comprobar?',
+  },
 ];
 
 function panelAsistente() {
   const suggestions = ASK_SUGGESTIONS;
   const welcome = apiBase
-    ? 'Estoy conectado al agente. Pregúntame por este lote, su propuesta, riesgos o mediciones.'
-    : 'Modo sin conexión: responderé solo con el paquete descargado de este lote.';
-  return `<div class="chat" id="chat" aria-live="polite"><div class="bubble bot">${welcome}</div></div>
-    <div class="suggest">${suggestions.map((s) => `<button class="chip as-suggest" type="button">¿${s}?</button>`).join('')}</div>
+    ? 'Estoy listo para cruzar las mediciones, las tres zonas, el clima y la propuesta. Pregunte como hablaría con el técnico del acopio.'
+    : 'Estoy en modo local. Responderé únicamente con la evidencia guardada en este paquete.';
+  const status = apiBase ? 'Conectado al agente' : 'Modo paquete local';
+  const statusClass = apiBase ? 'online' : 'offline';
+  const { sampling, zonas, riesgos } = state.view;
+  const totalBags = (state.view.propuesta?.zonas || []).reduce(
+    (total, zone) => total + zone.formulaciones.reduce((sum, item) => sum + item.bags, 0),
+    0,
+  );
+
+  return `<div class="assistant-workspace">
+    <header class="assistant-head">
+      <div class="assistant-identity">
+        <span class="assistant-mark" aria-hidden="true">IA</span>
+        <div>
+          <p class="assistant-eyebrow">Copiloto de campo</p>
+          <h3>Pregunte antes de decidir</h3>
+          <p>Respuestas aterrizadas al lote El Rosal, no consejos genéricos.</p>
+        </div>
+      </div>
+      <span class="assistant-status ${statusClass}"><i></i>${status}</span>
+    </header>
+
+    <div class="assistant-evidence" aria-label="Evidencia disponible para responder">
+      <span><b>${sampling.valid}</b> mediciones válidas</span>
+      <span><b>${zonas.length}</b> zonas calculadas</span>
+      <span><b>${riesgos.length}</b> riesgos activos</span>
+      <span><b>${totalBags}</b> bultos propuestos</span>
+    </div>
+
+    <div class="chat" id="chat" aria-live="polite">
+      <div class="bubble bot welcome">
+        <span class="bubble-author">IOmido IA</span>
+        <p>${welcome}</p>
+        <small>Basado en el paquete vigente del lote</small>
+      </div>
+    </div>
+
+    <div class="suggest" aria-label="Preguntas sugeridas">
+      ${suggestions.map((suggestion, index) => `<button class="as-suggest" type="button"
+          data-question="${suggestion.question}">
+        <span class="suggest-index">0${index + 1}</span>
+        <span><b>${suggestion.title}</b><small>${suggestion.detail}</small></span>
+        <span class="suggest-arrow" aria-hidden="true">→</span>
+      </button>`).join('')}
+    </div>
+
     <form class="ask" id="ask">
-      <input id="ask-input" type="text" placeholder="Pregunte sobre el lote…" autocomplete="off" aria-label="Pregunte sobre el lote">
-      <button class="btn icon" id="mic" type="button" title="${canListen ? 'Preguntar por voz' : 'Voz no disponible aquí'}" ${canListen ? '' : 'disabled'}>🎙</button>
-      <button class="btn" type="submit">Enviar</button>
+      <label for="ask-input">Pregunta sobre este lote</label>
+      <div class="ask-composer">
+        <input id="ask-input" type="text"
+          placeholder="Ej. ¿Qué debería validar antes de aplicar?"
+          autocomplete="off" aria-describedby="ask-grounding">
+        <button class="btn icon" id="mic" type="button"
+          title="${canListen ? 'Preguntar por voz' : 'Voz no disponible aquí'}"
+          aria-label="${canListen ? 'Preguntar por voz' : 'Voz no disponible'}"
+          ${canListen ? '' : 'disabled'}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></svg>
+        </button>
+        <button class="btn ask-submit" type="submit">Consultar <span aria-hidden="true">→</span></button>
+      </div>
     </form>
-    <p class="note">${canSpeak ? 'Responde en voz alta.' : 'Este navegador no reproduce voz.'} ${apiBase ? 'Las respuestas usan evidencia del backend.' : 'Sin red no consulta el modelo.'}</p>`;
+    <p class="assistant-grounding" id="ask-grounding">
+      <span></span> No inventa cifras: responde con la evidencia disponible y declara cuando no sabe.
+      ${canSpeak ? ' Puede leer la respuesta en voz alta.' : ''}
+    </p>
+  </div>`;
 }
 
 function panelMediciones() {
@@ -545,22 +618,41 @@ function panelMediciones() {
     <p class="note">${sampling.valid} de ${sampling.total} mediciones alimentan el modelo. Porcentaje de masa del suelo, lectura cruda del sensor.</p>`;
 }
 
-function bubble(role, text) {
+function bubble(role, text, source = '') {
   const chat = document.getElementById('chat');
   const node = document.createElement('div');
   node.className = `bubble ${role}`;
-  node.textContent = text;
+  if (role === 'bot') {
+    const author = document.createElement('span');
+    author.className = 'bubble-author';
+    author.textContent = 'IOmido IA';
+    node.appendChild(author);
+  }
+  const content = document.createElement('p');
+  content.textContent = text;
+  node.appendChild(content);
+  if (source) {
+    const citation = document.createElement('small');
+    citation.textContent = source;
+    node.appendChild(citation);
+  }
   chat.appendChild(node);
   chat.scrollTop = chat.scrollHeight;
-  return node;
+  return { node, content };
 }
 
 async function answer(question) {
   bubble('me', question);
-  const pending = bubble('bot', '…');
+  const pending = bubble('bot', 'Consultando la evidencia del lote…');
+  pending.node.classList.add('thinking');
   const reply = await ask(question, state.view);
-  pending.textContent = reply.texto;
-  if (reply.fuente) pending.title = reply.fuente;
+  pending.node.classList.remove('thinking');
+  pending.content.textContent = reply.texto;
+  if (reply.fuente) {
+    const citation = document.createElement('small');
+    citation.textContent = `Fuentes: ${reply.fuente}`;
+    pending.node.appendChild(citation);
+  }
   speak(reply.texto);
 }
 
@@ -577,7 +669,8 @@ function wireTabs(initial) {
     stopSpeaking();
     body.innerHTML = panels[name]();
     const lotGrid = document.querySelector('.lote-grid');
-    lotGrid?.classList.toggle('proposal-focus', name === 'propuesta');
+    lotGrid?.classList.add('detail-focus');
+    lotGrid?.classList.toggle('assistant-focus', name === 'asistente');
     // The map changes width without a re-render; repaint once its CSS transition settles.
     if (lotGrid) setTimeout(() => scheduleDraw(), 240);
     for (const tab of document.querySelectorAll('.tab')) {
@@ -668,7 +761,7 @@ function wireTabs(initial) {
       input.value = '';
     });
     for (const chip of body.querySelectorAll('.as-suggest')) {
-      chip.addEventListener('click', () => answer(chip.textContent));
+      chip.addEventListener('click', () => answer(chip.dataset.question));
     }
     const mic = document.getElementById('mic');
     if (canListen) {
@@ -1162,7 +1255,7 @@ function viewLote() {
             <button class="tab" data-tab="propuesta" role="tab" aria-selected="true">Propuesta</button>
             <button class="tab" data-tab="riesgos" role="tab" aria-selected="false">Lo que viene${view.riesgos.length ? ` <span class="badge-n">${view.riesgos.length}</span>` : ''}</button>
             <button class="tab" data-tab="mediciones" role="tab" aria-selected="false">Mediciones</button>
-            <button class="tab" data-tab="asistente" role="tab" aria-selected="false">Preguntar</button>
+            <button class="tab ai-tab" data-tab="asistente" role="tab" aria-selected="false"><span>IA</span> Preguntar</button>
           </div>
           <div class="tab-body" id="tab-body"></div>
         </section>
