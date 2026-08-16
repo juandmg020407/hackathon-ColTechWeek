@@ -49,22 +49,28 @@ NIVEL_TEXTO = {"critico": "muy por debajo", "bajo": "por debajo", "adecuado": "a
 # derecha. Es la tabla que hace visible el trabajo del asistente.
 HUMANIZADO = [
     ("Proceso gaussiano Matérn por nutriente",
-     "Con 18 mediciones el sistema dibuja el resto del lote, y además dice dónde\n"
+     "Con 18 mediciones el sistema dibuja el resto del lote, y además dice dónde "
      "está adivinando más."),
     ("Balance de masa sobre la capa muestreada",
-     "Convierte el porcentaje del sensor en kilos por hectárea, contando 20 cm de\n"
+     "Convierte el porcentaje del sensor en kilos por hectárea, contando 20 cm de "
      "profundidad. No se resta del porcentaje del bulto."),
     ("Factor de disponibilidad 0,001",
-     "De todo el nutriente que hay en el suelo, la planta sólo alcanza una milésima.\n"
+     "De todo el nutriente que hay en el suelo, la planta sólo alcanza una milésima. "
      "Es un supuesto conservador de la demo, no una medición."),
     ("Óptimo lexicográfico entre combinaciones enteras factibles",
-     "Se probaron todas las mezclas posibles con bultos enteros y ganó la que menos\n"
+     "Se probaron todas las mezclas posibles con bultos enteros y ganó la que menos "
      "deja faltando; a igual faltante, la que menos desperdicia."),
     ("Incertidumbre predictiva sobre el umbral",
      "Las franjas rayadas del mapa: ahí el sistema no sabe y hace falta ir a medir."),
     ("validation_status: requires_technical_validation",
      "Nadie aplica esto hasta que un técnico lo firme. Este documento es esa firma."),
 ]
+
+
+def numero(value: float, decimales: int = 0) -> str:
+    """Formato colombiano: coma decimal y punto de miles."""
+    rendered = f"{value:,.{decimales}f}"
+    return rendered.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
 
 def load():
@@ -101,12 +107,22 @@ class Sheet:
     def space(self, amount):
         self.y -= amount
 
-    def text(self, string, size=9.5, font="Helvetica", color=INK, x=MARGIN, leading=None):
+    def text(
+        self,
+        string,
+        size=9.5,
+        font="Helvetica",
+        color=INK,
+        x=MARGIN,
+        leading=None,
+        width=None,
+    ):
         leading = leading or size + 3.2
+        width = width or COL - (x - MARGIN)
         self.pdf.setFont(font, size)
         self.pdf.setFillColor(color)
         for line in string.split("\n"):
-            for wrapped in simpleSplit(line, font, size, COL - (x - MARGIN)):
+            for wrapped in simpleSplit(line, font, size, width):
                 self.pdf.drawString(x, self.y, wrapped)
                 self.y -= leading
         return self.y
@@ -162,7 +178,7 @@ def portada(sheet, pkg, zonas, decidido_en):
     pdf.setFont("Helvetica", 10)
     pdf.drawString(
         MARGIN, sheet.y,
-        f"{plot['name']} · {plot['municipality']} · {plot['area']['value']:.2f} ha"
+        f"{plot['name']} · {plot['municipality']} · {numero(plot['area']['value'], 2)} ha"
         f" · {perfil['crop']} {perfil['variety']}",
     )
     sheet.y -= 22
@@ -179,7 +195,7 @@ def portada(sheet, pkg, zonas, decidido_en):
     pdf.setFont("Helvetica", 10)
     pdf.drawString(
         MARGIN + 14, sheet.y - 33,
-        f"Lleve {total_bultos} bultos ({total_kg:.0f} kg) al lote y repártalos en tres zonas: "
+        f"Lleve {total_bultos} bultos ({numero(total_kg)} kg) al lote y repártalos en tres zonas: "
         "la de abajo pide casi todo.",
     )
     sheet.y -= caja_alto + 16
@@ -207,7 +223,7 @@ def tabla_zonas(sheet, zonas):
         pdf.setFont("Helvetica-Bold", 10)
         pdf.drawString(cols[0], sheet.y, f"Zona {zona['id']}")
         pdf.setFont("Helvetica", 9.5)
-        pdf.drawString(cols[1], sheet.y, f"{zona['area']:.2f} ha")
+        pdf.drawString(cols[1], sheet.y, f"{numero(zona['area'], 2)} ha")
 
         y_row = sheet.y
         for label, bags, peso in zona["bultos"]:
@@ -217,7 +233,7 @@ def tabla_zonas(sheet, zonas):
             pdf.setFillColor(INK)
             pdf.setFont("Helvetica", 9.5)
             unidad = "bulto" if bags == 1 else "bultos"
-            pdf.drawString(cols[3], y_row, f"{bags} {unidad} de {peso:.0f} kg")
+            pdf.drawString(cols[3], y_row, f"{bags} {unidad} de {numero(peso)} kg")
             y_row -= 13
 
         peor = min(zona["niveles"].items(), key=lambda kv: zona["falta"][kv[0]] * -1)
@@ -227,31 +243,123 @@ def tabla_zonas(sheet, zonas):
         pdf.drawString(cols[4], sheet.y, nutriente)
         pdf.setFillColor(MUTED)
         pdf.setFont("Helvetica", 8.3)
-        pdf.drawString(cols[4] + 12, sheet.y, f"{NIVEL_TEXTO[nivel]}, faltan {zona['falta'][nutriente]:.0f} kg/ha")
+        pdf.drawString(
+            cols[4] + 12,
+            sheet.y,
+            f"{NIVEL_TEXTO[nivel]}, faltan {numero(zona['falta'][nutriente])} kg/ha",
+        )
 
-        sheet.y = min(y_row, sheet.y - 13) - 4
+        sheet.y = min(y_row, sheet.y - 13) - 7
         pdf.setStrokeColor(LINE)
         pdf.setLineWidth(0.4)
-        pdf.line(MARGIN, sheet.y + 6, W - MARGIN, sheet.y + 6)
-        sheet.y -= 6
+        pdf.line(MARGIN, sheet.y, W - MARGIN, sheet.y)
+        sheet.y -= 9
 
     total_bultos = sum(z["total_bultos"] for z in zonas)
     total_kg = sum(z["total_kg"] for z in zonas)
     pdf.setFillColor(INK)
     pdf.setFont("Helvetica-Bold", 9.5)
     pdf.drawString(cols[2], sheet.y, "Total del lote")
-    pdf.drawString(cols[3], sheet.y, f"{total_bultos} bultos · {total_kg:.0f} kg")
+    pdf.drawString(cols[3], sheet.y, f"{total_bultos} bultos · {numero(total_kg)} kg")
     sheet.y -= 16
     sheet.text(
-        "Un grado 30-30-40 quiere decir que el bulto es 30 % nitrógeno, 30 % fósforo y 40 % potasio\n"
+        "Un grado 30-30-40 quiere decir que el bulto es 30 % nitrógeno, 30 % fósforo y 40 % potasio "
         "de su propio peso. No hace falta convertir nada: los bultos ya vienen contados.",
         size=8.4, color=MUTED,
     )
     sheet.space(8)
 
 
+def croquis_zonas(sheet, pkg, zonas):
+    """Dibuja la asignación reproducible de las 140 celdas del modelo."""
+    sheet.heading("2", "Croquis operativo de las tres zonas")
+    pdf = sheet.pdf
+    grid = pkg["spatial"]["grid"]
+    rows, cols = grid["rows"], grid["cols"]
+    zone_cells = {
+        zone["id"]: set(zone["cells"])
+        for zone in pkg["spatial"]["zones"]
+    }
+    palette = {
+        "zone-1": HexColor("#00718f"),
+        "zone-2": HexColor("#e8a33d"),
+        "zone-3": HexColor("#2e8b57"),
+    }
+
+    cell = 7.2
+    map_w, map_h = cols * cell, rows * cell
+    map_x = MARGIN + 32
+    map_y = sheet.y - map_h
+
+    pdf.setFillColor(HexColor("#eef2f3"))
+    pdf.roundRect(map_x - 5, map_y - 5, map_w + 10, map_h + 10, 4, stroke=0, fill=1)
+    for index, inside in enumerate(grid["mask"]):
+        if not inside:
+            continue
+        zone_id = next((key for key, cells in zone_cells.items() if index in cells), None)
+        col = index % cols
+        row = index // cols
+        x = map_x + col * cell
+        y = map_y + row * cell
+        pdf.setFillColor(palette.get(zone_id, LINE))
+        pdf.setStrokeColor(PAPER)
+        pdf.setLineWidth(0.35)
+        pdf.rect(x, y, cell, cell, stroke=1, fill=1)
+
+    # Etiqueta cada masa de celdas en su centro, sin alterar la orientación.
+    for zone_id, cells in zone_cells.items():
+        columns = [index % cols for index in cells]
+        row_values = [index // cols for index in cells]
+        x = map_x + (sum(columns) / len(columns) + 0.5) * cell
+        y = map_y + (sum(row_values) / len(row_values) + 0.5) * cell
+        pdf.setFillColor(PAPER)
+        pdf.setFont("Helvetica-Bold", 8.5)
+        pdf.drawCentredString(x, y - 3, zone_id.replace("zone-", "Z"))
+
+    # Norte arriba: coincide con el flip vertical usado por el mapa del tablero.
+    north_x = map_x - 19
+    pdf.setFillColor(INK)
+    pdf.setFont("Helvetica-Bold", 7.5)
+    pdf.drawCentredString(north_x, map_y + map_h - 2, "N")
+    pdf.setStrokeColor(INK)
+    pdf.setLineWidth(1)
+    pdf.line(north_x, map_y + map_h - 12, north_x, map_y + map_h - 27)
+    pdf.line(north_x, map_y + map_h - 12, north_x - 3, map_y + map_h - 18)
+    pdf.line(north_x, map_y + map_h - 12, north_x + 3, map_y + map_h - 18)
+
+    legend_x = MARGIN + 155
+    pdf.setFillColor(INK)
+    pdf.setFont("Helvetica-Bold", 9.5)
+    pdf.drawString(legend_x, sheet.y - 4, "Reparto de campo")
+    legend_y = sheet.y - 22
+    for zone in zonas:
+        zone_id = f"zone-{zone['id']}"
+        pdf.setFillColor(palette[zone_id])
+        pdf.roundRect(legend_x, legend_y - 7, 10, 10, 2, stroke=0, fill=1)
+        pdf.setFillColor(INK)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(legend_x + 18, legend_y - 4, f"Zona {zone['id']} · {numero(zone['area'], 2)} ha")
+        formulas = " + ".join(
+            f"{bags}× {label}"
+            for label, bags, _ in zone["bultos"]
+        )
+        pdf.setFillColor(MUTED)
+        pdf.setFont("Helvetica", 8.3)
+        pdf.drawString(legend_x + 18, legend_y - 16, formulas)
+        legend_y -= 31
+
+    pdf.setFillColor(MUTED)
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(
+        map_x,
+        map_y - 15,
+        f"Grid {cols} × {rows} · celdas de {numero(grid['cell_size']['value'])} m · norte arriba",
+    )
+    sheet.y = map_y - 27
+
+
 def antes_de_aplicar(sheet, pkg):
-    sheet.heading("2", "Antes de aplicar, mire el clima")
+    sheet.heading("3", "Antes de aplicar, mire el clima")
     pdf = sheet.pdf
     riesgos = pkg["climate"]["risks"][:3]
     textos = {
@@ -284,13 +392,13 @@ def antes_de_aplicar(sheet, pkg):
 
 
 def por_que(sheet, pkg, zonas):
-    sheet.heading("3", "Por qué esta mezcla y no otra")
+    sheet.heading("4", "Por qué esta mezcla y no otra")
     plan = pkg["proposal"]["recommendations"][0]["integer_plan"]
     evaluadas = plan["optimizer"]["evaluated_combinations"]
     factibles = plan["optimizer"]["feasible_combinations"]
     sheet.text(
-        f"El sistema probó {evaluadas:,} combinaciones de bultos enteros y {factibles} cumplían los "
-        "límites de seguridad.".replace(",", "."),
+        f"El sistema probó {numero(evaluadas)} combinaciones de bultos enteros y "
+        f"{numero(factibles)} cumplían los límites de seguridad.",
         size=9.5,
     )
     sheet.text(
@@ -335,7 +443,7 @@ def pie(pdf, numero, total):
 
 def pagina_dos(sheet, pkg):
     pdf = sheet.pdf
-    sheet.heading("4", "Del tecnicismo al castellano")
+    sheet.heading("5", "Del tecnicismo al castellano")
     sheet.text(
         "El sistema calcula en su idioma. Esta columna es la traducción que hace el asistente de "
         "IOmido para que el acta se lea sin diccionario.",
@@ -354,22 +462,21 @@ def pagina_dos(sheet, pkg):
         sheet.y = top
         pdf.setFillColor(INK)
         pdf.setFont("Helvetica", 9.2)
-        for parrafo in humano.split("\n"):
-            for line in simpleSplit(parrafo, "Helvetica", 9.2, COL - 196):
-                pdf.drawString(MARGIN + 190, sheet.y, line)
-                sheet.y -= 12
-        sheet.y = min(sheet.y, y_tecnico) - 4
+        for line in simpleSplit(humano, "Helvetica", 9.2, COL - 196):
+            pdf.drawString(MARGIN + 190, sheet.y, line)
+            sheet.y -= 12
+        row_bottom = min(sheet.y, y_tecnico) - 7
 
         pdf.setStrokeColor(BRAND)
         pdf.setLineWidth(1.2)
-        pdf.line(MARGIN, sheet.y + 12, MARGIN, top + 4)
+        pdf.line(MARGIN, row_bottom + 4, MARGIN, top + 4)
         pdf.setStrokeColor(LINE)
         pdf.setLineWidth(0.4)
-        pdf.line(MARGIN, sheet.y + 4, W - MARGIN, sheet.y + 4)
-        sheet.y -= 8
+        pdf.line(MARGIN, row_bottom, W - MARGIN, row_bottom)
+        sheet.y = row_bottom - 10
 
     sheet.space(6)
-    sheet.heading("5", "Lo que el sistema no sabe")
+    sheet.heading("6", "Lo que el sistema no sabe")
     for unknown in pkg["proposal"]["explanation"]["unknowns"]:
         pdf.setFillColor(LOW)
         pdf.circle(MARGIN + 3, sheet.y + 3, 2.4, stroke=0, fill=1)
@@ -377,13 +484,17 @@ def pagina_dos(sheet, pkg):
         sheet.space(1)
     sheet.space(8)
 
-    sheet.heading("6", "De dónde salen los números")
+    sheet.heading("7", "De dónde salen los números")
     modelo = pkg["model_run"]
     evidencia = pkg["proposal"]["explanation"]["evidence"]
     filas = [
         ("Mediciones usadas", f"{pkg['measurements']['valid_for_model']} de {pkg['measurements']['count']} lecturas dentro del lote"),
         ("Modelo espacial", f"{modelo['model_name']} {modelo['model_version']}"),
-        ("Error medio del modelo", f"{modelo['metrics']['mean_rmse']['gp']:.2f} puntos de porcentaje (validación dejando uno fuera)"),
+        (
+            "Error medio del modelo",
+            f"{numero(modelo['metrics']['mean_rmse']['gp'], 2)} puntos de porcentaje "
+            "(validación dejando uno fuera)",
+        ),
         ("Fuentes de clima", ", ".join(evidencia["source_names"][:3])),
         ("Huella de las entradas", evidencia["input_hash"][:32] + "…"),
         ("Perfil de cultivo", f"{pkg['crop_profile']['id']} · sin validar por agrónomo local"),
@@ -408,11 +519,15 @@ def pagina_dos(sheet, pkg):
     pdf.drawString(MARGIN + 14, sheet.y - 15, "Sobre el uso de inteligencia artificial")
     pdf.setFillColor(INK)
     pdf.setFont("Helvetica", 8.3)
-    pdf.drawString(
-        MARGIN + 14, sheet.y - 28,
+    lines = simpleSplit(
         "Los cálculos los hacen modelos deterministas y auditables. La IA sólo redactó este acta: "
         "tradujo los tecnicismos, no tocó un solo número.",
+        "Helvetica",
+        8.3,
+        COL - 28,
     )
+    for index, line in enumerate(lines):
+        pdf.drawString(MARGIN + 14, sheet.y - 28 - index * 10, line)
     sheet.y -= alto
 
 
@@ -432,14 +547,15 @@ def build():
     header(sheet, pkg, folio)
     portada(sheet, pkg, zonas, decidido_en)
     tabla_zonas(sheet, zonas)
+    croquis_zonas(sheet, pkg, zonas)
     antes_de_aplicar(sheet, pkg)
-    por_que(sheet, pkg, zonas)
     firma(sheet, pkg, decidido_en, decision_id)
     pie(pdf, 1, 2)
 
     pdf.showPage()
     sheet = Sheet(pdf)
     header(sheet, pkg, folio)
+    por_que(sheet, pkg, zonas)
     pagina_dos(sheet, pkg)
     pie(pdf, 2, 2)
 
