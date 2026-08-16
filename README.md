@@ -250,10 +250,16 @@ legal** del proyecto.
 
 - **Una persona decide.** La IA prepara el mapa y recomienda una receta, pero el
   técnico o agrónomo puede aceptarla, modificarla, rechazarla o remitirla. Nada
-  se presenta como aplicado sin esa decisión.
-- **La responsabilidad se diseña desde el inicio.** El sistema muestra sus dudas,
-  explica de dónde sale cada recomendación, limita a Claude a redactar evidencia
-  ya calculada y conserva un historial que no se puede reescribir.
+  se presenta como aplicado sin esa decisión, y la propia base de datos impide
+  guardarlo de otra manera.
+- **Todo queda explicado y trazable.** Cada resultado viaja con su explicación,
+  su modelo, sus fuentes y una huella digital de los datos de entrada que permite
+  comprobar que nadie los cambió. Las decisiones quedan en un historial que no se
+  puede editar ni borrar.
+- **Las dudas se muestran, no se maquillan.** Lo que el sistema no sabe llega en
+  la misma respuesta que la recomendación.
+- **Los datos tienen dueño.** Se registra de dónde viene cada dato y si hay
+  consentimiento para usarlo. No puntuamos agricultores ni evaluamos crédito.
 - **Escalar no significa quitar a la persona.** Un sensor compartido y el mismo
   motor pueden atender muchas fincas. La validación ocurre por lote, en el punto
   importante: antes de llevar la recomendación al campo.
