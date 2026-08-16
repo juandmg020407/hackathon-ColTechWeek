@@ -1,9 +1,10 @@
-<h1 align="center"><<img width="1400" height="400" alt="image" src="https://github.com/user-attachments/assets/ce35261d-ab36-4c11-889e-af5a7f35f92c" />
-></h1>
+<p align="center">
+  <img width="1400" height="400" alt="IOmido: un sensor de suelo para muchas fincas" src="https://github.com/user-attachments/assets/ce35261d-ab36-4c11-889e-af5a7f35f92c">
+</p>
 
 <p align="center">
   <strong>Un sensor de suelo, muchas fincas.</strong><br>
-  Convierte una medición puntual de NPK en un mapa del lote con incertidumbre visible,<br>
+  Convierte mediciones de nitrógeno, fósforo y potasio (NPK) en un mapa del lote,<br>
   una receta de fertilización <em>recomendada</em> y una decisión que siempre firma una persona.
 </p>
 
@@ -85,9 +86,9 @@ generados.
 
 <img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="100%">
 
-Cada lectura se registra con un `client_id` que la hace **idempotente**: si el
-técnico pierde señal a mitad de un lote y reintenta, no se duplica nada. También
-puede llegar en lote desde un Excel (`POST /v1/readings/import`).
+Cada lectura lleva un identificador único. Si el técnico pierde señal y vuelve a
+enviarla, el sistema la reconoce y **no la duplica**. También se pueden cargar
+varias mediciones a la vez desde un archivo de Excel.
 
 La lectura fuera del polígono no se borra: se **conserva y se anota**. De las 19,
 18 entran al modelo y una queda marcada por geometría, con su motivo. Un dato mal
@@ -97,50 +98,47 @@ ubicado que desaparece en silencio es un dato que nadie puede auditar después.
 
 <img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
 
-| API | Qué aporta |
+| Fuente | Qué aporta |
 |---|---|
-| **IDEAM**<br>`datos.gov.co` · Socrata | La **observación real**: estaciones físicas de la autoridad meteorológica colombiana. Para el lote El Rosal, la estación *Universidad de Nariño – AUT* está a **2,47 km** y publicó ayer. Es el único dato de instrumento; los demás productos climáticos son modelos. Abierta y sin llave |
-| **Open-Meteo Forecast**<br>`api.open-meteo.com/v1/forecast` | 16 días de pronóstico horario **en la coordenada exacta del lote**, no de la cabecera municipal. De aquí salen la mínima prevista (helada), el balance lluvia − evapotranspiración (sequía) y las horas a 10–24 °C con HR ≥ 90 % (gota tardía). Abierta y sin llave |
-| **NASA POWER**<br>`power.larc.nasa.gov/api/temporal/daily/point` | 20 años de reanálisis diario del mismo punto. Es la **memoria**: sin ella «va a llover poco» no significa nada. Con ella se responde a qué año histórico se parece esta temporada |
-| **NOAA CPC — ENSO advisory** | Fase e índice de **El Niño / La Niña**: la escala estacional que ni el pronóstico de 16 días ni la climatología capturan. Va versionado con fecha y URL porque NOAA no publica ese aviso como API JSON estable, y preferimos decirlo a fingir un endpoint |
-| **Anthropic Claude** `claude-sonnet-5` | Redacta la respuesta del asistente en español claro sobre evidencia estructurada. **No calcula, no decide y no puede emitir una cifra que no esté en los datos** |
-| **OpenStreetMap tiles** | Mapa base **opcional**. Si no carga —lo normal en una finca sin señal— el mapa de suelo sigue siendo legible |
+| **IDEAM** | La **observación real** de estaciones meteorológicas colombianas. Para El Rosal, la estación *Universidad de Nariño – AUT* está a **2,47 km** y publicó ayer. Es el único dato medido por un instrumento; las demás fuentes climáticas son estimaciones. |
+| **Open-Meteo** | Pronóstico de 16 días para la **ubicación exacta del lote**, no para la cabecera municipal. Permite anticipar heladas, sequía y condiciones favorables para la gota tardía. |
+| **NASA POWER** | 20 años de historia climática del mismo punto. Es la **memoria**: sin ella, «va a llover poco» no significa nada. Permite comparar la temporada actual con años anteriores. |
+| **NOAA** | Informa si hay **El Niño o La Niña**, fenómenos que pueden cambiar la temporada más allá de lo que muestra un pronóstico de 16 días. |
+| **Anthropic Claude** | Redacta la respuesta del asistente en español claro. **No calcula, no decide y no puede añadir cifras que no estén en los datos**. |
+| **OpenStreetMap** | Proporciona el mapa de fondo. Es **opcional**: si no carga por falta de señal, el mapa de suelo sigue siendo legible. |
 
-Traer al IDEAM tuvo un costo real: su dataset **republica la misma lectura hasta
+Usar los datos del IDEAM exigió una precaución: su conjunto de datos **repite la misma lectura hasta
 19 veces**. Sumar sin deduplicar inflaba la lluvia acumulada un **31 %** (45,4 mm
-frente a los 34,6 mm reales). El sistema deduplica por marca de tiempo y reporta
-cuántos registros descartó, porque un dato público no es lo mismo que un dato
-limpio.
+frente a los 34,6 mm reales). El sistema elimina esas copias, informa cuántas
+descartó y conserva el valor correcto.
 
-Toda fuente externa pasa por la misma política: timeout, reintentos con backoff,
-caché en SQLite, *circuit breaker* y último valor válido. Y si no hay Internet, el
-sistema **sigue funcionando con fixtures versionados y lo declara degradado en la
-propia respuesta**. Una demo que se cae por el wifi del auditorio no es una demo;
-una que disimula que usa datos viejos es peor.
+Si una fuente externa tarda o falla, el sistema vuelve a intentarlo y, cuando es
+necesario, usa la última copia válida. Si no hay Internet, **sigue funcionando
+con datos de respaldo e indica claramente que la información puede no estar
+actualizada**.
 
 ### ④ La IA convierte los datos en una decisión entendible
 
-<img src="docs/media/4.jpg" alt="Mapa de nutrientes, receta recomendada y acta humanizada accesible mediante un código QR" width="100%">
-
-Tres **procesos gaussianos Matérn** —uno por nutriente— llevan 18 puntos a 140
-celdas de 10 × 10 m. Cada celda recibe media, desviación e intervalo del 95 %, así
-que el mapa dice también **dónde no sabe**: lo rayado es lo incierto, nunca lo
-pobre. Y sugiere la **siguiente** medición, a 54 m de la más cercana, para
-aprender lo máximo con un solo punto más.
+Tres modelos estadísticos —uno por nutriente— convierten 18 mediciones en un mapa
+de 140 celdas de 10 × 10 m. El mapa no solo estima qué hay en cada celda: también
+muestra **dónde tiene dudas**. Las franjas rayadas indican que hace falta medir
+más, no que el suelo sea pobre. El sistema también sugiere dónde tomar la
+siguiente muestra para reducir esas dudas.
 
 La IA no es una caja negra ni un chatbot que inventa dosis. En el flujo actual
 cumple tareas separadas y verificables:
 
-- el proceso gaussiano construye el mapa y cuantifica su incertidumbre;
-- el aprendizaje activo propone dónde conviene tomar la siguiente muestra;
-- KMeans agrupa las celdas en zonas que el técnico sí puede manejar;
-- NearestNeighbors busca temporadas climáticas parecidas;
+- un modelo estadístico construye el mapa y muestra qué tan segura es cada
+  estimación;
+- otro método propone dónde conviene tomar la siguiente muestra;
+- las celdas parecidas se agrupan en zonas que el técnico sí puede manejar;
+- se buscan temporadas pasadas con condiciones climáticas similares;
 - Claude Sonnet 5, cuando está habilitado, **traduce la evidencia a español
   claro**, pero no calcula ni decide.
 
-Después, una **búsqueda entera exacta y determinista** —no el modelo de lenguaje—
-enumera 12 341 combinaciones del catálogo que el centro tiene en bodega y
-devuelve la mejor:
+Después, un cálculo tradicional —no el modelo de lenguaje— prueba las 12 341
+combinaciones posibles del inventario del centro y devuelve la que mejor cubre
+la necesidad nutricional:
 
 ```text
 Zona 1 · 0,67 ha        8 bultos de 20-10-30  +  1 bulto de 30-30-40
@@ -151,10 +149,9 @@ Bultos enteros, porque nadie aplica 2,7 bultos. Sin marcas, sin nombres químico
 y **sin precios**: el objetivo es nutricional, no monetario, y no publicamos un
 ahorro que no podemos sustentar.
 
-El resultado es siempre una receta **recomendada, no prescrita**. Toda propuesta
-nace en la base de datos como `pending`, `applied = false` y
-`requires_technical_validation`, y una persona puede **aceptar, rechazar,
-modificar o remitir** la propuesta.
+El resultado es siempre una receta **recomendada, no prescrita**. Primero queda
+pendiente de validación técnica y marcada como no aplicada. Una persona puede
+**aceptarla, rechazarla, modificarla o remitirla** a otro profesional.
 
 Cuando el técnico la acepta, el tablero genera un **QR humanizado** que abre el
 acta de campo en el celular. El documento conserva las cifras calculadas por el
@@ -167,22 +164,21 @@ a un servicio externo.
 Claude puede mejorar la redacción del asistente sobre evidencia ya estructurada,
 pero un verificador compara todas sus cifras con las permitidas. Si introduce un
 número que no estaba en la evidencia, se descarta la respuesta completa y se usa
-la explicación determinista. Si no hay llave, Internet o presupuesto, el sistema
-sigue funcionando.
+la explicación generada mediante reglas verificables. Si no hay llave, Internet
+o presupuesto, el sistema sigue funcionando.
 
-Es supervisión humana significativa en el sentido del **AI Act**, y no está
-sostenida por una promesa en un slide:
+Esta supervisión humana está alineada con el enfoque del **AI Act** europeo, y no
+depende de una promesa:
 
 - el sistema **propone**, una persona **decide** — el esquema de la base no
   permite otra cosa;
-- toda salida trae su explicación paso a paso, su modelo, sus fuentes y el
-  **SHA-256 de los datos de entrada**;
+- toda salida trae su explicación, su modelo, sus fuentes y una **huella digital
+  de los datos de entrada** para comprobar que no cambiaron;
 - la incertidumbre es visible, no se esconde detrás de un color bonito;
 - lo que el sistema **no sabe** viaja en la misma respuesta que la recomendación;
-- las decisiones quedan en una auditoría **append-only**: triggers de SQLite
-  rechazan `UPDATE` y `DELETE`, así que el pasado no se reescribe;
-- los datos son del productor: cada uno lleva `data_origin` y `consent_status`
-  explícitos, y no puntuamos agricultores ni evaluamos crédito.
+- las decisiones quedan en un historial que no se puede editar ni borrar;
+- se registra de dónde viene cada dato y si existe consentimiento para usarlo;
+  no puntuamos agricultores ni evaluamos crédito.
 
 ### ⑤ Aplicación precisa y anticipación al clima
 
@@ -199,14 +195,12 @@ explicables acompañan cada propuesta:
 - **Gota tardía** (*Phytophthora infestans*) — horas favorables en las próximas
   48 h. Es lo que arruina un cultivo de papa en el alto andino.
 
-Cada riesgo entrega score, severidad, ventana temporal, entradas exactas,
-fuentes, versión de la regla y **qué le cambió a la propuesta**. Si las fuentes
-están degradadas, la confianza baja automáticamente de 0,90 a 0,65 y se dice.
+Cada riesgo explica su nivel, cuándo podría ocurrir, qué datos y fuentes utilizó
+y **qué cambió en la propuesta**. Si alguna fuente falla o está desactualizada,
+la confianza baja automáticamente de 0,90 a 0,65 y se informa.
 
-Son **reglas transparentes con umbrales visibles, no un clasificador entrenado**.
-Podríamos haber generado etiquetas sintéticas y presentar un modelo con 94 % de
-accuracy sobre datos inventados por nosotros mismos. Eso no es machine learning,
-es saber llamar a `.fit()`.
+Son **reglas transparentes con límites visibles**, no un modelo entrenado con
+ejemplos inventados para presumir una precisión que no existe.
 
 ---
 
@@ -224,9 +218,10 @@ secciones; el recorrido de la demo toca seis:
    se sabe.
 5. **Alertas** — el riesgo climático con su ventana, su confianza y su efecto
    sobre la propuesta.
-6. **Historial** — se acepta o se remite, y queda en la auditoría append-only.
+6. **Historial** — se acepta o se remite, y queda en un registro que no se puede
+   alterar.
 
-## Correrlo
+## Correrlo (para desarrolladores)
 
 ```powershell
 python -m pip install -r backend/requirements.txt
@@ -247,7 +242,7 @@ funciona igual y lo declara.
 
 ```powershell
 python -m pytest backend/tests -q        # 66 pruebas, ninguna toca la red
-python backend/scripts/demo_backend.py   # el pipeline entero sin Internet
+python backend/scripts/demo_backend.py   # el proceso entero sin Internet
 ```
 
 ## Lo que afirmamos y lo que no
@@ -256,31 +251,53 @@ Un jurado puede verificar esto en el código, no solo leerlo aquí.
 
 **Sí:**
 
-- El pipeline completo corre sobre datos reales de un lote real.
-- Interpola, cuantifica su propia incertidumbre y pide la siguiente medición.
-- Resuelve la mezcla entera óptima dentro de sus límites y lo demuestra
+- El proceso completo usa mediciones reales de un lote real.
+- Construye el mapa, muestra sus dudas y recomienda la siguiente medición.
+- Encuentra la mejor mezcla posible dentro de sus límites y lo demuestra
   (`optimal_within_bounds: true`, 12 341 combinaciones enumeradas).
 - Los riesgos modifican la propuesta con explicación y fuente.
 - Toda decisión queda en un registro que la base impide reescribir.
 
-**No, y lo decimos en la propia respuesta de la API:**
+**No, y lo decimos en la propia respuesta del sistema:**
 
-- El sensor **no está calibrado** contra laboratorio. Va en `warnings` en cada
-  llamada.
-- El perfil agronómico es `demo_unvalidated`: requerimientos, densidad aparente y
-  factor de disponibilidad son supuestos de demostración, no una prescripción
-  firmada por un agrónomo.
-- **El proceso gaussiano no le gana a IDW en este dataset.** RMSE medio GP
-  `4,675924` contra IDW `4,619368` puntos porcentuales. El backend lo reporta
-  como `gp_better_than_idw: false`. Elegimos GP por su distribución predictiva y
-  su muestreo activo, no por precisión demostrada.
-- Los riesgos modelados son **helada, sequía y gota tardía**, más el contexto
-  ENSO. **No modelamos incendios**: la señal de sequía indica condiciones
-  propicias, y eso es todo lo que podemos afirmar.
+- El sensor **todavía no se ha comparado con análisis de laboratorio**. Cada
+  respuesta incluye esta advertencia.
+- Los valores agronómicos de la demo son supuestos sin validar, no una
+  prescripción firmada por un agrónomo.
+- **El modelo actual no fue más preciso que el método sencillo usado como
+  comparación.** Se mantiene porque permite mostrar la incertidumbre y sugerir
+  dónde medir después, no porque haya demostrado mayor precisión.
+- Los riesgos modelados son **helada, sequía y gota tardía**, además del contexto
+  de El Niño o La Niña. **No modelamos incendios**: la señal de sequía indica
+  condiciones propicias, y eso es todo lo que podemos afirmar.
 - No estimamos ahorro en pesos, no predecimos rendimiento y no puntuamos
   agricultores.
 
 Preferimos un sistema que sepa lo que no sabe.
+
+## Uso responsable, AI Act y escalabilidad
+
+El [AI Act de la Unión Europea](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)
+establece un enfoque basado en el riesgo y, para determinados sistemas de alto
+riesgo, exige supervisión humana efectiva. IOmido adopta esos principios como
+guía de diseño. Esto **no equivale a afirmar una certificación o clasificación
+legal** del proyecto.
+
+- **Una persona decide.** La IA prepara el mapa y recomienda una receta, pero el
+  técnico o agrónomo puede aceptarla, modificarla, rechazarla o remitirla. Nada
+  se presenta como aplicado sin esa decisión.
+- **La responsabilidad se diseña desde el inicio.** El sistema muestra sus dudas,
+  explica de dónde sale cada recomendación, limita a Claude a redactar evidencia
+  ya calculada y conserva un historial que no se puede reescribir.
+- **Escalar no significa quitar a la persona.** Un sensor compartido y el mismo
+  motor pueden atender muchas fincas. La validación ocurre por lote, en el punto
+  importante: antes de llevar la recomendación al campo.
+- **Cada región conserva control local.** Antes de incorporar un cultivo o una
+  zona nueva, deben validarse los parámetros con especialistas locales, definirse
+  responsables y vigilar si la calidad del sistema cambia con el tiempo.
+
+Así, crecer significa producir más recomendaciones trazables y revisables, no
+automatizar más decisiones sin control.
 
 ## Documentación
 
@@ -298,10 +315,11 @@ Preferimos un sistema que sepa lo que no sabe.
 2. Medir la densidad aparente real y validar la profundidad de muestreo.
 3. Que un ingeniero agrónomo local firme requerimientos, disponibilidad y
    máximos por cultivo, variedad y etapa.
-4. Consultar clima en vivo en vez de los fixtures versionados.
+4. Consultar clima en vivo en vez de los datos de respaldo incluidos en la demo.
 5. Cargar el inventario real de formulaciones de cada centro.
-6. Pilotear y reevaluar GP contra IDW con más lotes y más temporadas.
+6. Hacer pruebas con más lotes y temporadas, y volver a comparar el modelo con
+   métodos más sencillos.
 
 Ninguno de esos pendientes autoriza presentar el perfil de demo como una
-prescripción validada, y el código no lo permite: toda propuesta sale marcada
-`requires_technical_validation`.
+prescripción validada. Por eso, el sistema marca toda propuesta como pendiente
+de validación técnica.
