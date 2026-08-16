@@ -501,7 +501,9 @@ table.data tr.row-out td { color: var(--low); }
 /* ── kpis ─────────────────────────────────────────────── */
 .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); flex: none; }
 .kpis .kpi { min-width: 0; }
-.kpi .label, .kpi .hint { overflow-wrap: anywhere; }
+/* break-word only splits a word that cannot fit on its own line; `anywhere`
+   also collapses the track's minimum, which chopped "pobre" into "pobr e". */
+.kpi .label, .kpi .hint { overflow-wrap: break-word; }
 .kpi {
   background: var(--surface);
   border: 1px solid var(--border);
