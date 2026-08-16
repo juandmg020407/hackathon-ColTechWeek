@@ -37,7 +37,7 @@ cuesta más de lo que deja una cosecha pequeña y los resultados llegan cuando y
 sembró. Entonces se fertiliza por costumbre —el mismo bulto, la misma dosis, en
 todo el lote y todos los años.
 
-Y un lote no es homogéneo. En las **19 mediciones reales** de esta demo, dos
+Y un lote no es homogéneo. En las **19 mediciones REALES** de esta demo, dos
 puntos separados **45 metros** dan potasio de **1 %** y de **13 %**, y el
 nitrógeno va de **1 % a 27 %** dentro de la misma hectárea y cuarto. Fertilizar
 eso con una dosis única es equivocarse en casi toda la superficie: sobra donde ya
@@ -72,7 +72,7 @@ evidencia más útil, trazable y oportuna para decidir juntos.
 
 ### ① La medición en campo
 
-<img src="docs/media/1.jpg" alt="Agricultor insertando el sensor NPK en el suelo de un lote de papa en Pasto, Nariño" width="100%">
+<img src="docs/media/1.jpg" alt="Agricultor insertando el sensor NPK en el suelo de un lote de papa en Pasto, Nariño" width="40%">
 
 El técnico del centro de acopio recorre las fincas con **un solo sensor
 compartido por toda la red**. Lo clava en la tierra y anota N, P, K y la
@@ -85,7 +85,7 @@ generados.
 
 ### ② Recolección y envío a la nube
 
-<img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="100%">
+<img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="40%">
 
 Cada lectura lleva un identificador único. Si el técnico pierde señal y vuelve a
 enviarla, el sistema la reconoce y **no la duplica**. También se pueden cargar
@@ -97,7 +97,7 @@ ubicado que desaparece en silencio es un dato que nadie puede auditar después.
 
 ### ③ El sistema le suma el clima
 
-<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
+<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="40%">
 
 Saber qué tiene el suelo no basta: también importa qué clima viene. El sistema
 consulta seis fuentes abiertas y las junta con la lectura del sensor.
@@ -119,6 +119,8 @@ Si una fuente falla o no hay Internet, sigue funcionando con la última copia
 guardada **y lo dice en pantalla**.
 
 ### ④ Sale un mapa y una receta que se entiende
+
+<img src="docs/media/4.jpg" alt="Supervisión humana, trazabilidad y decisiones explicables con IA" width="40%">
 
 Con 18 mediciones el sistema arma un mapa del lote celda por celda. No solo dice
 qué hay en cada punto: también **dónde no está seguro**. Las franjas rayadas
@@ -148,7 +150,7 @@ estaba en los datos, descarta la respuesta entera.
 
 ### ⑤ Aplicación precisa y anticipación al clima
 
-<img src="docs/media/5.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="100%">
+<img src="docs/media/5.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="40%">
 
 La receta llega a la zona que la necesita, en la cantidad que le corresponde, y
 **en el momento en que tiene sentido aplicarla**. Tres motores de riesgo
