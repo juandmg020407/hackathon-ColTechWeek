@@ -59,6 +59,12 @@ enlazar. Un hash desconocido cae en `#resumen`. `pitch.html` embebe
 Los iconos del menú van **inline como paths SVG**: el contrato prohíbe pedir
 recursos a hosts externos, y el shell debe pintar sin una sola petición de red.
 
+El fondo ilustrado del cultivo es `assets/field.webp` (127 KB), servido desde el
+mismo origen y precacheado por el service worker. `style.css` lo apunta con
+`--field-image`, que conserva detrás el degradado pintado a mano: si el archivo
+faltara, la página sigue abriendo sobre un campo y no sobre blanco. Cambiar esa
+variable cambia el fondo del dashboard y el de las pantallas de entrada a la vez.
+
 ## Módulos
 
 | Archivo | Responsabilidad |
