@@ -17,3 +17,10 @@ openpyxl==3.1.5
 brotli-asgi==1.4.0
 PyYAML==6.0.3
 python-multipart==0.0.20
+#
+# anthropic==0.122.0 NO va aqui a proposito. El explicador esta apagado en
+# produccion (AI_EXPLAINER_ENABLED=false) y su import es perezoso, asi que la
+# funcion arranca igual sin el SDK. Son ~8 MB y este bundle ya pasa raspando el
+# limite de 250 MB. Para encenderlo en el despliegue: descomentar la linea,
+# poner ANTHROPIC_API_KEY en las variables de Vercel y verificar que el build
+# no reviente por tamano.

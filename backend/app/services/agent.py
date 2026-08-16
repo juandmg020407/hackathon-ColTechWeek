@@ -7,6 +7,7 @@ import unicodedata
 from typing import Any
 
 from ..repositories import SQLiteRepository
+from .explainer import EvidenceExplainer
 
 
 def _normalise(value: str) -> str:
@@ -17,8 +18,15 @@ def _normalise(value: str) -> str:
 class GroundedAgent:
     version = "deterministic-grounded-router/1.0.0"
 
-    def __init__(self, repository: SQLiteRepository):
+    def __init__(
+        self,
+        repository: SQLiteRepository,
+        explainer: EvidenceExplainer | None = None,
+    ):
         self.repository = repository
+        # El explicador es opcional y solo reescribe. El intent, las cifras y la
+        # evidencia salen del router aunque el modelo este activo.
+        self.explainer = explainer
 
     def ask(self, plot_id: str, question: str) -> dict[str, Any]:
         package = self.repository.latest_package(plot_id)
@@ -54,7 +62,7 @@ class GroundedAgent:
         sources = [
             source.get("name") for source in package.get("sources", []) if source.get("name")
         ]
-        return {
+        result = {
             "answered": True,
             "intent": intent,
             "answer": answer,
@@ -65,6 +73,28 @@ class GroundedAgent:
             "llm_used": False,
             "limitations": package.get("warnings", []),
         }
+        return self._phrase(question, result)
+
+    def _phrase(self, question: str, result: dict[str, Any]) -> dict[str, Any]:
+        """Deja que el explicador reescriba la respuesta, si hay uno activo.
+
+        La respuesta determinista es la que se devuelve mientras el explicador no
+        confirme una redaccion valida, asi que un modelo caido, sin presupuesto o
+        que inventa una cifra no cambia lo que ve el usuario.
+        """
+        if self.explainer is None:
+            return result
+        rendered = self.explainer.render(
+            question=question,
+            evidence=result,
+            evidence_ids=result["evidence_ids"],
+        )
+        result["explainer"] = rendered
+        if rendered.get("used"):
+            result["answer_deterministic"] = result["answer"]
+            result["answer"] = rendered["text"]
+            result["llm_used"] = True
+        return result
 
     @staticmethod
     def _intent(question: str) -> str | None:

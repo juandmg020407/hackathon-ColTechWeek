@@ -25,8 +25,15 @@ def _default_db_path() -> str:
 
 
 class Settings(BaseSettings):
+    # Se leen los dos .env por ruta absoluta y no el relativo al directorio de
+    # trabajo: el backend se lanza tanto desde la raiz como desde backend/, y
+    # con una ruta relativa la credencial aparecia o no segun desde donde se
+    # arrancara. El de la raiz gana por ir de ultimo.
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False
+        env_file=(BACKEND_ROOT / ".env", REPOSITORY_ROOT / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
     )
 
     app_name: str = "IOmido Soil Intelligence API"
@@ -51,6 +58,10 @@ class Settings(BaseSettings):
     ai_model: str = "disabled"
     ai_input_price_usd_per_million: float = Field(default=0.0, ge=0)
     ai_output_price_usd_per_million: float = Field(default=0.0, ge=0)
+    ai_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
+    # El SDK tambien lee ANTHROPIC_API_KEY del entorno; declararla aqui permite
+    # tomarla del .env local sin exportarla a mano.
+    anthropic_api_key: str = ""
 
     @property
     def origins(self) -> list[str]:

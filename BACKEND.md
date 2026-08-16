@@ -140,6 +140,27 @@ Las respuestas principales incluyen `contract_version`, unidades, convención,
 validación, fuentes, versiones, tiempo, degradación y advertencias. Los errores
 incluyen `request_id` y el middleware emite logs JSON con duración.
 
+## Explicador opcional
+
+`POST /v1/agent/ask` responde siempre con un router determinista: clasifica la
+intención, lee el paquete y arma la respuesta a partir de la evidencia. Ese
+router es el único que produce cifras.
+
+Encima puede montarse un explicador (`AI_EXPLAINER_ENABLED=true`,
+`AI_MODEL=claude-haiku-4-5`) que solo reescribe ese texto en lenguaje llano. No
+decide, no calcula y no puede introducir datos:
+
+- toda cifra de la redacción se contrasta contra la evidencia; si aparece una
+  que no estaba —incluido un redondeo—, la redacción se descarta;
+- si el modelo falla, tarda o se queda sin presupuesto, se devuelve el texto
+  determinista y la demo no se cae;
+- el costo real de cada llamada se acumula contra `AI_TOTAL_BUDGET_USD` y viaja
+  en la respuesta, junto con `answer_deterministic` para poder comparar.
+
+`llm_used` dice si la redacción se usó, y `model_versions.explainer` identifica
+la versión del explicador. Con Haiku 4.5 cada pregunta cuesta del orden de
+0,0015 USD, así que el presupuesto de 1 USD cubre cientos de consultas.
+
 ## Seguridad y presupuesto
 
 - CORS configurable.
@@ -149,8 +170,11 @@ incluyen `request_id` y el middleware emite logs JSON con duración.
 - no se registran secretos;
 - LLM desactivado por defecto;
 - precios de tokens solo por variables de entorno;
-- presupuesto opcional máximo por defecto: 1 USD;
-- las pruebas no habilitan red ni proveedor pagado.
+- presupuesto opcional máximo por defecto: 1 USD, verificado antes de cada
+  llamada y acumulado con el consumo real que reporta la API;
+- `ANTHROPIC_API_KEY` vive en el `.env` local, que `.gitignore` excluye;
+- las pruebas no habilitan red ni proveedor pagado: el explicador se prueba
+  contra un cliente falso.
 
 ## Verificación
 
