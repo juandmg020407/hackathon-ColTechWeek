@@ -65,16 +65,30 @@ def main() -> int:
                 "measurements": package["measurements"]["count"],
                 "proposal_id": package["proposal"]["id"],
             })
-            show(4, "Predicciones e incertidumbre", {
+
+            dashboard_response = client.get(
+                "/v1/centers/center-pasto-demo/dashboard"
+            )
+            dashboard_response.raise_for_status()
+            dashboard = dashboard_response.json()["dashboard"]
+            show(4, "Red persistida del centro", {
+                "data_scope": dashboard["data_scope"],
+                "summary": dashboard["summary"],
+                "priority_queue": dashboard["priority_queue"],
+                "risk_horizon": dashboard["risk_horizon"],
+                "producers": dashboard["producers"],
+            })
+
+            show(5, "Predicciones e incertidumbre", {
                 "model_run": package["model_run"],
                 "zone_centroids": [zone["centroid_npk"] for zone in package["spatial"]["zones"]],
                 "uncertainty": package["spatial"]["grid"]["combined_uncertainty"],
             })
-            show(5, "Siguiente punto", package["spatial"]["next_sample"])
+            show(6, "Siguiente punto", package["spatial"]["next_sample"])
 
             risk_response = client.get("/v1/plots/nar-001/risk")
             risk_response.raise_for_status()
-            show(6, "Riesgo climático", risk_response.json()["climate"])
+            show(7, "Riesgo climático", risk_response.json()["climate"])
 
             plans = [
                 {
@@ -83,12 +97,12 @@ def main() -> int:
                 }
                 for recommendation in package["proposal"]["recommendations"]
             ]
-            show(7, "Formulaciones candidatas enteras", plans)
+            show(8, "Formulaciones candidatas enteras", plans)
 
             proposal_id = package["proposal"]["id"]
             why = client.get(f"/v1/proposals/{proposal_id}/why")
             why.raise_for_status()
-            show(8, "Explicación de la propuesta", why.json()["explanation"])
+            show(9, "Explicación de la propuesta", why.json()["explanation"])
 
             decision = client.post("/v1/decisions", json={
                 "proposal_id": proposal_id,
@@ -97,13 +111,13 @@ def main() -> int:
                 "note": "Solicitar validación del técnico del centro.",
             })
             decision.raise_for_status()
-            show(9, "Decisión humana", decision.json()["decision"])
+            show(10, "Decisión humana", decision.json()["decision"])
 
             audit = client.get(
                 "/v1/audit", params={"entity_type": "proposal", "entity_id": proposal_id}
             )
             audit.raise_for_status()
-            show(10, "Auditoría append-only", audit.json()["events"])
+            show(11, "Auditoría append-only", audit.json()["events"])
     return 0
 
 

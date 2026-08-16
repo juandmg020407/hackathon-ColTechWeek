@@ -51,6 +51,10 @@ const SEVERITY_MARK = {
 };
 const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
 const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
+const MODEL_LABEL = {
+  'GaussianProcessRegressor-Matern': 'proceso gaussiano Matérn',
+  'GaussianProcessRegressor': 'proceso gaussiano',
+};
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
 const KPI_ICON = {
   area: 'M4 7h16v10H4zM4 11h16M9 7v10',
@@ -107,13 +111,18 @@ function colorbar() {
 }
 
 function networkBounds() {
-  const producers = state.network.productores;
+  const producers = state.network.productores
+    .filter((producer) => Number.isFinite(producer.lat) && Number.isFinite(producer.lon));
+  const points = producers.length
+    ? producers.map((producer) => ({ lat: producer.lat, lon: producer.lon }))
+    : (state.view?.contorno || []).map(([lat, lon]) => ({ lat, lon }));
+  if (!points.length) throw new Error('No hay ubicaciones para representar la red.');
   const pad = 0.03;
   return {
-    north: Math.max(...producers.map((p) => p.lat)) + pad,
-    south: Math.min(...producers.map((p) => p.lat)) - pad,
-    east: Math.max(...producers.map((p) => p.lon)) + pad,
-    west: Math.min(...producers.map((p) => p.lon)) - pad,
+    north: Math.max(...points.map((point) => point.lat)) + pad,
+    south: Math.min(...points.map((point) => point.lat)) - pad,
+    east: Math.max(...points.map((point) => point.lon)) + pad,
+    west: Math.min(...points.map((point) => point.lon)) - pad,
   };
 }
 
@@ -572,10 +581,13 @@ function wireTabs(initial) {
   show(initial || 'propuesta');
 }
 
+// With a live dashboard this percentage is measured coverage, not crop health:
+// it says how many plots have readings, so the wording talks about coverage.
 function healthHeadline(pct) {
-  if (pct >= 80) return 'Tu abastecimiento está estable.';
-  if (pct >= 60) return 'Tu abastecimiento aguanta, con puntos que vigilar.';
-  return 'Tu abastecimiento está comprometido.';
+  if (pct >= 80) return 'Casi toda la red está medida.';
+  if (pct >= 60) return 'La red está medida en su mayoría.';
+  if (pct > 0) return 'Falta medir buena parte de la red.';
+  return 'La red todavía no tiene mediciones.';
 }
 
 // The screen never invents the outcome: it shows what the backend resolved.
@@ -748,7 +760,7 @@ function viewResumen() {
       <div class="facts-head">
         <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
         <p class="note">${net?.real
-          ? 'Del backend: <code>/v1/centers/{id}/dashboard</code>'
+          ? `Medido ${new Date(view.generado).toLocaleDateString('es-CO')}`
           : 'Del paquete descargado, sin conexión'}</p>
       </div>
       <div class="kpi-grid">${kpis}</div>
@@ -858,7 +870,7 @@ function viewResumenRed() {
       <ul class="moves-list">${net.real.lotes.map((l) => `<li>
         <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
       </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers</code> y <code>/v1/plots</code>.</p>
+      <p class="note">Conteos del centro, tal como los guarda el sistema.</p>
     </section>` : ''}
 
     <div class="kpi-grid">${kpis}</div>
@@ -894,11 +906,13 @@ function viewResumenRed() {
 
     <div class="bot-grid">
       <section class="card health">
-        <h2>Salud de abastecimiento</h2>
+        <h2>Cobertura de medición</h2>
         <div class="health-pct">${net.salud.pct}%</div>
         ${riskBar(net.salud.pct)}
         <p class="note">${net.salud.lotes_ok} de ${k.lotes} lotes sin alertas críticas.
-          <span class="${net.salud.delta_semana < 0 ? 'delta-bad' : 'delta-good'}">${net.salud.delta_semana >= 0 ? '+' : ''}${net.salud.delta_semana} pts vs. la semana pasada</span></p>
+          ${net.salud.delta_semana
+            ? `<span class="${net.salud.delta_semana < 0 ? 'delta-bad' : 'delta-good'}">${net.salud.delta_semana > 0 ? '+' : ''}${net.salud.delta_semana} pts vs. la semana pasada</span>`
+            : ''}</p>
         <p class="note">Área en riesgo: <b>${fmt(net.area_riesgo.ha)} ha</b> (${net.area_riesgo.pct}% de tu área).</p>
         <p class="note">Riesgo, próximos 30 días:</p>
         ${horizonte}
@@ -1025,7 +1039,7 @@ function viewLote() {
 
         ${view.descartados.length ? `<div class="amber">
           <b>Una medición quedó fuera</b>
-          <p>${view.descartados[0].motivo}</p>
+          <p>${translateOne(view.descartados[0].motivo)}</p>
           <p>Se conserva en el historial, pero no alimenta el modelo.</p>
           <div class="amber-actions"><button class="btn ghost" type="button" data-open-measurements>Ver mediciones →</button></div>
         </div>` : ''}
@@ -1105,7 +1119,7 @@ function viewLotes() {
 
   return panelCard('Lotes del centro', `<div class="table-wrap"><table class="data">
       <thead><tr><th>Lote</th><th>Municipio</th><th class="num">Mediciones</th><th>Área</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`, 'Del backend: <code>GET /v1/plots</code>.');
+      <tbody>${rows}</tbody></table></div>`);
 }
 
 function viewMediciones() {
@@ -1116,7 +1130,7 @@ function viewMediciones() {
       <td class="num">${String(i + 1).padStart(2, '0')}</td>
       <td class="num">${p.N} %</td><td class="num">${p.P} %</td><td class="num">${p.K} %</td>
       <td>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</td>
-      <td>${p.usada ? 'usada' : `fuera <span class="note">${p.motivo || 'geometría'}</span>`}</td>
+      <td>${p.usada ? 'usada' : `fuera <span class="note">${translateOne(p.motivo) || 'geometría'}</span>`}</td>
     </tr>`).join('');
 
   return panelCard(`Mediciones · ${view.sampling.valid} de ${view.sampling.total} alimentan el modelo`,
@@ -1124,7 +1138,7 @@ function viewMediciones() {
       <thead><tr><th class="num">#</th><th class="num">N</th><th class="num">P</th><th class="num">K</th>
         <th>Coordenadas</th><th>Estado</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`,
-    `Porcentaje de masa, base ${view.grid.base || 'elemental'}. Del paquete: <code>measurements.points</code>.`);
+    'Los valores son porcentaje de masa del suelo, en convención elemental.');
 }
 
 function viewAlertas() {
@@ -1141,7 +1155,7 @@ function viewAlertas() {
       </div>
       <button class="btn ghost" type="button" data-nav="lote" data-tab-go="riesgos">Ver detalles →</button>
     </article>`).join('');
-  return panelCard('Alertas climáticas', cards, 'Del paquete: <code>climate.risks</code>.');
+  return panelCard('Alertas climáticas', cards);
 }
 
 function viewRecomendaciones() {
@@ -1156,7 +1170,7 @@ function viewRecomendaciones() {
     </article>`).join('');
   return panelCard('Recomendaciones por zona', `<div class="proposal">${zones}
     <button class="btn" type="button" data-nav="lote" data-tab-go="propuesta">Abrir la propuesta y decidir →</button></div>`,
-  'Del paquete: <code>proposal.recommendations</code>. Un grado <b>30-30-40</b> es 30 % N, 30 % P y 40 % K de la masa del bulto.');
+  'Un grado <b>30-30-40</b> es 30 % N, 30 % P y 40 % K de la masa del bulto.');
 }
 
 function viewHistorial() {
@@ -1171,23 +1185,92 @@ function viewHistorial() {
         <th>Cuándo</th><th>Acción</th><th>Estado resultante</th><th>Quién</th></tr></thead>
         <tbody>${rows}</tbody></table></div>`
     : `<p class="note">${state.historialMsg || 'Sin decisiones registradas todavía.'}</p>`;
-  return panelCard('Historial de decisiones', body, 'Del backend: <code>GET /v1/decisions/{id}/history</code>.');
+  return panelCard('Historial de decisiones', body);
 }
 
 function viewReportes() {
   const view = state.view;
   const m = view.modelo;
-  const metrics = m?.metrics || {};
-  const rows = Object.entries(metrics).map(([k, v]) => `<tr><td>${k.replace(/_/g, ' ')}</td>
-      <td class="num">${typeof v === 'number' ? fmt(v, 3) : JSON.stringify(v)}</td></tr>`).join('');
-  return panelCard('Reportes del modelo', `
-    <p class="note"><b>${m?.model_name || 'modelo'}</b> ${m?.model_version || ''}
-      · ${m?.observation_count ?? view.sampling.valid} observaciones
-      · ${m?.inference_ms ? `${fmt(m.inference_ms, 0)} ms` : ''}</p>
-    ${rows ? `<div class="table-wrap"><table class="data"><tbody>${rows}</tbody></table></div>` : ''}
-    ${m?.limitations ? `<p class="note"><b>Límites:</b> ${m.limitations}</p>` : ''}
-    ${view.avisos.length ? `<h2>Advertencias del paquete</h2><ul class="balance">${view.avisos.map((a) => `<li>${a}</li>`).join('')}</ul>` : ''}`,
-  'Del paquete: <code>model_run</code>. En vivo también <code>GET /v1/models</code> y <code>/v1/governance</code>.');
+  const perNutrient = m?.metrics?.per_nutrient;
+  const meanRmse = m?.metrics?.mean_rmse;
+
+  // The backend reports GP against an IDW baseline per nutrient. Showing the
+  // raw object helps nobody; the comparison is the point.
+  const compare = perNutrient
+    ? `<div class="table-wrap"><table class="data">
+        <thead><tr><th>Nutriente</th><th class="num">Error del modelo</th><th class="num">Error de la referencia</th>
+          <th class="num">Aciertos del intervalo</th></tr></thead>
+        <tbody>${NUTRIENTS.map((n) => {
+    const row = perNutrient[n];
+    if (!row) return '';
+    return `<tr><td><b>${n}</b></td>
+            <td class="num">${fmt(row.gp?.mae, 2)} pp</td>
+            <td class="num">${fmt(row.idw?.mae, 2)} pp</td>
+            <td class="num">${Math.round((row.gp?.interval_95_coverage ?? 0) * 100)} %</td></tr>`;
+  }).join('')}</tbody></table></div>`
+    : '';
+
+  const verdict = meanRmse
+    ? `<p class="note">Error cuadrático medio: <b>${fmt(meanRmse.gp, 2)} pp</b> con el modelo espacial
+        contra <b>${fmt(meanRmse.idw, 2)} pp</b> del método de referencia.
+        ${m.metrics.gp_better_than_idw
+    ? 'El modelo espacial mejora la referencia en este conjunto.'
+    : 'Con estos datos <b>no se afirma</b> que el modelo espacial supere a la referencia.'}</p>`
+    : '';
+
+  const limits = translateList(m?.limitations);
+  // The package repeats the model's limitations inside its warnings; show each once.
+  const warnings = translateList(view.avisos).filter((a) => !limits.includes(a));
+
+  return panelCard('Cómo se calculó', `
+    <p class="note">Modelo <b>${MODEL_LABEL[m?.model_name] || m?.model_name || 'espacial'}</b>
+      ${m?.model_version || ''} · <b>${m?.observation_count ?? view.sampling.valid}</b> mediciones dentro del lote
+      ${m?.inference_ms ? ` · ${fmt(m.inference_ms, 0)} ms de cálculo` : ''}</p>
+    ${compare}
+    ${verdict}
+    ${limits.length ? `<h2>Hasta dónde llega</h2><ul class="balance">${limits.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
+    ${warnings.length ? `<h2>Avisos</h2><ul class="balance">${warnings.map((a) => `<li>${a}</li>`).join('')}</ul>` : ''}
+    <p class="note">«pp» son puntos porcentuales de masa. Una cobertura por debajo del 95 %
+      significa que el intervalo del modelo se queda corto más veces de lo previsto.</p>`);
+}
+
+// The backend writes its limitations and warnings in English. Each is mapped
+// word for word; anything unmapped is shown as it came rather than guessed at.
+const BACKEND_ES = new Map([
+  ['Sensor percentages have not been calibrated against laboratory samples.',
+    'Los porcentajes del sensor no se han calibrado contra muestras de laboratorio.'],
+  ['Spatial predictions support sampling and review; they are not laboratory measurements.',
+    'Las predicciones espaciales sirven para muestrear y revisar; no son mediciones de laboratorio.'],
+  ['Small dataset (18 in-plot observations); metrics have high variance.',
+    'Conjunto pequeño (18 mediciones dentro del lote): las métricas varían mucho.'],
+  ['The crop profile is demo_unvalidated; no candidate plan is an applied prescription.',
+    'El perfil de cultivo es de demostración y no está validado: ningún plan es una prescripción aplicada.'],
+  ['GP is not claimed to outperform IDW for this input set.',
+    'No se afirma que el modelo espacial supere al método de referencia con estos datos.'],
+  ['measurement is outside the declared plot boundary',
+    'la medición cae fuera del contorno declarado del lote'],
+  ['reading is outside the declared plot boundary',
+    'la lectura cae fuera del contorno declarado del lote'],
+]);
+
+const SOURCE_OFFLINE = /^(.+): network access is disabled; using a versioned offline fixture; data is not presented as current$/;
+
+function translateOne(text) {
+  if (typeof text !== 'string') return text;
+  const mapped = BACKEND_ES.get(text.trim());
+  if (mapped) return mapped;
+  const offline = text.trim().match(SOURCE_OFFLINE);
+  if (offline) {
+    return `${offline[1]}: sin acceso a la red; se usó un archivo local con fecha, así que el dato no es actual.`;
+  }
+  return text;
+}
+
+function translateList(value) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return [...new Set(items.map(translateOne))];
 }
 
 function viewConfiguracion() {
@@ -1203,11 +1286,10 @@ function viewConfiguracion() {
       <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
       <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
       <tr><td>Densidad aparente</td><td>${p.bulk_density_g_cm3 ?? '—'} g/cm³</td></tr>
-      <tr><td>Unidad de suelo</td><td>${view.grid.unidad} · ${view.grid.base}</td></tr>
-      <tr><td>Contrato</td><td>${view.contrato}</td></tr>
+      <tr><td>Unidad del suelo</td><td>porcentaje de masa, convención elemental</td></tr>
       <tr><td>Validación</td><td>${VALIDATION_LABEL[view.validacion] || view.validacion}</td></tr>
     </tbody></table></div>`,
-  `Perfil <code>${p.id || ''}</code>, estado <b>${p.validation_status || ''}</b>.`);
+  'El perfil de cultivo es de demostración: requiere que un agrónomo local lo valide.');
 }
 
 function render() {
@@ -1313,7 +1395,6 @@ function render() {
       else zoomBy(button.dataset.map === 'in' ? 1 : -1);
     });
   }
-
   if (state.nav === 'lote') wireTabs(state.tabInicial);
   if (state.nav === 'resumen' || state.nav === 'mapa' || state.nav === 'lote') {
     paintNutrientToggle();

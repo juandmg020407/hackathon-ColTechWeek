@@ -40,10 +40,22 @@ class PlotCreate(BaseModel):
 
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
     center_id: str
+    producer_id: str | None = None
     crop_profile_id: str
     name: str = Field(min_length=1, max_length=150)
     municipality: str = Field(min_length=1, max_length=150)
     boundary: list[tuple[float, float]] = Field(min_length=3)
+
+
+class ProducerPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None = Field(default=None, pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
+    display_name: str = Field(min_length=1, max_length=150)
+    municipality: str = Field(min_length=1, max_length=150)
+    data_origin: Literal["demonstration", "pilot", "operational"] = "operational"
+    consent_status: Literal["demonstration", "granted", "withdrawn"] = "withdrawn"
+    consent_updated_at: datetime | None = None
 
 
 class ReadingCreate(BaseModel):

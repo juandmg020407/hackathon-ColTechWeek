@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 
 from ..agronomy import load_formulation_catalog, load_profiles
-from ..domain.models import Plot
+from ..domain.models import Plot, Producer
 from ..repositories import SQLiteRepository
 
 
@@ -16,6 +16,7 @@ def bootstrap_repository(repository: SQLiteRepository, config_root: str | Path) 
     repository.migrate()
     demo = yaml.safe_load((root / "demo" / "center-pasto-v1.yaml").read_text(encoding="utf-8"))
     repository.upsert_center(demo["center"])
+    repository.upsert_producer(Producer.model_validate(demo["producer"]))
     for profile in load_profiles(root / "agronomy"):
         repository.upsert_crop_profile(profile)
     repository.upsert_plot(Plot.model_validate(demo["plot"]))

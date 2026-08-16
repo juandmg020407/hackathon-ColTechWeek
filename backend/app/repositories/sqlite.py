@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator, Sequence
 
-from ..domain.models import CropProfile, Formulation, NPKPercent, Plot, Reading
+from ..domain.models import CropProfile, Formulation, NPKPercent, Plot, Producer, Reading
 
 
 def utc_now() -> str:
@@ -123,6 +123,77 @@ class SQLiteRepository:
             row = connection.execute("SELECT * FROM centers WHERE id = ?", (center_id,)).fetchone()
             return dict(row) if row else None
 
+    def upsert_producer(self, producer: Producer, actor: str = "system") -> None:
+        now = utc_now()
+        consent_updated_at = (
+            producer.consent_updated_at.isoformat() if producer.consent_updated_at else None
+        )
+        with self.transaction() as connection:
+            existing = connection.execute(
+                """SELECT center_id, display_name, municipality, data_origin,
+                          consent_status, consent_updated_at
+                   FROM producers WHERE id = ?""",
+                (producer.id,),
+            ).fetchone()
+            incoming = (
+                producer.center_id, producer.display_name, producer.municipality,
+                producer.data_origin, producer.consent_status, consent_updated_at,
+            )
+            changed = existing is None or tuple(existing) != incoming
+            connection.execute(
+                """INSERT INTO producers(id, center_id, display_name, municipality, data_origin,
+                                         consent_status, consent_updated_at, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET center_id=excluded.center_id,
+                     display_name=excluded.display_name, municipality=excluded.municipality,
+                     data_origin=excluded.data_origin, consent_status=excluded.consent_status,
+                     consent_updated_at=excluded.consent_updated_at,
+                     updated_at=excluded.updated_at""",
+                (
+                    producer.id, producer.center_id, producer.display_name,
+                    producer.municipality, producer.data_origin, producer.consent_status,
+                    consent_updated_at, now, now,
+                ),
+            )
+            if changed:
+                self._append_audit(
+                    connection,
+                    "producer_created" if existing is None else "producer_updated",
+                    "producer",
+                    producer.id,
+                    actor,
+                    {
+                        "center_id": producer.center_id,
+                        "data_origin": producer.data_origin,
+                        "consent_status": producer.consent_status,
+                    },
+                    now,
+                )
+
+    def list_producers(self, center_id: str) -> list[Producer]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM producers WHERE center_id = ? ORDER BY display_name",
+                (center_id,),
+            ).fetchall()
+            return [self._producer_row(row) for row in rows]
+
+    def get_producer(self, producer_id: str) -> Producer | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM producers WHERE id = ?", (producer_id,)
+            ).fetchone()
+            return self._producer_row(row) if row else None
+
+    @staticmethod
+    def _producer_row(row: sqlite3.Row) -> Producer:
+        return Producer(
+            id=row["id"], center_id=row["center_id"], display_name=row["display_name"],
+            municipality=row["municipality"], data_origin=row["data_origin"],
+            consent_status=row["consent_status"],
+            consent_updated_at=row["consent_updated_at"], created_at=row["created_at"],
+        )
+
     def upsert_crop_profile(self, profile: CropProfile) -> None:
         now = utc_now()
         with self.transaction() as connection:
@@ -151,25 +222,42 @@ class SQLiteRepository:
         now = utc_now()
         with self.transaction() as connection:
             connection.execute(
-                """INSERT INTO plots(id, center_id, crop_profile_id, name, municipality,
-                                      boundary_json, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """INSERT INTO plots(id, center_id, producer_id, crop_profile_id, name,
+                                      municipality, boundary_json, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(id) DO UPDATE SET center_id=excluded.center_id,
+                     producer_id=excluded.producer_id,
                      crop_profile_id=excluded.crop_profile_id, name=excluded.name,
                      municipality=excluded.municipality, boundary_json=excluded.boundary_json,
                      updated_at=excluded.updated_at""",
                 (
-                    plot.id, plot.center_id, plot.crop_profile_id, plot.name,
+                    plot.id, plot.center_id, plot.producer_id, plot.crop_profile_id, plot.name,
                     plot.municipality, _json(plot.boundary), now, now,
                 ),
             )
 
-    def list_plots(self) -> list[dict[str, Any]]:
+    def list_plots(
+        self,
+        *,
+        center_id: str | None = None,
+        producer_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        where: list[str] = []
+        params: list[Any] = []
+        if center_id:
+            where.append("p.center_id = ?")
+            params.append(center_id)
+        if producer_id:
+            where.append("p.producer_id = ?")
+            params.append(producer_id)
+        clause = " WHERE " + " AND ".join(where) if where else ""
         with self.connect() as connection:
             rows = connection.execute(
-                """SELECT p.*, COUNT(r.id) AS reading_count
-                   FROM plots p LEFT JOIN readings r ON r.plot_id = p.id
-                   GROUP BY p.id ORDER BY p.name"""
+                f"""SELECT p.*, COUNT(r.id) AS reading_count
+                    FROM plots p LEFT JOIN readings r ON r.plot_id = p.id
+                    {clause}
+                    GROUP BY p.id ORDER BY p.name""",
+                params,
             ).fetchall()
             return [self._plot_row(row) | {"reading_count": row["reading_count"]} for row in rows]
 
@@ -182,6 +270,7 @@ class SQLiteRepository:
     def _plot_row(row: sqlite3.Row) -> dict[str, Any]:
         return {
             "id": row["id"], "center_id": row["center_id"],
+            "producer_id": row["producer_id"],
             "crop_profile_id": row["crop_profile_id"], "name": row["name"],
             "municipality": row["municipality"], "boundary": _loads(row["boundary_json"]),
             "created_at": row["created_at"],

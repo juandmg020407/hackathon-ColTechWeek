@@ -24,9 +24,10 @@
 - [x] Optimizador entero exacto, lexicográfico y sin objetivo monetario.
 - [x] Propuestas pendientes, explicación y decisión humana.
 - [x] `/v1/agent/ask` local, determinista y anclado a evidencia.
+- [x] Productores, consentimiento y dashboard persistido del centro.
 - [x] Logs JSON, request ID, errores consistentes, CORS y API key opcional.
 - [x] OpenAPI v2 y script de demo sin Internet.
-- [x] 26 pruebas unitarias, ML, contrato e integración offline.
+- [x] 42 pruebas unitarias, ML, contrato e integración offline.
 
 ## Resultado ML que debe conservarse
 

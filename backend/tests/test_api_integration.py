@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 
 REQUIRED_METADATA = {
@@ -14,6 +15,8 @@ REQUIRED_METADATA = {
     "degraded",
     "warnings",
 }
+
+OPENAPI_SNAPSHOT = Path(__file__).resolve().parents[1] / "openapi-v2.json"
 
 
 def test_offline_excel_to_audit_flow(prepared_client):
@@ -71,10 +74,13 @@ def test_openapi_contains_required_v2_operations(prepared_client):
     required = {
         "/health/live", "/health/ready", "/v1/governance", "/v1/models",
         "/v1/models/{model_id}/metrics", "/v1/centers", "/v1/centers/{center_id}",
+        "/v1/centers/{center_id}/dashboard", "/v1/centers/{center_id}/producers",
+        "/v1/producers/{producer_id}", "/v1/producers/{producer_id}/plots",
         "/v1/centers/{center_id}/formulations",
         "/v1/centers/{center_id}/formulations/{formulation_id}",
         "/v1/crop-profiles", "/v1/crop-profiles/{profile_id}",
-        "/v1/plots", "/v1/plots/{plot_id}", "/v1/plots/{plot_id}/package",
+        "/v1/plots", "/v1/plots/{plot_id}", "/v1/plots/{plot_id}/readings",
+        "/v1/plots/{plot_id}/package",
         "/v1/plots/{plot_id}/recompute", "/v1/plots/{plot_id}/risk",
         "/v1/readings", "/v1/readings/bulk", "/v1/readings/import",
         "/v1/proposals/{proposal_id}", "/v1/proposals/{proposal_id}/why",
@@ -82,6 +88,7 @@ def test_openapi_contains_required_v2_operations(prepared_client):
         "/v1/decisions/{identifier}/history", "/v1/agent/ask",
     }
     assert required.issubset(document["paths"])
+    assert document == json.loads(OPENAPI_SNAPSHOT.read_text(encoding="utf-8"))
 
 
 def test_errors_are_consistent_contract_objects(client):
@@ -118,3 +125,46 @@ def test_agent_is_grounded_for_supported_intents(prepared_client):
         "/v1/agent/ask", json={"plot_id": "nar-001", "question": "cuéntame un chiste"}
     )
     assert unsupported.json()["agent"]["answered"] is False
+
+
+def test_center_dashboard_is_persisted_and_honest(prepared_client):
+    client, package, _ = prepared_client
+    response = client.get("/v1/centers/center-pasto-demo/dashboard")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    dashboard = body["dashboard"]
+
+    assert dashboard["summary"]["producer_count"] == 1
+    assert dashboard["summary"]["plot_count"] == 1
+    assert dashboard["summary"]["measurement_count"] == 19
+    assert dashboard["summary"]["computed_plot_count"] == 1
+    assert dashboard["data_scope"]["contains_demonstration_data"] is True
+    assert dashboard["producers"][0]["data_origin"] == "demonstration"
+    assert dashboard["producers"][0]["plots"][0]["package_id"] == package["id"]
+    assert dashboard["producers"][0]["plots"][0]["location"] == {
+        "latitude": 1.24811,
+        "longitude": -77.267245,
+    }
+    assert body["model_versions"]["network"] == "center-network-summary/1.0.0"
+    audit = client.get(
+        "/v1/audit?entity_type=producer&entity_id=producer-el-rosal-demo"
+    ).json()["events"]
+    assert [event["event_type"] for event in audit] == ["producer_created"]
+
+
+def test_producer_and_reading_endpoints_support_frontend_drilldown(prepared_client):
+    client, _, _ = prepared_client
+    producer_id = "producer-el-rosal-demo"
+
+    producer = client.get(f"/v1/producers/{producer_id}")
+    plots = client.get(f"/v1/producers/{producer_id}/plots")
+    filtered = client.get(f"/v1/plots?producer_id={producer_id}")
+    readings = client.get("/v1/plots/nar-001/readings?valid_only=true")
+
+    assert producer.status_code == plots.status_code == filtered.status_code == 200
+    assert producer.json()["producer"]["display_name"] == "Productor demo El Rosal"
+    assert [item["id"] for item in plots.json()["plots"]] == ["nar-001"]
+    assert [item["id"] for item in filtered.json()["plots"]] == ["nar-001"]
+    assert readings.status_code == 200
+    assert readings.json()["count"] == 18
+    assert all(item["valid_for_model"] for item in readings.json()["readings"])

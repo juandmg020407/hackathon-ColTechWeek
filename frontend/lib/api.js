@@ -2,6 +2,7 @@
 
 const DEFAULT_PLOT = 'nar-001';
 const REQUEST_TIMEOUT_MS = 8000;
+const AGENT_REQUEST_TIMEOUT_MS = 25000;
 
 const BACKEND_DEV_PORT = '8000';
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1)$/;
@@ -29,8 +30,8 @@ export const apiBase = resolveBase();
 // Only needed when the backend runs with WRITE_API_KEY set.
 const writeKey = () => (typeof window !== 'undefined' && window.NPK_WRITE_KEY) || '';
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), ...options });
+async function fetchJson(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), ...options });
   if (!response.ok) throw new Error(`${url} respondió ${response.status}`);
   return response.json();
 }
@@ -44,15 +45,19 @@ function get(path) {
   return fetchJson(`${requireBase()}${path}`);
 }
 
-function send(path, body, { raw = false } = {}) {
+function send(path, body, {
+  raw = false,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+  method = 'POST',
+} = {}) {
   const headers = raw ? {} : { 'content-type': 'application/json' };
   const key = writeKey();
   if (key) headers['X-API-Key'] = key;
   return fetchJson(`${requireBase()}${path}`, {
-    method: 'POST',
+    method,
     headers,
     ...(body === undefined ? {} : { body: raw ? body : JSON.stringify(body) }),
-  });
+  }, timeoutMs);
 }
 
 export async function getPackage(plotId = DEFAULT_PLOT) {
@@ -74,7 +79,30 @@ export async function getPackage(plotId = DEFAULT_PLOT) {
 
 // Configuración
 export const getCenters = () => get('/v1/centers');
-export const getPlots = () => get('/v1/plots');
+export const getCenterDashboard = (centerId) => get(`/v1/centers/${encodeURIComponent(centerId)}/dashboard`);
+export const getProducers = (centerId) => get(`/v1/centers/${encodeURIComponent(centerId)}/producers`);
+export const getProducer = (producerId) => get(`/v1/producers/${encodeURIComponent(producerId)}`);
+export const getProducerPlots = (producerId) => get(`/v1/producers/${encodeURIComponent(producerId)}/plots`);
+export const createProducer = (centerId, producer) => send(
+  `/v1/centers/${encodeURIComponent(centerId)}/producers`, producer,
+);
+export const updateProducer = (producerId, producer) => send(
+  `/v1/producers/${encodeURIComponent(producerId)}`,
+  producer,
+  { method: 'PUT' },
+);
+export const getPlots = ({ centerId, producerId } = {}) => {
+  const params = new URLSearchParams();
+  if (centerId) params.set('center_id', centerId);
+  if (producerId) params.set('producer_id', producerId);
+  const queryString = params.toString();
+  const query = queryString ? `?${queryString}` : '';
+  return get(`/v1/plots${query}`);
+};
+export const getPlot = (plotId) => get(`/v1/plots/${encodeURIComponent(plotId)}`);
+export const getPlotReadings = (plotId, { validOnly = false } = {}) => get(
+  `/v1/plots/${encodeURIComponent(plotId)}/readings?valid_only=${validOnly}`,
+);
 
 // Lecturas
 export const postReading = (reading) => send('/v1/readings', reading);
@@ -103,6 +131,10 @@ export const getModelMetrics = (modelId) => get(`/v1/models/${modelId}/metrics`)
 
 // Conversación. La respuesta útil vive en response.agent.answer.
 export async function askAgent(plotId, question) {
-  const response = await send('/v1/agent/ask', { plot_id: plotId, question });
+  const response = await send(
+    '/v1/agent/ask',
+    { plot_id: plotId, question },
+    { timeoutMs: AGENT_REQUEST_TIMEOUT_MS },
+  );
   return response.agent;
 }

@@ -56,7 +56,7 @@ con una persona técnica o un aliado que pueda recorrer los lotes.
 
 ## Caso demostrativo
 
-La demo usa un cultivo de papa de 0,69 ha en Pasto, Nariño:
+La demo usa un polígono aproximado de 1,28 ha con cultivo de papa en Pasto, Nariño:
 
 - 19 mediciones georreferenciadas;
 - N, P y K reportados como porcentaje;

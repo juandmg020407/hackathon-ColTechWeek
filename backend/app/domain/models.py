@@ -21,6 +21,31 @@ ValidationStatus = Literal[
 ]
 
 
+class Producer(BaseModel):
+    """Privacy-conscious producer record owned by a collection center."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
+    center_id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
+    display_name: str = Field(min_length=1, max_length=150)
+    municipality: str = Field(min_length=1, max_length=150)
+    data_origin: Literal["demonstration", "pilot", "operational"] = "demonstration"
+    consent_status: Literal["demonstration", "granted", "withdrawn"] = "demonstration"
+    consent_updated_at: datetime | None = None
+    created_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_consent(self) -> "Producer":
+        if self.consent_status == "granted" and self.consent_updated_at is None:
+            raise ValueError("granted consent requires consent_updated_at")
+        if self.data_origin == "demonstration" and self.consent_status != "demonstration":
+            raise ValueError("demonstration records must use demonstration consent status")
+        if self.data_origin != "demonstration" and self.consent_status == "demonstration":
+            raise ValueError("pilot and operational records require a real consent status")
+        return self
+
+
 class NPKPercent(BaseModel):
     """Elemental NPK concentration in mass percent."""
 
@@ -147,6 +172,7 @@ class Plot(BaseModel):
 
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{2,63}$")
     center_id: str
+    producer_id: str | None = None
     crop_profile_id: str
     name: str = Field(min_length=1, max_length=150)
     municipality: str = Field(min_length=1, max_length=150)

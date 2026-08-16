@@ -12,7 +12,7 @@
   "kpis": {
     "productores": 10,
     "lotes": 21,
-    "area_ha": 12.59,
+    "area_ha": 13.18,
     "lotes_riesgo": 11
   },
   "salud": {
@@ -23,8 +23,8 @@
     "delta_semana": -8
   },
   "area_riesgo": {
-    "ha": 6.7,
-    "pct": 53
+    "ha": 7.29,
+    "pct": 55
   },
   "proximos_7d": 28,
   "prioridades": [
@@ -67,7 +67,7 @@
       "nombre": "MARÍA LÓPEZ",
       "piloto": true,
       "lotes": 1,
-      "area_ha": 0.69,
+      "area_ha": 1.28,
       "lotes_riesgo": 1,
       "riesgo_nivel": "alto",
       "riesgo_pct": 78,
