@@ -25,19 +25,196 @@
 html, body { height: 100%; overflow: hidden; }
 
 body {
-  background: var(--bg);
+  /* Transparent so the illustrated layer below shows; auth pages set their own. */
+  background: transparent;
   color: var(--ink);
   font: 400 clamp(12px, 1.05vw, 15px)/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── illustrated ground ───────────────────────────────────
+   Self-contained: no external host, per FRONTEND.md §2. Swap the whole
+   look by pointing --field-image at a file you drop in the folder, e.g.
+   :root { --field-image: url("/assets/field.webp"); }                    */
+:root {
+  --field-image:
+    radial-gradient(58% 22% at 12% 30%, rgb(255 255 255 / 82%) 0%, transparent 70%),
+    radial-gradient(46% 18% at 82% 20%, rgb(255 255 255 / 78%) 0%, transparent 70%),
+    radial-gradient(130% 54% at 50% 110%, #9c6b3a 0%, #b0824a 30%, transparent 66%),
+    radial-gradient(70% 30% at 20% 88%, #6f9a41 0%, transparent 62%),
+    radial-gradient(70% 30% at 80% 88%, #6f9a41 0%, transparent 62%),
+    linear-gradient(180deg, #a9dcef 0%, #c4e7f4 30%, #bcd98f 50%, #93bd5c 62%, #7ba648 70%, #a3763f 100%);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--field-image) center / cover no-repeat fixed;
+}
+
+/* No veil over the whole page: every card is already ~94% opaque and carries
+   its own contrast, so washing the illustration out buys nothing. */
+
 .shell {
   height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-columns: clamp(180px, 13vw, 212px) minmax(0, 1fr);
   gap: var(--gap);
-  padding: var(--gap) clamp(10px, 1.4vw, 20px);
+  /* Generous inset: the illustration is part of the design, not wallpaper
+     hidden behind the frame. */
+  padding: clamp(10px, 2vh, 26px) clamp(12px, 2.6vw, 48px);
 }
+
+/* The last row is auto, not 1fr: the column stops at its content so the
+   illustration keeps the strip below it instead of being covered by filler. */
+.content { display: grid; grid-template-rows: auto auto minmax(0, auto); gap: var(--gap); min-height: 0; align-content: start; }
+.main { min-height: 0; }
+
+/* ── sidebar ──────────────────────────────────────────── */
+.side {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+  min-height: 0;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(10px, 1.2vh, 16px) 10px;
+  backdrop-filter: blur(6px);
+}
+.side-brand { display: flex; align-items: center; gap: 9px; padding: 0 6px; }
+.side-brand-name { font-weight: 700; font-size: .95em; line-height: 1.1; }
+.side-brand-name small { display: block; font-size: .72em; font-weight: 400; color: var(--muted); }
+
+.side-nav { display: grid; gap: 2px; align-content: start; min-height: 0; overflow-y: auto; }
+.side-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 0 10px;
+  background: none; border: 0; border-radius: 8px;
+  font: inherit; font-size: .92em; color: var(--ink); text-align: left; cursor: pointer;
+}
+.side-item svg { width: 19px; height: 19px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.side-item span { flex: 1; }
+.side-item:hover { background: var(--brand-soft); }
+.side-item.on { background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand-deep); }
+.side-item.on svg { stroke: var(--brand-deep); }
+.side-item:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: -2px; }
+.side-badge {
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px;
+  background: var(--low); color: #fff; font-size: .72em; font-weight: 700;
+  display: grid; place-items: center;
+}
+
+.side-foot { display: grid; gap: 8px; }
+.side-center {
+  display: grid; gap: 2px; padding: 10px;
+  background: var(--bg); border-radius: 8px; font-size: .86em;
+}
+.side-label { font-size: .78em; color: var(--muted); }
+.side-center .btn { margin-top: 6px; min-height: 36px; font-size: .92em; }
+.side-user { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.side-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  background: var(--brand-deep); color: #fff; font-size: .78em; font-weight: 700;
+  display: grid; place-items: center;
+}
+.side-user-name { font-size: .86em; font-weight: 600; line-height: 1.15; }
+.side-user-name small { display: block; font-weight: 400; color: var(--muted); font-size: .82em; }
+
+/* ── page header ──────────────────────────────────────── */
+.page-head { display: flex; align-items: center; gap: 11px; flex: none; }
+.page-head h1 { font-size: clamp(15px, 1.4vw, 20px); font-weight: 700; line-height: 1.2; }
+.page-head p { font-size: .84em; color: var(--muted); }
+.page-mark {
+  width: 38px; height: 38px; border-radius: 50%; flex: none;
+  background: var(--high); display: grid; place-items: center;
+}
+.page-mark svg { width: 21px; height: 21px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linejoin: round; }
+
+.icon-btn {
+  position: relative; display: grid; place-items: center;
+  width: 38px; height: 38px; flex: none;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+}
+.icon-btn svg { width: 19px; height: 19px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn:hover { background: var(--brand-soft); border-color: var(--brand-border); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.icon-btn .side-badge { position: absolute; top: -6px; right: -6px; }
+
+/* ── data tables and list screens ─────────────────────── */
+.wide-card { min-height: 0; overflow: hidden; }
+.table-wrap { overflow: auto; min-height: 0; }
+table.data { width: 100%; border-collapse: collapse; font-size: .86em; }
+table.data th, table.data td { text-align: left; padding: .45em .6em; border-bottom: 1px solid var(--border); }
+table.data th { font-size: .82em; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tr.row-out td { color: var(--low); }
+
+.alert-row {
+  display: flex; align-items: center; gap: .8em;
+  border: 1px solid var(--border); border-radius: 8px; padding: .6em .75em; margin-bottom: .5em;
+}
+.alert-row > div { flex: 1; }
+.alert-mark { font-size: 1.1em; }
+.alert-row.sev-high, .alert-row.sev-critical { border-left: 3px solid var(--low); }
+.alert-row.sev-medium { border-left: 3px solid var(--mid); }
+.alert-row.sev-low { border-left: 3px solid var(--muted); }
+
+/* One band: what this lot is, and its four numbers. */
+.facts-card { display: grid; grid-template-columns: minmax(140px, 15rem) minmax(0, 1fr); gap: var(--gap); align-items: center; }
+.facts-head h2 { margin-bottom: .2em; }
+@media (max-width: 900px) { .facts-card { grid-template-columns: 1fr; } }
+
+/* ── KPI tiles with a coloured mark ───────────────────── */
+.kpi { display: flex; align-items: center; gap: .7em; }
+.kpi-text { min-width: 0; }
+.kpi-icon {
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+}
+.kpi-icon svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tone-green { background: var(--high); }
+.tone-blue { background: var(--brand-deep); }
+.tone-red { background: var(--low); }
+.tone-grey { background: var(--muted); }
+
+/* ── map floating panel ───────────────────────────────── */
+.map-panel {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  background: rgb(255 255 255 / 95%); border: 1px solid var(--border);
+  border-radius: 10px; padding: .55em .7em; box-shadow: var(--shadow);
+  display: grid; gap: .15em; max-width: 15rem;
+}
+.map-panel > b { font-size: .92em; }
+.map-avg { display: flex; align-items: center; gap: .45em; margin-top: .4em; }
+.map-avg-mark { font-size: 1.15em; }
+.map-avg b { font-size: 1.5em; font-weight: 800; line-height: 1.05; display: block; }
+.map-avg small { color: var(--muted); font-size: .74em; }
+
+/* ── priority row ─────────────────────────────────────── */
+.prio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--gap); }
+.prio-card {
+  display: flex; align-items: flex-start; gap: .7em;
+  border: 1px solid var(--border); border-left: 4px solid var(--mid);
+  border-radius: 10px; padding: .7em .8em; background: var(--surface);
+}
+.prio-card.rv-alta { border-left-color: var(--low); background: #fdf6f5; }
+.prio-card.rv-media { border-left-color: var(--mid); background: #fffaf0; }
+.prio-card.rv-baja { border-left-color: var(--high); background: #f2f9f4; }
+.prio-icon {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; color: #fff; font-size: .84em;
+  background: var(--mid);
+}
+.prio-card.rv-alta .prio-icon { background: var(--low); }
+.prio-card.rv-baja .prio-icon { background: var(--high); }
+.prio-body { flex: 1; min-width: 0; display: grid; gap: .25em; }
+.prio-body b { font-size: .94em; }
+.prio-body p { font-size: .82em; line-height: 1.45; color: var(--ink); }
+.prio-body .btn { justify-self: start; min-height: 38px; font-size: .88em; }
 
 /* ── header ───────────────────────────────────────────── */
 .topbar { display: flex; align-items: center; gap: 11px; flex: none; }
@@ -93,14 +270,16 @@ body {
 .col { display: grid; gap: var(--gap); min-height: 0; grid-template-rows: auto auto 1fr; }
 
 .card {
-  background: var(--surface);
+  /* Slightly translucent so the illustration reads behind, never through text. */
+  background: rgb(255 255 255 / 94%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: clamp(9px, 1.1vh, 15px);
+  padding: clamp(8px, 0.9vh, 12px) clamp(9px, 1vw, 14px);
   box-shadow: var(--shadow);
   min-height: 0;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(4px);
 }
 
 .card h2 {
@@ -117,12 +296,12 @@ body {
 .sync {
   display: flex; align-items: center; gap: .5em; flex: none;
   font-size: .78em; color: var(--muted);
-  background: var(--surface); border: 1px solid var(--border);
+  background: rgb(255 255 255 / 92%); border: 1px solid var(--border);
   border-radius: 8px; padding: .35em .7em;
+  backdrop-filter: blur(4px);
 }
+.sync .spacer { flex: 1; }
 .sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--high); flex: none; }
-.sync.stale .dot { background: var(--mid); }
-.sync .aviso { margin-left: auto; text-align: right; }
 
 /* ── nutrient toggle + plot map ───────────────────────── */
 .nutrients { display: flex; align-items: center; gap: 5px; flex: none; margin-bottom: .5em; }
@@ -230,7 +409,8 @@ body {
    Doubled class so it beats the plain .rwrap rule declared further down. */
 .rwrap.rwrap-mvp {
   min-height: 0;
-  flex: 1;
+  /* Sizes to its content, so the illustration keeps the strip underneath. */
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -239,10 +419,6 @@ body {
 .rwrap.rwrap-mvp > * { flex: none; }
 .rwrap.rwrap-mvp .mvp-main { flex: 1 1 auto; min-height: 0; }
 .rwrap-mvp .map-card .map-stage { flex: none; height: clamp(220px, 32vh, 380px); }
-.open-lote {
-  width: 100%; min-height: 56px; font-size: 1.05em; font-weight: 700;
-  border-radius: var(--radius);
-}
 
 /* ── interactive map ──────────────────────────────────── */
 .map-stage { cursor: grab; touch-action: none; }
@@ -251,9 +427,11 @@ body {
 #heat, #overlay { pointer-events: none; }
 #overlay .pdot { pointer-events: auto; cursor: pointer; }
 
+/* A row, not a column: stacked they were ~140px tall and collided with the
+   floating panel whenever the map is short, as it is on the summary. */
 .map-ctl {
   position: absolute; bottom: 10px; left: 10px; z-index: 4;
-  display: grid; gap: 4px;
+  display: flex; gap: 4px;
 }
 .map-ctl button {
   width: 44px; height: 44px;
@@ -268,11 +446,11 @@ body {
 .map-ctl button:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
 
 .map-probe {
-  position: absolute; bottom: 10px; left: 62px; z-index: 4;
+  position: absolute; bottom: 62px; left: 10px; z-index: 4;
   background: rgb(255 255 255 / 95%);
   border: 1px solid var(--border); border-radius: 8px;
   padding: 6px 10px; font-size: .78em; line-height: 1.35;
-  max-width: calc(100% - 130px);
+  max-width: calc(100% - 20px);
 }
 .map-probe b { display: block; font-variant-numeric: tabular-nums; }
 .map-probe span { color: var(--muted); font-size: .92em; }
@@ -429,6 +607,27 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   .colorbar { height: min(58%, 150px); }
 }
 
+/* Under 1100 px the sidebar keeps its icons and loses its labels; nothing is
+   removed, so every section stays one tap away. */
+@media (max-width: 1099px) {
+  .shell { grid-template-columns: 60px minmax(0, 1fr); }
+  .side { padding: 10px 6px; }
+  .side-item { justify-content: center; padding: 0; }
+  .side-item span, .side-brand-name, .side-center, .side-user-name { display: none; }
+  .side-item.on { box-shadow: inset 0 -3px 0 var(--brand-deep); }
+  .side-badge { position: absolute; margin: -18px 0 0 16px; }
+  .side-item { position: relative; }
+  .side-foot { justify-items: center; }
+}
+
+/* On a phone the sidebar becomes a scrollable strip along the top. */
+@media (max-width: 700px) {
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .side { grid-template-rows: none; grid-auto-flow: column; justify-content: start; align-items: center; overflow-x: auto; }
+  .side-nav { grid-auto-flow: column; overflow-x: auto; overflow-y: hidden; }
+  .side-brand, .side-foot { display: none; }
+}
+
 /* En campo el teléfono manda. Nada de propuesta, riesgos o decisión se oculta:
    la pantalla deja de ser de altura fija y se recorre. */
 @media (max-width: 560px) {
@@ -474,7 +673,7 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 .real-plots code { font-size: .9em; background: var(--brand-soft); border-radius: 4px; padding: 0 .25em; }
 
 /* ── command center (acopio) ──────────────────────────── */
-.shell { grid-template-rows: auto auto auto 1fr; }
+/* The shell is a sidebar plus a content column; rows live on .content. */
 
 .nav { display: flex; gap: 4px; flex: none; }
 .nav-btn {
@@ -508,8 +707,9 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 }
 
 .hero {
-  display: grid; gap: .15em; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: clamp(10px, 1.6vh, 16px); box-shadow: var(--shadow);
+  display: grid; gap: .1em; background: rgb(255 255 255 / 94%); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: clamp(8px, 1.1vh, 13px) clamp(10px, 1.1vw, 16px);
+  box-shadow: var(--shadow); backdrop-filter: blur(4px);
 }
 .hero .demo-chip { justify-self: start; margin-top: .35em; }
 .hero-title { font-size: clamp(17px, 2vw, 24px); font-weight: 700; line-height: 1.2; }
@@ -532,13 +732,18 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 @media (min-width: 1100px) {
   .resumen-c,
   .rwrap-mvp {
-    max-width: 1560px;
+    max-width: 1180px;
     margin-inline: auto;
     width: 100%;
   }
 
   .resumen-c { grid-template-rows: auto auto minmax(340px, 1fr) auto; }
-  .rwrap.rwrap-mvp .mvp-main { min-height: 340px; }
+  /* The map absorbs whatever the other bands leave, down to a readable floor. */
+  .rwrap.rwrap-mvp .mvp-main { min-height: 210px; }
+  .kpi-icon { width: 30px; height: 30px; }
+  .kpi .value { font-size: clamp(16px, 1.7vw, 22px); }
+  /* Inset the frame so the illustrated ground stays visible around it. */
+  .shell { padding: clamp(10px, 1.6vh, 18px) clamp(16px, 2.2vw, 34px); }
 
   .net-grid,
   .rwrap-mvp .mvp-main {
@@ -559,12 +764,11 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   .rwrap-mvp .mvp-main .map-stage {
     flex: 1;
     height: auto;
-    min-height: 340px;
+    min-height: 230px;
   }
 
   .kpi-grid .kpi { min-height: 92px; }
   .bot-grid { grid-template-columns: 1.3fr 1fr 1fr; }
-  .open-lote { width: auto; justify-self: start; min-width: 280px; }
 }
 
 @media (max-width: 1099px) {

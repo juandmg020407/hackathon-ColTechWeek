@@ -2,12 +2,18 @@
 
 html, body { height: 100%; overflow: hidden; }
 
+/* The same illustrated ground as the dashboard, painted by CSS. It used to be a
+   canvas fed from the package, which the v2 contract no longer exposes. */
 #field {
   position: fixed;
   inset: -6%;
   width: 112%;
   height: 112%;
   z-index: 0;
+  background-image: var(--field-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   filter: blur(1px) saturate(1.02);
   animation: drift 46s var(--ease, cubic-bezier(.22,.61,.36,1)) infinite alternate;
 }

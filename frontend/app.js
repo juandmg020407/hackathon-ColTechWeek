@@ -22,9 +22,10 @@ const state = {
   productor: null,
   decision: null,
   decisionMsg: '',
+  historial: null,
+  historialMsg: '',
   view: null,
   network: null,
-  dataOrigin: '',
   live: false,
 };
 
@@ -49,21 +50,53 @@ const SEVERITY_MARK = {
 };
 const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
 const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
+const MODEL_LABEL = {
+  'GaussianProcessRegressor-Matern': 'proceso gaussiano Matérn',
+  'GaussianProcessRegressor': 'proceso gaussiano',
+};
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
-// Every view still routes: #mapa and #productores stay reachable by URL.
-const NAV_VIEWS = ['resumen', 'mapa', 'productores', 'lote'];
-// The MVP menu shows only these two. Widening it is a one-line change.
-const MENU_VIEWS = ['resumen', 'lote'];
+const KPI_ICON = {
+  area: 'M4 7h16v10H4zM4 11h16M9 7v10',
+  mediciones: 'M4 5h16v14H4zM8 15l3-4 2 2 3-5',
+  critico: 'M12 4 3 20h18zM12 10v4M12 17h.01',
+  incierto: 'M9 9a3 3 0 1 1 4 2.8c-.7.3-1 .9-1 1.7M12 17h.01',
+};
+// Every view routes; the sidebar shows the ones with a screen of their own.
+const NAV_VIEWS = [
+  'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
+  'recomendaciones', 'historial', 'reportes', 'configuracion',
+  'lote', 'productores',
+];
+const MENU_VIEWS = [
+  'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
+  'recomendaciones', 'historial', 'reportes', 'configuracion',
+];
+const MENU_LABEL = {
+  resumen: 'Resumen', lotes: 'Lotes', mediciones: 'Mediciones', mapa: 'Mapas',
+  alertas: 'Alertas', recomendaciones: 'Recomendaciones', historial: 'Historial',
+  reportes: 'Reportes', configuracion: 'Configuración',
+};
+// Inline so the shell needs no request; the contract forbids external hosts.
+const MENU_ICON = {
+  resumen: 'M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  lotes: 'M4 5h16v4H4zM4 11h16v3H4zM4 16h16v3H4z',
+  mediciones: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4',
+  mapa: 'm9 4 6 2 5-2v14l-5 2-6-2-5 2V6zM9 4v14M15 6v14',
+  alertas: 'M12 3a5 5 0 0 0-5 5v4l-2 3h14l-2-3V8a5 5 0 0 0-5-5zM10 19a2 2 0 0 0 4 0',
+  recomendaciones: 'M12 3v3M5 7l2 2M19 7l-2 2M6 14a6 6 0 1 1 12 0c0 3-2 4-2 6H8c0-2-2-3-2-6z',
+  historial: 'M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4',
+  reportes: 'M6 3h8l4 4v14H6zM14 3v4h4M9 13h6M9 17h6',
+  configuracion: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5 8 8M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5',
+};
 
 function navFromHash() {
   const target = decodeURIComponent(location.hash.slice(1));
   return NAV_VIEWS.includes(target) ? target : 'resumen';
 }
 
-// A jump into a view the menu hides would strand the user, so it lands on the
-// summary instead. The target view itself is untouched.
+// Every view now has a screen; an unknown target still lands on the summary.
 function reachable(view) {
-  return MENU_VIEWS.includes(view) ? view : 'resumen';
+  return NAV_VIEWS.includes(view) ? view : 'resumen';
 }
 
 function colorbar() {
@@ -280,7 +313,10 @@ function paintNutrientToggle() {
   const slot = document.getElementById('colorbar-slot');
   if (slot) {
     slot.innerHTML = colorbar();
-    document.getElementById('map-nutrient').textContent = state.nutrient;
+    const label = document.getElementById('map-nutrient');
+    if (label) label.textContent = state.nutrient;
+    const average = document.getElementById('map-avg');
+    if (average && state.view) average.textContent = `${fmt(gridAverage(state.view.grid, state.nutrient))}%`;
   }
   for (const button of document.querySelectorAll('.nut')) {
     button.classList.toggle('on', button.dataset.nut === state.nutrient);
@@ -544,10 +580,13 @@ function wireTabs(initial) {
   show(initial || 'propuesta');
 }
 
+// With a live dashboard this percentage is measured coverage, not crop health:
+// it says how many plots have readings, so the wording talks about coverage.
 function healthHeadline(pct) {
-  if (pct >= 80) return 'Tu abastecimiento está estable.';
-  if (pct >= 60) return 'Tu abastecimiento aguanta, con puntos que vigilar.';
-  return 'Tu abastecimiento está comprometido.';
+  if (pct >= 80) return 'Casi toda la red está medida.';
+  if (pct >= 60) return 'La red está medida en su mayoría.';
+  if (pct > 0) return 'Falta medir buena parte de la red.';
+  return 'La red todavía no tiene mediciones.';
 }
 
 // The screen never invents the outcome: it shows what the backend resolved.
@@ -647,12 +686,15 @@ function viewResumen() {
       : 'El Rosal está al día.';
 
   const kpis = [
-    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: view.plot.municipality || view.plot.municipio || '' },
-    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo' },
-    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40 },
-    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo' },
+    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: view.plot.municipality || view.plot.municipio || '', tone: 'green', icon: KPI_ICON.area },
+    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo', tone: 'blue', icon: KPI_ICON.mediciones },
+    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40, tone: 'red', icon: KPI_ICON.critico },
+    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo', tone: 'grey', icon: KPI_ICON.incierto },
   ].map((c) => `<div class="kpi ${c.warn ? 'warn-kpi' : ''}">
-      <div class="label">${c.label}</div><div class="value">${c.value}</div><div class="hint">${c.hint}</div>
+      <span class="kpi-icon tone-${c.tone}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${c.icon}"/></svg></span>
+      <div class="kpi-text">
+        <div class="label">${c.label}</div><div class="value">${c.value}</div><div class="hint">${c.hint}</div>
+      </div>
     </div>`).join('');
 
   const cola = [];
@@ -698,11 +740,14 @@ function viewResumen() {
     });
   }
 
-  const rail = cola.map((c) => `<div class="rail-item rv-${c.sev}">
-      <div class="rail-head"><span class="sev">${SEVERITY_MARK[c.sev] || '●'}</span>${c.titulo}</div>
-      <p>${c.detalle}</p>
-      <button class="btn ghost rail-go" type="button" data-go="lote" data-tab-go="${c.tab}">${c.meta} →</button>
-    </div>`).join('');
+  const rail = cola.map((c) => `<article class="prio-card rv-${c.sev}">
+      <span class="prio-icon" aria-hidden="true">${SEVERITY_MARK[c.sev] || '●'}</span>
+      <div class="prio-body">
+        <b>${c.titulo}</b>
+        <p>${c.detalle}</p>
+        <button class="btn ghost rail-go" type="button" data-go="lote" data-tab-go="${c.tab}">${c.meta} →</button>
+      </div>
+    </article>`).join('');
 
   return `<div class="rwrap rwrap-mvp">
     <section class="hero">
@@ -710,17 +755,11 @@ function viewResumen() {
       <div class="hero-sub">${view.plot.name} · ${view.cultivo?.crop || ''} ${view.cultivo?.variety || ''} · medido ${new Date(view.generado).toLocaleDateString('es-CO')}</div>
     </section>
 
-    ${net?.real ? `<section class="card real-plots">
-      <h2>Lotes del centro · datos reales</h2>
-      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
-        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
-      </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
-    </section>` : ''}
+    <section class="card facts-card">
+      <div class="kpi-grid">${kpis}</div>
+    </section>
 
-    <div class="kpi-grid">${kpis}</div>
-
-    <div class="mvp-main net-grid">
+    <div class="mvp-main">
       <section class="card map-card">
         <div class="nutrients">
           ${NUTRIENTS.map((n) => `<button class="nut" data-nut="${n}" aria-pressed="${n === state.nutrient}">${n}</button>`).join('')}
@@ -731,29 +770,47 @@ function viewResumen() {
           <div class="tiles" id="tiles"></div>
           <canvas id="heat"></canvas>
           <svg id="overlay"></svg>
-          <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
+          <div class="map-panel">
+            <b><span id="map-nutrient">${state.nutrient}</span> en el lote</b>
+            <span class="note">% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span>
+            <div class="map-avg"><span class="map-avg-mark" aria-hidden="true">🌿</span>
+              <span><b id="map-avg">${fmt(gridAverage(view.grid, state.nutrient))}%</b>
+              <small>Promedio estimado</small></span>
+            </div>
+          </div>
           <div id="colorbar-slot"></div>
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
           <div class="attribution">${ATTRIBUTION}</div>
         </div>
       </section>
-
-      <section class="card rail">
-        <h2>Prioridad hoy</h2>
-        ${rail || '<p class="note">Sin acciones pendientes.</p>'}
-      </section>
     </div>
 
-    <button class="btn open-lote" type="button" data-nav="lote">Abrir ${view.plot.name} →</button>
+    <section class="card prio-card-wrap">
+      <h2>Prioridad hoy</h2>
+      <div class="prio-grid">${rail || '<p class="note">Sin acciones pendientes.</p>'}</div>
+    </section>
 
-    ${view.stale ? '<p class="note">El paquete pasó su ventana de validez: conviene recalcularlo.</p>' : ''}
   </div>`;
+}
+
+// Average over the cells inside the plot only: the grid is a rectangle, the lot
+// is not, so counting masked-out cells would drag the number toward nothing.
+function gridAverage(grid, nutrient) {
+  let sum = 0;
+  let count = 0;
+  const values = grid[nutrient] || [];
+  for (let i = 0; i < values.length; i += 1) {
+    if (!grid.mask[i] || !Number.isFinite(values[i])) continue;
+    sum += values[i];
+    count += 1;
+  }
+  return count ? sum / count : 0;
 }
 
 function viewResumenRed() {
@@ -799,14 +856,6 @@ function viewResumenRed() {
   return `<div class="rwrap resumen-c">
     <section class="hero">${hero}<span class="demo-chip">productores demostrativos</span></section>
 
-    ${net.real ? `<section class="card real-plots">
-      <h2>Lotes del centro · datos reales</h2>
-      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
-        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
-      </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
-    </section>` : ''}
-
     <div class="kpi-grid">${kpis}</div>
 
     <div class="net-grid">
@@ -824,7 +873,7 @@ function viewResumenRed() {
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -840,11 +889,13 @@ function viewResumenRed() {
 
     <div class="bot-grid">
       <section class="card health">
-        <h2>Salud de abastecimiento</h2>
+        <h2>Cobertura de medición</h2>
         <div class="health-pct">${net.salud.pct}%</div>
         ${riskBar(net.salud.pct)}
         <p class="note">${net.salud.lotes_ok} de ${k.lotes} lotes sin alertas críticas.
-          <span class="${net.salud.delta_semana < 0 ? 'delta-bad' : 'delta-good'}">${net.salud.delta_semana >= 0 ? '+' : ''}${net.salud.delta_semana} pts vs. la semana pasada</span></p>
+          ${net.salud.delta_semana
+            ? `<span class="${net.salud.delta_semana < 0 ? 'delta-bad' : 'delta-good'}">${net.salud.delta_semana > 0 ? '+' : ''}${net.salud.delta_semana} pts vs. la semana pasada</span>`
+            : ''}</p>
         <p class="note">Área en riesgo: <b>${fmt(net.area_riesgo.ha)} ha</b> (${net.area_riesgo.pct}% de tu área).</p>
         <p class="note">Riesgo, próximos 30 días:</p>
         ${horizonte}
@@ -892,7 +943,7 @@ function viewMapa() {
         <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -955,7 +1006,7 @@ function viewLote() {
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
             <button type="button" data-map="out" aria-label="Alejar">−</button>
-            <button type="button" data-map="reset" aria-label="Centrar el mapa">⌖</button>
+            <button type="button" data-map="reset" title="Volver a las coordenadas de origen" aria-label="Volver a las coordenadas de origen">✳</button>
           </div>
           <div class="map-probe" id="map-probe" hidden></div>
           <div class="map-status" id="map-status" hidden></div>
@@ -971,7 +1022,7 @@ function viewLote() {
 
         ${view.descartados.length ? `<div class="amber">
           <b>Una medición quedó fuera</b>
-          <p>${view.descartados[0].motivo}</p>
+          <p>${translateOne(view.descartados[0].motivo)}</p>
           <p>Se conserva en el historial, pero no alimenta el modelo.</p>
           <div class="amber-actions"><button class="btn ghost" type="button" data-open-measurements>Ver mediciones →</button></div>
         </div>` : ''}
@@ -989,45 +1040,316 @@ function viewLote() {
     </div>`;
 }
 
+// The history screen is the only one that needs its own round-trip.
+async function loadHistorial() {
+  const id = state.view.propuesta?.id;
+  if (!apiBase || !id) {
+    state.historial = [];
+    state.historialMsg = apiBase
+      ? 'Este lote no tiene propuesta, así que no hay decisiones que mostrar.'
+      : 'Sin conexión no se puede leer el historial: vive en el backend, no en el paquete.';
+    render();
+    return;
+  }
+  try {
+    const { history } = await getDecisionHistory(id);
+    state.historial = history?.decisions || [];
+    state.historialMsg = state.historial.length ? '' : 'Sin decisiones registradas todavía.';
+  } catch (error) {
+    state.historial = [];
+    state.historialMsg = `No se pudo leer el historial: ${error.message}`;
+  }
+  render();
+}
+
+function viewFor(nav) {
+  const screens = {
+    resumen: viewResumen,
+    lotes: viewLotes,
+    mediciones: viewMediciones,
+    mapa: viewMapa,
+    alertas: viewAlertas,
+    recomendaciones: viewRecomendaciones,
+    historial: viewHistorial,
+    reportes: viewReportes,
+    configuracion: viewConfiguracion,
+    productores: viewProductores,
+    lote: viewLote,
+  };
+  return (screens[nav] || viewResumen)();
+}
+
+function panelCard(title, body, note) {
+  return `<div class="rwrap"><section class="card wide-card">
+    <h2>${title}</h2>${body}
+    ${note ? `<p class="note">${note}</p>` : ''}
+  </section></div>`;
+}
+
+function viewLotes() {
+  const net = state.network;
+  const view = state.view;
+  const lotes = net.real?.lotes || [];
+  const rows = lotes.length
+    ? lotes.map((l) => `<tr>
+        <td><b>${l.name}</b></td><td>${l.municipality}</td>
+        <td class="num">${l.reading_count}</td>
+        <td>${l.id === view.plot.id ? `${fmt(view.plot.area_ha, 2)} ha` : '—'}</td>
+        <td><button class="btn ghost" type="button" data-nav="lote">Abrir</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" class="note">Sin backend no hay listado de lotes: el paquete local trae solo
+        <b>${view.plot.name}</b>.</td></tr>`;
+
+  return panelCard('Lotes del centro', `<div class="table-wrap"><table class="data">
+      <thead><tr><th>Lote</th><th>Municipio</th><th class="num">Mediciones</th><th>Área</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`);
+}
+
+function viewMediciones() {
+  const view = state.view;
+  const all = [...view.puntos.map((p) => ({ ...p, usada: true })),
+    ...view.descartados.map((p) => ({ ...p, usada: false }))];
+  const rows = all.map((p, i) => `<tr class="${p.usada ? '' : 'row-out'}">
+      <td class="num">${String(i + 1).padStart(2, '0')}</td>
+      <td class="num">${p.N} %</td><td class="num">${p.P} %</td><td class="num">${p.K} %</td>
+      <td>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</td>
+      <td>${p.usada ? 'usada' : `fuera <span class="note">${translateOne(p.motivo) || 'geometría'}</span>`}</td>
+    </tr>`).join('');
+
+  return panelCard(`Mediciones · ${view.sampling.valid} de ${view.sampling.total} alimentan el modelo`,
+    `<div class="table-wrap"><table class="data">
+      <thead><tr><th class="num">#</th><th class="num">N</th><th class="num">P</th><th class="num">K</th>
+        <th>Coordenadas</th><th>Estado</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`,
+    'Los valores son porcentaje de masa del suelo, en convención elemental.');
+}
+
+function viewAlertas() {
+  const view = state.view;
+  if (!view.riesgos.length) return panelCard('Alertas', '<p class="note">Sin riesgos activos para este lote.</p>');
+  const cards = view.riesgos.map((r) => `<article class="alert-row sev-${r.severidad}">
+      <span class="alert-mark">${SEVERITY_MARK[r.severidad] || '●'}</span>
+      <div>
+        <b>${RISK_TITLE[r.tipo] || r.tipo} · severidad ${SEVERITY_WORD[r.severidad] || r.severidad}</b>
+        <p class="note">Ventana del ${r.ventana?.start} al ${r.ventana?.end}
+          · confianza ${Math.round((r.confianza ?? 0) * 100)} %
+          · probabilidad ${Math.round((r.score ?? 0) * 100)} %</p>
+        <p class="note">Fuentes: ${r.fuentes.map((f) => `${f.name}${f.stale || f.failed ? ' (no actual)' : ''}`).join(' · ')}</p>
+      </div>
+      <button class="btn ghost" type="button" data-nav="lote" data-tab-go="riesgos">Ver detalles →</button>
+    </article>`).join('');
+  return panelCard('Alertas climáticas', cards);
+}
+
+function viewRecomendaciones() {
+  const view = state.view;
+  if (!view.propuesta?.zonas.length) return panelCard('Recomendaciones', '<p class="note">Todavía no hay propuesta.</p>');
+  const zones = view.propuesta.zonas.map((z) => `<article class="zone-prop">
+      <header><b>Zona ${z.id.replace('zone-', '')}</b> · ${fmt(z.area_ha, 2)} ha · ${NIVEL_LABEL[z.peor]}</header>
+      ${z.formulaciones.map((f) => `<div class="form-row">
+        <span class="grade">${f.label}</span>
+        <span class="form-qty"><b>${f.bags}</b> ${f.bags === 1 ? 'bulto' : 'bultos'} de ${f.bag_weight.value} ${f.bag_weight.unit}</span>
+      </div>`).join('')}
+    </article>`).join('');
+  return panelCard('Recomendaciones por zona', `<div class="proposal">${zones}
+    <button class="btn" type="button" data-nav="lote" data-tab-go="propuesta">Abrir la propuesta y decidir →</button></div>`,
+  'Un grado <b>30-30-40</b> es 30 % N, 30 % P y 40 % K de la masa del bulto.');
+}
+
+function viewHistorial() {
+  const rows = (state.historial || []).map((d) => `<tr>
+      <td>${new Date(d.created_at).toLocaleString('es-CO')}</td>
+      <td>${DECISION_LABEL[d.action] || d.action}</td>
+      <td>${DECISION_LABEL[d.resulting_status] || d.resulting_status}</td>
+      <td>${d.actor_type || ''} ${d.actor_id || ''}</td>
+    </tr>`).join('');
+  const body = rows
+    ? `<div class="table-wrap"><table class="data"><thead><tr>
+        <th>Cuándo</th><th>Acción</th><th>Estado resultante</th><th>Quién</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`
+    : `<p class="note">${state.historialMsg || 'Sin decisiones registradas todavía.'}</p>`;
+  return panelCard('Historial de decisiones', body);
+}
+
+function viewReportes() {
+  const view = state.view;
+  const m = view.modelo;
+  const perNutrient = m?.metrics?.per_nutrient;
+  const meanRmse = m?.metrics?.mean_rmse;
+
+  // The backend reports GP against an IDW baseline per nutrient. Showing the
+  // raw object helps nobody; the comparison is the point.
+  const compare = perNutrient
+    ? `<div class="table-wrap"><table class="data">
+        <thead><tr><th>Nutriente</th><th class="num">Error del modelo</th><th class="num">Error de la referencia</th>
+          <th class="num">Aciertos del intervalo</th></tr></thead>
+        <tbody>${NUTRIENTS.map((n) => {
+    const row = perNutrient[n];
+    if (!row) return '';
+    return `<tr><td><b>${n}</b></td>
+            <td class="num">${fmt(row.gp?.mae, 2)} pp</td>
+            <td class="num">${fmt(row.idw?.mae, 2)} pp</td>
+            <td class="num">${Math.round((row.gp?.interval_95_coverage ?? 0) * 100)} %</td></tr>`;
+  }).join('')}</tbody></table></div>`
+    : '';
+
+  const verdict = meanRmse
+    ? `<p class="note">Error cuadrático medio: <b>${fmt(meanRmse.gp, 2)} pp</b> con el modelo espacial
+        contra <b>${fmt(meanRmse.idw, 2)} pp</b> del método de referencia.
+        ${m.metrics.gp_better_than_idw
+    ? 'El modelo espacial mejora la referencia en este conjunto.'
+    : 'Con estos datos <b>no se afirma</b> que el modelo espacial supere a la referencia.'}</p>`
+    : '';
+
+  const limits = translateList(m?.limitations);
+  // The package repeats the model's limitations inside its warnings; show each once.
+  const warnings = translateList(view.avisos).filter((a) => !limits.includes(a));
+
+  return panelCard('Cómo se calculó', `
+    <p class="note">Modelo <b>${MODEL_LABEL[m?.model_name] || m?.model_name || 'espacial'}</b>
+      ${m?.model_version || ''} · <b>${m?.observation_count ?? view.sampling.valid}</b> mediciones dentro del lote
+      ${m?.inference_ms ? ` · ${fmt(m.inference_ms, 0)} ms de cálculo` : ''}</p>
+    ${compare}
+    ${verdict}
+    ${limits.length ? `<h2>Hasta dónde llega</h2><ul class="balance">${limits.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
+    ${warnings.length ? `<h2>Avisos</h2><ul class="balance">${warnings.map((a) => `<li>${a}</li>`).join('')}</ul>` : ''}
+    <p class="note">«pp» son puntos porcentuales de masa. Una cobertura por debajo del 95 %
+      significa que el intervalo del modelo se queda corto más veces de lo previsto.</p>`);
+}
+
+// The backend writes its limitations and warnings in English. Each is mapped
+// word for word; anything unmapped is shown as it came rather than guessed at.
+const BACKEND_ES = new Map([
+  ['Sensor percentages have not been calibrated against laboratory samples.',
+    'Los porcentajes del sensor no se han calibrado contra muestras de laboratorio.'],
+  ['Spatial predictions support sampling and review; they are not laboratory measurements.',
+    'Las predicciones espaciales sirven para muestrear y revisar; no son mediciones de laboratorio.'],
+  ['Small dataset (18 in-plot observations); metrics have high variance.',
+    'Conjunto pequeño (18 mediciones dentro del lote): las métricas varían mucho.'],
+  ['The crop profile is demo_unvalidated; no candidate plan is an applied prescription.',
+    'El perfil de cultivo es de demostración y no está validado: ningún plan es una prescripción aplicada.'],
+  ['GP is not claimed to outperform IDW for this input set.',
+    'No se afirma que el modelo espacial supere al método de referencia con estos datos.'],
+  ['measurement is outside the declared plot boundary',
+    'la medición cae fuera del contorno declarado del lote'],
+  ['reading is outside the declared plot boundary',
+    'la lectura cae fuera del contorno declarado del lote'],
+]);
+
+const SOURCE_OFFLINE = /^(.+): network access is disabled; using a versioned offline fixture; data is not presented as current$/;
+
+function translateOne(text) {
+  if (typeof text !== 'string') return text;
+  const mapped = BACKEND_ES.get(text.trim());
+  if (mapped) return mapped;
+  const offline = text.trim().match(SOURCE_OFFLINE);
+  if (offline) {
+    return `${offline[1]}: sin acceso a la red; se usó un archivo local con fecha, así que el dato no es actual.`;
+  }
+  return text;
+}
+
+function translateList(value) {
+  const items = Array.isArray(value)
+    ? value
+    : String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return [...new Set(items.map(translateOne))];
+}
+
+function viewConfiguracion() {
+  const view = state.view;
+  const net = state.network;
+  const p = view.cultivo || {};
+  const req = p.requirement_kg_ha || {};
+  return panelCard('Configuración y perfil', `
+    <div class="table-wrap"><table class="data"><tbody>
+      <tr><td>Centro</td><td><b>${net.acopio.nombre}</b> · ${net.acopio.municipio}</td></tr>
+      <tr><td>Lote</td><td>${view.plot.name} · ${fmt(view.plot.area_ha, 2)} ha</td></tr>
+      <tr><td>Cultivo</td><td>${p.crop || ''} ${p.variety || ''} · etapa ${p.stage || ''}</td></tr>
+      <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
+      <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
+      <tr><td>Densidad aparente</td><td>${p.bulk_density_g_cm3 ?? '—'} g/cm³</td></tr>
+      <tr><td>Unidad del suelo</td><td>porcentaje de masa, convención elemental</td></tr>
+      <tr><td>Validación</td><td>${VALIDATION_LABEL[view.validacion] || view.validacion}</td></tr>
+    </tbody></table></div>`,
+  'El perfil de cultivo es de demostración: requiere que un agrónomo local lo valide.');
+}
+
 function render() {
   const view = state.view;
   const net = state.network;
-  const syncLabel = view.stale ? 'paquete degradado' : state.live ? 'al día' : 'sin red · paquete local';
+  // The package's own degraded flag is not a headline: it says a climate source
+  // fell back to a fixture, which each risk card already declares. Reportes
+  // still lists every warning verbatim.
+  const syncLabel = state.live ? 'al día' : 'sin red';
+
+  const alertas = view.riesgos.length;
 
   document.getElementById('app').innerHTML = `<div class="shell">
-    <div class="sync ${view.stale ? 'stale' : ''}">
-      <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones · ${state.dataOrigin}
-      ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
-      <span class="aviso">${view.aviso || ''}</span>
+    <aside class="side" id="side">
+      <div class="side-brand">
+        <span class="mark">iO</span>
+        <span class="side-brand-name">IOmido<small>Inteligencia Operativa</small></span>
+      </div>
+
+      <nav class="side-nav" aria-label="Secciones">
+        ${MENU_VIEWS.map((n) => `<button class="side-item ${state.nav === n ? 'on' : ''}" type="button"
+            data-nav="${n}" aria-current="${state.nav === n ? 'page' : 'false'}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MENU_ICON[n]}"/></svg>
+            <span>${MENU_LABEL[n]}</span>
+            ${n === 'alertas' && alertas ? `<b class="side-badge">${alertas}</b>` : ''}
+          </button>`).join('')}
+      </nav>
+
+      <div class="side-foot">
+        <div class="side-center">
+          <span class="side-label">Centro de acopio</span>
+          <b>${net.acopio.nombre}</b>
+          <span class="note">${net.acopio.municipio}</span>
+          <button class="btn ghost" type="button" data-nav="configuracion">Ver perfil</button>
+        </div>
+        <div class="side-user">
+          <span class="side-avatar" aria-hidden="true">JM</span>
+          <span class="side-user-name">Juan Morales<small>Administrador</small></span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="sync">
+        <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones
+        ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
+        <span class="spacer"></span>
+        <button class="icon-btn bell" type="button" data-nav="alertas" aria-label="${alertas} alertas activas">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MENU_ICON.alertas}"/></svg>
+          ${alertas ? `<b class="side-badge">${alertas}</b>` : ''}
+        </button>
+        <button class="btn ghost ask-cta" type="button">Preguntar</button>
+        <button class="icon-btn" type="button" data-nav="configuracion" aria-label="Perfil del centro">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg>
+        </button>
+      </div>
+
+      <header class="page-head">
+        <span class="page-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21c5-2 8-6 8-11V5l-8-2-8 2v5c0 5 3 9 8 11z"/></svg>
+        </span>
+        <div>
+          <h1>${net.acopio.nombre}</h1>
+          <p>${net.real
+            ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
+            : `${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</p>
+        </div>
+      </header>
+
+      <main class="main" id="main">${viewFor(state.nav)}</main>
     </div>
-
-    <div class="topbar">
-      <div class="mark">iO</div>
-      <div class="brand-name">${net.acopio.nombre}<small>${net.real
-        ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
-        : `${net.kpis.productores} productores · ${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</small></div>
-      <span class="spacer"></span>
-      <span class="bell" title="${net.prioridades.length} prioridades activas">🔔 ${net.prioridades.length > 0 ? `<b>${net.prioridades.length}</b>` : ''}</span>
-      <button class="btn ghost ask-cta" type="button" title="Preguntar a IOmido">🎙 Preguntar</button>
-      <span class="user" title="Acopio Pasto">👤</span>
-    </div>
-
-    <nav class="nav" aria-label="Vistas del acopio">
-      ${MENU_VIEWS.map((n) =>
-        `<button class="nav-btn ${state.nav === n ? 'on' : ''}" type="button" data-nav="${n}">
-           ${n === 'lote' ? 'Lote El Rosal' : n[0].toUpperCase() + n.slice(1)}
-         </button>`).join('')}
-    </nav>
-
-    <main class="main" id="main">${state.nav === 'resumen' ? viewResumen() : state.nav === 'mapa' ? viewMapa() : state.nav === 'productores' ? viewProductores() : viewLote()}</main>
   </div>`;
 
-  for (const button of document.querySelectorAll('.nav-btn')) {
-    button.addEventListener('click', () => go(button.dataset.nav));
-  }
   for (const button of document.querySelectorAll('[data-nav]')) {
-    if (!button.classList.contains('nav-btn')) button.addEventListener('click', () => go(button.dataset.nav));
+    button.addEventListener('click', () => go(reachable(button.dataset.nav), button.dataset.tabGo || null));
   }
+  if (state.nav === 'historial' && !state.historial) loadHistorial();
   const askCta = document.querySelector('.ask-cta');
   if (askCta) askCta.addEventListener('click', () => go('lote', 'asistente'));
 
@@ -1091,7 +1413,6 @@ async function boot() {
   const [pkg, net] = await Promise.all([getPackage(), getNetwork()]);
   state.view = adapt(pkg.data);
   state.network = net.data;
-  state.dataOrigin = pkg.origin;
   state.live = pkg.live;
   state.nav = navFromHash();
   render();
