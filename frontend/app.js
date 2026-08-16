@@ -24,6 +24,7 @@ const state = {
   decisionMsg: '',
   historial: null,
   historialMsg: '',
+  riesgoAbrir: null,
   view: null,
   network: null,
   live: false,
@@ -39,6 +40,13 @@ const DECISION_LABEL = {
   pending_review: 'pendiente de revisión',
   pending_technical_review: 'pendiente de revisión técnica',
   referred_to_technician: 'derivada a un técnico',
+};
+// What the person did, and who they were. The backend stores both in English.
+const ACTION_LABEL = {
+  accept: 'Aceptar', reject: 'Rechazar', modify: 'Modificar', refer: 'Pedir revisión',
+};
+const ACTOR_LABEL = {
+  technician: 'Técnico', farmer: 'Productor', system: 'Sistema',
 };
 const VALIDATION_LABEL = {
   requires_technical_validation: 'Plan candidato: requiere validación técnica antes de aplicarse.',
@@ -160,7 +168,7 @@ function drawMap() {
         : state.network.productores.filter((p) => p.riesgo_nivel === state.riesgoFiltro);
       paintNetworkDots(projector, producers);
       if (overlay) for (const circle of overlay.querySelectorAll('.pdot')) {
-        circle.addEventListener('click', () => selectProducer(circle.dataset.prod));
+        circle.addEventListener('click', () => openProducer(circle.dataset.prod));
       }
     } else {
       const view = state.view;
@@ -269,7 +277,9 @@ function wireMapGestures() {
     moved = 0;
     startX = event.clientX;
     startY = event.clientY;
-    stage.setPointerCapture(event.pointerId);
+    // Capture is a convenience, not a requirement: losing it must not abort
+    // the drag, and some synthetic pointers have no capturable id at all.
+    try { stage.setPointerCapture(event.pointerId); } catch { /* drag still works */ }
     stage.classList.add('grabbing');
   });
 
@@ -414,28 +424,34 @@ function panelRiesgos() {
   const { riesgos, estacional, degradado } = state.view;
   if (riesgos.length === 0) return '<p class="note">Sin riesgos activos para este lote.</p>';
 
-  const cards = riesgos.map((r, index) => `<article class="risk sev-${r.severidad} ${index === 0 ? 'open' : ''}">
-      <button class="risk-head" type="button" aria-expanded="${index === 0}">
+  // Opening from Alertas expands the risk you clicked, not always the first.
+  const target = riesgos.findIndex((r) => r.tipo === state.riesgoAbrir);
+  const openIndex = target >= 0 ? target : 0;
+
+  const cards = riesgos.map((r, index) => `<article class="risk sev-${r.severidad} ${index === openIndex ? 'open' : ''}">
+      <button class="risk-head" type="button" aria-expanded="${index === openIndex}">
         <span class="mark">${SEVERITY_MARK[r.severidad] || '●'}</span>
         <span class="sev-label">${SEVERITY_WORD[r.severidad] || r.severidad}</span>
         <span class="risk-title">${RISK_TITLE[r.tipo] || r.tipo}</span>
       </button>
       <div class="risk-body">
         <p>Ventana ${r.ventana?.start} a ${r.ventana?.end} · confianza ${Math.round((r.confianza ?? 0) * 100)}%</p>
-        ${r.accion ? `<ul><li>${r.accion}</li></ul>` : ''}
+        ${r.accion ? `<ul><li>${translateOne(r.accion)}</li></ul>` : ''}
         ${(r.confianza ?? 1) < 0.5 ? '<p class="low-conf">Esto todavía puede cambiar.</p>' : ''}
         <button class="why" type="button" data-risk="${r.tipo}">¿Por qué?</button>
         <div class="why-body" id="why-${r.tipo}" hidden>
-          <p><b>Probabilidad estimada:</b> ${Math.round((r.score ?? 0) * 100)}%</p>
-          <p><b>Datos:</b> ${Object.entries(r.entradas || {}).map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`).join(' · ')}</p>
-          <p><b>Fuentes:</b> ${r.fuentes.map((f) => `${f.name}${f.fetched_at ? ` (${f.fetched_at.slice(0, 10)})` : ''}${f.stale || f.failed ? ' · no actual' : ''}`).join(', ')}</p>
-          ${r.limitaciones ? `<p><b>Límites:</b> ${r.limitaciones}</p>` : ''}
+          <p><b>Probabilidad estimada:</b> ${Math.round((r.score ?? 0) * 100)} %</p>
+          <p><b>Datos:</b> ${riskInputs(r.entradas)}</p>
+          <p><b>Fuentes:</b> ${riskSources(r.fuentes)}</p>
+          ${translateList(r.limitaciones).length
+    ? `<p><b>Límites:</b></p><ul>${translateList(r.limitaciones).map((l) => `<li>${l}</li>`).join('')}</ul>`
+    : ''}
         </div>
       </div>
     </article>`).join('');
 
   return `<div class="scroll-y">${cards}
-    ${estacional?.enso ? `<p class="note"><b>ENSO:</b> ${estacional.enso.phase ?? estacional.enso.status ?? ''}</p>` : ''}
+    ${estacional?.enso ? `<p class="note"><b>ENSO:</b> ${ensoLabel(estacional.enso.phase ?? estacional.enso.status)}</p>` : ''}
     ${degradado ? '<p class="note warn-text">Alguna fuente no respondió: el clima se muestra como no actual.</p>' : ''}
   </div>`;
 }
@@ -471,8 +487,10 @@ function panelMediciones() {
       <td class="num">${pct(m.N)}</td>
       <td class="num">${pct(m.P)}</td>
       <td class="num">${pct(m.K)}</td>
-      <td>${m.valido ? (m.sospechoso ? 'revisar' : 'usada') : 'fuera'}${m.motivo ? `<span class="why-dot" title="${m.motivo}">?</span>` : ''}</td>
-    </tr>`).join('');
+      <td>${m.valido ? (m.sospechoso ? 'revisar' : 'usada') : 'fuera'}${m.motivo
+    ? `<button class="why-dot" type="button" data-motivo="${translateOne(m.motivo)}"
+        aria-label="Por qué: ${translateOne(m.motivo)}">?</button>` : ''}</td>
+    </tr>${m.motivo ? `<tr class="motivo-row" hidden><td colspan="5" class="note">${translateOne(m.motivo)}</td></tr>` : ''}`).join('');
 
   return `<div class="scroll-y">
       <table class="readings">
@@ -526,6 +544,20 @@ function wireTabs(initial) {
       }
       const why = body.querySelector('[data-why]');
       if (why) why.addEventListener('click', () => showWhy(why.dataset.why));
+      return;
+    }
+
+    if (name === 'mediciones') {
+      // Hover-only would strand touch users, so the mark toggles a real row.
+      for (const dot of body.querySelectorAll('.why-dot')) {
+        dot.addEventListener('click', () => {
+          const row = dot.closest('tr')?.nextElementSibling;
+          if (row?.classList.contains('motivo-row')) {
+            row.hidden = !row.hidden;
+            dot.setAttribute('aria-expanded', String(!row.hidden));
+          }
+        });
+      }
       return;
     }
 
@@ -610,7 +642,12 @@ async function decide(action) {
       resulting_status: decision.resulting_status,
       applied: propuesta.aplicada,
     };
-    state.decisionMsg = `Decisión <b>${decision.id}</b> registrada.`;
+    // The identifier belongs in the audit trail, not in the sentence a person
+    // reads; it stays reachable on hover.
+    const at = new Date(decision.created_at || Date.now())
+      .toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+      .replace(/\.$/, '');
+    state.decisionMsg = `<span title="${decision.id}">Decisión registrada a las ${at}.</span>`;
     try {
       // history is one object holding the proposal, its decisions and the audit trail.
       const { history } = await getDecisionHistory(propuesta.id);
@@ -656,9 +693,10 @@ async function showWhy(proposalId) {
 }
 
 function renderWhy(why) {
-  const steps = (why.steps || []).map((s) => `<li><b>${s.step}</b> ${s.detail || ''}</li>`).join('');
-  const unknowns = (why.unknowns || []).map((u) => `<li>${u}</li>`).join('');
-  return `${why.summary ? `<p>${why.summary}</p>` : ''}
+  const steps = (why.steps || [])
+    .map((s) => `<li><b>${translateOne(s.step)}</b> ${translateOne(s.detail || '')}</li>`).join('');
+  const unknowns = (why.unknowns || []).map((u) => `<li>${translateOne(u)}</li>`).join('');
+  return `${why.summary ? `<p>${translateOne(why.summary)}</p>` : ''}
     ${steps ? `<ul>${steps}</ul>` : ''}
     ${unknowns ? `<p class="note"><b>Lo que no se sabe</b></p><ul>${unknowns}</ul>` : ''}`;
 }
@@ -686,11 +724,15 @@ function viewResumen() {
       : 'El Rosal está al día.';
 
   const kpis = [
-    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: view.plot.municipality || view.plot.municipio || '', tone: 'green', icon: KPI_ICON.area },
-    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo', tone: 'blue', icon: KPI_ICON.mediciones },
-    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40, tone: 'red', icon: KPI_ICON.critico },
-    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo', tone: 'grey', icon: KPI_ICON.incierto },
-  ].map((c) => `<div class="kpi ${c.warn ? 'warn-kpi' : ''}">
+    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: place(view.plot.municipality || view.plot.municipio), tone: 'green', icon: KPI_ICON.area,
+      ayuda: 'Área que encierra el contorno declarado del lote.' },
+    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo', tone: 'blue', icon: KPI_ICON.mediciones,
+      ayuda: `De ${view.sampling.total} lecturas recibidas, ${view.sampling.valid} caen dentro del lote y alimentan el modelo.` },
+    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40, tone: 'red', icon: KPI_ICON.critico,
+      ayuda: 'Parte del lote cuyas zonas tienen menos de la mitad del nutriente que pide el cultivo.' },
+    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo', tone: 'grey', icon: KPI_ICON.incierto,
+      ayuda: 'Celdas donde la incertidumbre del modelo pasa su umbral. En el mapa van rayadas: ahí el modelo no sabe.' },
+  ].map((c) => `<div class="kpi ${c.warn ? 'warn-kpi' : ''}" title="${c.ayuda}">
       <span class="kpi-icon tone-${c.tone}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${c.icon}"/></svg></span>
       <div class="kpi-text">
         <div class="label">${c.label}</div><div class="value">${c.value}</div><div class="hint">${c.hint}</div>
@@ -1016,7 +1058,7 @@ function viewLote() {
 
       <div class="col">
         <div class="kpis">
-          <div class="kpi"><div class="label">Zona más pobre</div><div class="value warn">${NIVEL_LABEL[worstZone.peor]}</div><div class="hint">${fmt(worstZone.area_ha, 2)} ha · ${worstZone.id}</div></div>
+          <div class="kpi"><div class="label">Zona más pobre</div><div class="value warn">${NIVEL_LABEL[worstZone.peor]}</div><div class="hint">${fmt(worstZone.area_ha, 2)} ha · zona ${worstZone.id.replace('zone-', '')}</div></div>
           <div class="kpi"><div class="label">Le falta</div><div class="value">${fmt(view.criticalSharePct)}%</div><div class="hint">del lote en nivel crítico</div></div>
         </div>
 
@@ -1057,7 +1099,12 @@ async function loadHistorial() {
     state.historialMsg = state.historial.length ? '' : 'Sin decisiones registradas todavía.';
   } catch (error) {
     state.historial = [];
-    state.historialMsg = `No se pudo leer el historial: ${error.message}`;
+    // The URL and status belong in the console, not on screen. A 404 here means
+    // the deployed backend does not expose the history route yet.
+    console.warn('[historial] no disponible:', error.message);
+    state.historialMsg = /respondió 404/.test(error.message)
+      ? 'Este backend todavía no expone el historial de decisiones.'
+      : 'No se pudo leer el historial ahora mismo. Vuelva a intentarlo.';
   }
   render();
 }
@@ -1092,7 +1139,7 @@ function viewLotes() {
   const lotes = net.real?.lotes || [];
   const rows = lotes.length
     ? lotes.map((l) => `<tr>
-        <td><b>${l.name}</b></td><td>${l.municipality}</td>
+        <td><b>${l.name}</b></td><td>${place(l.municipality)}</td>
         <td class="num">${l.reading_count}</td>
         <td>${l.id === view.plot.id ? `${fmt(view.plot.area_ha, 2)} ha` : '—'}</td>
         <td><button class="btn ghost" type="button" data-nav="lote">Abrir</button></td>
@@ -1134,9 +1181,10 @@ function viewAlertas() {
         <p class="note">Ventana del ${r.ventana?.start} al ${r.ventana?.end}
           · confianza ${Math.round((r.confianza ?? 0) * 100)} %
           · probabilidad ${Math.round((r.score ?? 0) * 100)} %</p>
+        ${r.accion ? `<p class="note">${translateOne(r.accion)}</p>` : ''}
         <p class="note">Fuentes: ${r.fuentes.map((f) => `${f.name}${f.stale || f.failed ? ' (no actual)' : ''}`).join(' · ')}</p>
       </div>
-      <button class="btn ghost" type="button" data-nav="lote" data-tab-go="riesgos">Ver detalles →</button>
+      <button class="btn ghost" type="button" data-nav="lote" data-tab-go="riesgos" data-risk-go="${r.tipo}">Ver detalles →</button>
     </article>`).join('');
   return panelCard('Alertas climáticas', cards);
 }
@@ -1157,11 +1205,15 @@ function viewRecomendaciones() {
 }
 
 function viewHistorial() {
+  const when = (iso) => new Date(iso).toLocaleString('es-CO', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+
   const rows = (state.historial || []).map((d) => `<tr>
-      <td>${new Date(d.created_at).toLocaleString('es-CO')}</td>
-      <td>${DECISION_LABEL[d.action] || d.action}</td>
+      <td>${when(d.created_at)}</td>
+      <td>${ACTION_LABEL[d.action] || d.action}</td>
       <td>${DECISION_LABEL[d.resulting_status] || d.resulting_status}</td>
-      <td>${d.actor_type || ''} ${d.actor_id || ''}</td>
+      <td${d.actor_id ? ` title="${d.actor_id}"` : ''}>${ACTOR_LABEL[d.actor_type] || d.actor_type || '—'}</td>
     </tr>`).join('');
   const body = rows
     ? `<div class="table-wrap"><table class="data"><thead><tr>
@@ -1181,8 +1233,8 @@ function viewReportes() {
   // raw object helps nobody; the comparison is the point.
   const compare = perNutrient
     ? `<div class="table-wrap"><table class="data">
-        <thead><tr><th>Nutriente</th><th class="num">Error del modelo</th><th class="num">Error de la referencia</th>
-          <th class="num">Aciertos del intervalo</th></tr></thead>
+        <thead><tr><th>Nutriente</th><th class="num">Error medio · modelo</th><th class="num">Error medio · referencia</th>
+          <th class="num">Cobertura del intervalo 95 %</th></tr></thead>
         <tbody>${NUTRIENTS.map((n) => {
     const row = perNutrient[n];
     if (!row) return '';
@@ -1194,11 +1246,12 @@ function viewReportes() {
     : '';
 
   const verdict = meanRmse
-    ? `<p class="note">Error cuadrático medio: <b>${fmt(meanRmse.gp, 2)} pp</b> con el modelo espacial
-        contra <b>${fmt(meanRmse.idw, 2)} pp</b> del método de referencia.
+    ? `<p class="note">La tabla mide el <b>error medio</b>. Castigando más los fallos grandes
+        (error cuadrático medio) el orden se invierte: <b>${fmt(meanRmse.gp, 2)} pp</b> el modelo
+        espacial contra <b>${fmt(meanRmse.idw, 2)} pp</b> la referencia.
         ${m.metrics.gp_better_than_idw
     ? 'El modelo espacial mejora la referencia en este conjunto.'
-    : 'Con estos datos <b>no se afirma</b> que el modelo espacial supere a la referencia.'}</p>`
+    : 'Por eso, con estos datos, <b>no se afirma</b> que el modelo espacial supere a la referencia.'}</p>`
     : '';
 
   const limits = translateList(m?.limitations);
@@ -1234,7 +1287,97 @@ const BACKEND_ES = new Map([
     'la medición cae fuera del contorno declarado del lote'],
   ['reading is outside the declared plot boundary',
     'la lectura cae fuera del contorno declarado del lote'],
+
+  // Acciones sugeridas por el motor de riesgos
+  ['Review the local station and protect exposed areas before the forecast minimum.',
+    'Revise la estación local y proteja las zonas expuestas antes de la mínima prevista.'],
+  ['Prioritize soil moisture verification and postpone nutrient application if water is unavailable.',
+    'Priorice comprobar la humedad del suelo y aplace la fertilización si no hay agua.'],
+  ['Inspect lower leaves and ask the technician to validate preventive action.',
+    'Revise las hojas bajas y pida al técnico que valide una acción preventiva.'],
+
+  // Límites que el motor declara en cada riesgo
+  ['Rules are decision support and have not been locally validated as a supervised classifier.',
+    'Las reglas son apoyo a la decisión; no se han validado localmente como clasificador supervisado.'],
+  ['No synthetic labels were used; probabilities are transparent rule scores.',
+    'No se usaron etiquetas sintéticas: las probabilidades son puntajes de reglas a la vista.'],
+  ['Coarse climate products can smooth high-altitude extremes.',
+    'Los productos climáticos de baja resolución suavizan los extremos de alta montaña.'],
+  ['Weather suitability is not evidence that the pathogen is present.',
+    'Que el clima sea favorable no prueba que el patógeno esté presente.'],
+
+  // Explicación de la propuesta: resumen, pasos y lo que queda sin saber
+  ["Candidate integer formulation plans were derived from spatial estimates, explicit demo agronomy assumptions and the center's active catalog.",
+    'Los planes candidatos salen de las estimaciones espaciales, de supuestos agronómicos de demostración declarados y del catálogo activo del centro.'],
+  ['spatial inference', 'inferencia espacial'],
+  ['agronomic accounting', 'balance agronómico'],
+  ['integer optimization', 'optimización entera'],
+  ['climate context', 'contexto climático'],
+  ['Three Matern Gaussian Processes produced means and uncertainty.',
+    'Tres procesos gaussianos Matérn produjeron las medias y la incertidumbre.'],
+  ['Soil percentage was converted to sampled-layer mass and availability; it was not subtracted from bag percentage.',
+    'El porcentaje del suelo se convirtió a masa de la capa muestreada y a disponibilidad; no se restó del porcentaje del bulto.'],
+  ['Each zone used exact bounded integer search with shortfall, excess, bag count and formulation count in that order.',
+    'Cada zona usó búsqueda entera exacta y acotada, priorizando faltante, exceso, número de bultos y número de formulaciones, en ese orden.'],
+  ['Risk rules used the fused sources and can block application timing.',
+    'Las reglas de riesgo usaron las fuentes combinadas y pueden bloquear el momento de aplicación.'],
+  ['The sensor has not been calibrated against laboratory samples.',
+    'El sensor no se ha calibrado contra muestras de laboratorio.'],
+  ['The crop profile has not been validated by a local agronomist.',
+    'El perfil de cultivo no lo ha validado un agrónomo local.'],
+  ['Offline or stale climate data must be refreshed before field action.',
+    'Los datos climáticos sin conexión o vencidos hay que actualizarlos antes de actuar en campo.'],
 ]);
+
+// Names the risk engine uses for its inputs.
+const INPUT_LABEL = {
+  minimum_temperature_c: 'temperatura mínima',
+  enso_phase: 'fase ENSO',
+  precipitation_mm: 'precipitación',
+  evapotranspiration_mm: 'evapotranspiración',
+  water_balance_mm: 'balance hídrico',
+  seasonal_rainfall_anomaly_pct: 'anomalía de lluvia estacional',
+  favorable_hours_48h: 'horas favorables (últimas 48 h)',
+};
+const INPUT_UNIT = {
+  minimum_temperature_c: ' °C',
+  precipitation_mm: ' mm',
+  evapotranspiration_mm: ' mm',
+  water_balance_mm: ' mm',
+  seasonal_rainfall_anomaly_pct: ' %',
+  favorable_hours_48h: ' h',
+};
+const ENSO_ES = { 'El Nino': 'El Niño', 'La Nina': 'La Niña', Neutral: 'neutra' };
+
+// The backend ships ENSO phases without accents; the UI writes them properly.
+function ensoLabel(phase) {
+  return ENSO_ES[phase] || phase || '';
+}
+
+// Place names arrive unaccented from the database. Only the ones we actually
+// serve are corrected; anything else is shown exactly as it came.
+const PLACE_ES = new Map([['Narino', 'Nariño'], ['Pasto, Narino', 'Pasto, Nariño']]);
+
+function place(name) {
+  if (!name) return '';
+  return PLACE_ES.get(name.trim()) || name.replace(/\bNarino\b/g, 'Nariño');
+}
+
+function riskInputs(entradas) {
+  return Object.entries(entradas || {})
+    .map(([k, v]) => {
+      const label = INPUT_LABEL[k] || k.replace(/_/g, ' ');
+      // Numbers follow the Spanish convention, so 2.4 reads as 2,4.
+      const value = typeof v === 'number' ? fmt(v) : (ENSO_ES[v] || v);
+      return `${label} ${value}${INPUT_UNIT[k] || ''}`;
+    })
+    .join(' · ');
+}
+
+function riskSources(fuentes) {
+  return (fuentes || []).map((f) => `${f.name}${f.fetched_at ? ` (${f.fetched_at.slice(0, 10)})` : ''}`
+    + `${f.stale || f.failed ? ' · no actual' : ''}`).join(', ');
+}
 
 const SOURCE_OFFLINE = /^(.+): network access is disabled; using a versioned offline fixture; data is not presented as current$/;
 
@@ -1263,12 +1406,12 @@ function viewConfiguracion() {
   const req = p.requirement_kg_ha || {};
   return panelCard('Configuración y perfil', `
     <div class="table-wrap"><table class="data"><tbody>
-      <tr><td>Centro</td><td><b>${net.acopio.nombre}</b> · ${net.acopio.municipio}</td></tr>
+      <tr><td>Centro</td><td><b>${net.acopio.nombre}</b> · ${place(net.acopio.municipio)}</td></tr>
       <tr><td>Lote</td><td>${view.plot.name} · ${fmt(view.plot.area_ha, 2)} ha</td></tr>
       <tr><td>Cultivo</td><td>${p.crop || ''} ${p.variety || ''} · etapa ${p.stage || ''}</td></tr>
       <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
       <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
-      <tr><td>Densidad aparente</td><td>${p.bulk_density_g_cm3 ?? '—'} g/cm³</td></tr>
+      <tr><td>Densidad aparente</td><td>${Number.isFinite(p.bulk_density_g_cm3) ? fmt(p.bulk_density_g_cm3, 2) : '—'} g/cm³</td></tr>
       <tr><td>Unidad del suelo</td><td>porcentaje de masa, convención elemental</td></tr>
       <tr><td>Validación</td><td>${VALIDATION_LABEL[view.validacion] || view.validacion}</td></tr>
     </tbody></table></div>`,
@@ -1305,7 +1448,7 @@ function render() {
         <div class="side-center">
           <span class="side-label">Centro de acopio</span>
           <b>${net.acopio.nombre}</b>
-          <span class="note">${net.acopio.municipio}</span>
+          <span class="note">${place(net.acopio.municipio)}</span>
           <button class="btn ghost" type="button" data-nav="configuracion">Ver perfil</button>
         </div>
         <div class="side-user">
@@ -1337,8 +1480,8 @@ function render() {
         <div>
           <h1>${net.acopio.nombre}</h1>
           <p>${net.real
-            ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
-            : `${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</p>
+            ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${place(net.acopio.municipio)}`
+            : `${net.kpis.lotes} lotes · ${place(net.acopio.municipio)}`}</p>
         </div>
       </header>
 
@@ -1347,7 +1490,10 @@ function render() {
   </div>`;
 
   for (const button of document.querySelectorAll('[data-nav]')) {
-    button.addEventListener('click', () => go(reachable(button.dataset.nav), button.dataset.tabGo || null));
+    button.addEventListener('click', () => {
+      state.riesgoAbrir = button.dataset.riskGo || null;
+      go(reachable(button.dataset.nav), button.dataset.tabGo || null);
+    });
   }
   if (state.nav === 'historial' && !state.historial) loadHistorial();
   const askCta = document.querySelector('.ask-cta');
@@ -1389,6 +1535,15 @@ function render() {
 function selectProducer(id) {
   state.productor = state.productor === id ? null : id;
   render();
+}
+
+// A dot on the map has nowhere to show a producer, so tapping one opens the
+// Productores screen with that producer already expanded.
+function openProducer(id) {
+  state.productor = id;
+  go('productores');
+  const card = document.querySelector(`[data-prod="${id}"]`)?.closest('.prod-card, .prod-detail');
+  if (card) card.scrollIntoView({ block: 'nearest' });
 }
 
 function go(nav, tab = null) {
