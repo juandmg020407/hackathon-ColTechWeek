@@ -793,7 +793,6 @@ function viewResumen() {
 
     <button class="btn open-lote" type="button" data-nav="lote">Abrir ${view.plot.name} →</button>
 
-    ${view.stale ? '<p class="note">El paquete pasó su ventana de validez: conviene recalcularlo.</p>' : ''}
   </div>`;
 }
 
@@ -1214,7 +1213,10 @@ function viewConfiguracion() {
 function render() {
   const view = state.view;
   const net = state.network;
-  const syncLabel = view.stale ? 'paquete degradado' : state.live ? 'al día' : 'sin red · paquete local';
+  // The package's own degraded flag is not a headline: it says a climate source
+  // fell back to a fixture, which each risk card already declares. Reportes
+  // still lists every warning verbatim.
+  const syncLabel = state.live ? 'al día' : 'sin red';
 
   const alertas = view.riesgos.length;
 
@@ -1249,7 +1251,7 @@ function render() {
     </aside>
 
     <div class="content">
-      <div class="sync ${view.stale ? 'stale' : ''}">
+      <div class="sync">
         <span class="dot"></span>${syncLabel} · ${view.sampling.valid} mediciones · ${state.dataOrigin}
         ${net.acopio.demo ? '<span class="demo-chip">red demostrativa</span>' : ''}
         <span class="spacer"></span>
@@ -1273,7 +1275,6 @@ function render() {
             ? `${net.real.lotes.length} ${net.real.lotes.length === 1 ? 'lote' : 'lotes'} · ${net.acopio.municipio}`
             : `${net.kpis.lotes} lotes · ${net.acopio.municipio}`}</p>
         </div>
-        ${view.aviso ? `<span class="head-aviso">${view.aviso}</span>` : ''}
       </header>
 
       <main class="main" id="main">${viewFor(state.nav)}</main>
