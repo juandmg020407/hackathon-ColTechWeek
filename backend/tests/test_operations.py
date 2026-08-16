@@ -46,6 +46,25 @@ def test_cold_start_seeds_the_demo_plot_so_the_package_works(tmp_path):
         assert package.json()["measurements"]["count"] == 19
 
 
+def test_cold_start_leaves_the_demo_plot_already_computed(tmp_path):
+    """El frontend pide tablero y package en paralelo: no puede haber carrera."""
+
+    with TestClient(create_app(_settings(tmp_path, demo_auto_import=True))) as client:
+        # Primera petición de la sesión: el tablero, sin tocar /package antes.
+        dashboard = client.get("/v1/centers/center-pasto-demo/dashboard").json()["dashboard"]
+        assert dashboard["summary"]["computed_plot_count"] == 1
+        assert dashboard["producers"][0]["plots"][0]["package_id"]
+        assert dashboard["producers"][0]["plots"][0]["needs_recompute"] is False
+
+        # Y el asistente ya tiene evidencia sobre la que responder.
+        agent = client.post(
+            "/v1/agent/ask",
+            json={"plot_id": "nar-001", "question": "¿qué tiene este lote?"},
+        )
+        assert agent.status_code == 200
+        assert agent.json()["agent"]["grounded"] is True
+
+
 def test_cold_start_without_auto_import_leaves_the_plot_empty(tmp_path):
     with TestClient(create_app(_settings(tmp_path, demo_auto_import=False))) as client:
         assert client.get("/v1/plots/nar-001/readings").json()["count"] == 0

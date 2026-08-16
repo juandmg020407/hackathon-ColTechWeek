@@ -69,3 +69,24 @@ def seed_demo_readings(
         extra={"source": str(excel_path), "inference_ms": None},
     )
     return bool(result["rows_created"])
+
+
+async def warm_demo_package(engine, repository: SQLiteRepository, plot_id: str) -> bool:
+    """Calcula el primer package si el lote tiene lecturas y ningún cálculo.
+
+    El frontend pide tablero y package en paralelo. Sin esto, en un arranque en
+    frío el tablero puede resolverse antes que el cálculo y la portada abre
+    diciendo que no hay ningún lote calculado.
+    """
+
+    if repository.latest_package(plot_id) is not None:
+        return False
+    if not repository.count_readings(plot_id):
+        return False
+    try:
+        await engine.recompute(plot_id)
+    except Exception as error:  # noqa: BLE001 - arrancar sin package es válido
+        logger.warning("[bootstrap] no se pudo precalcular el lote demo: %s", error)
+        return False
+    logger.info("demo_package_warmed")
+    return True

@@ -20,7 +20,7 @@ from .ml.spatial import SpatialInferenceError
 from .observability import configure_logging, request_context_middleware
 from .optimization.integer import OptimizationError
 from .services.agent import NoPackageEvidenceError
-from .services.bootstrap import bootstrap_repository, seed_demo_readings
+from .services.bootstrap import bootstrap_repository, seed_demo_readings, warm_demo_package
 from .services.contracts import utc_now
 from .services.engine import EngineError, PlotHasNoReadingsError
 from .services.importer import ImportValidationError
@@ -41,6 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 demo_plot_id,
                 active_settings.demo_excel_path,
             )
+            await warm_demo_package(container.engine, container.repository, demo_plot_id)
         yield
 
     app = FastAPI(
