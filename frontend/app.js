@@ -70,10 +70,12 @@ const KPI_ICON = {
   incierto: 'M9 9a3 3 0 1 1 4 2.8c-.7.3-1 .9-1 1.7M12 17h.01',
 };
 // Every view routes; the sidebar shows the ones with a screen of their own.
+// `perfil` answers "who is this centre"; `configuracion` answers "with what
+// assumptions does it calculate". Both routable; only the second is in the menu.
 const NAV_VIEWS = [
   'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
   'recomendaciones', 'historial', 'reportes', 'configuracion',
-  'lote', 'productores',
+  'perfil', 'lote', 'productores',
 ];
 const MENU_VIEWS = [
   'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
@@ -1134,6 +1136,7 @@ function viewFor(nav) {
     historial: viewHistorial,
     reportes: viewReportes,
     configuracion: viewConfiguracion,
+    perfil: viewPerfil,
     productores: viewProductores,
     lote: viewLote,
   };
@@ -1341,6 +1344,27 @@ const BACKEND_ES = new Map([
     'El perfil de cultivo no lo ha validado un agrónomo local.'],
   ['Offline or stale climate data must be refreshed before field action.',
     'Los datos climáticos sin conexión o vencidos hay que actualizarlos antes de actuar en campo.'],
+
+  // El perfil agronómico llega en español sin tildes desde el YAML del backend.
+  ['lote demostrativo de Pasto, Narino; no transferible sin validacion local',
+    'lote demostrativo de Pasto, Nariño; no transferible sin validación local'],
+  ['Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.',
+    'Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.'],
+  ['No es una prescripcion validada.', 'No es una prescripción validada.'],
+  ['Supuesto de muestreo de demostracion IOmido v1.', 'Supuesto de muestreo de demostración IOmido v1.'],
+  ['Debe confirmarse con el protocolo de campo.', 'Debe confirmarse con el protocolo de campo.'],
+  ['Estimacion demostrativa para suelo volcanico; requiere medicion del lote.',
+    'Estimación demostrativa para suelo volcánico; requiere medición del lote.'],
+  ['No proviene de una muestra de densidad aparente del lote.',
+    'No proviene de una muestra de densidad aparente del lote.'],
+  ['Factor operacional conservador de demostracion IOmido v1.',
+    'Factor operacional conservador de demostración IOmido v1.'],
+  ['Debe calibrarse contra analisis de laboratorio y respuesta del cultivo.',
+    'Debe calibrarse contra análisis de laboratorio y respuesta del cultivo.'],
+  ['Limite de seguridad de demostracion IOmido v1.', 'Límite de seguridad de demostración IOmido v1.'],
+  ['Requiere validacion tecnica antes de cualquier aplicacion.',
+    'Requiere validación técnica antes de cualquier aplicación.'],
+  ['Objetivo ilustrativo de la demo IOmido.', 'Objetivo ilustrativo de la demo IOmido.'],
 ]);
 
 // Names the risk engine uses for its inputs.
@@ -1413,23 +1437,116 @@ function translateList(value) {
   return [...new Set(items.map(translateOne))];
 }
 
+function viewPerfil() {
+  const net = state.network;
+  const view = state.view;
+  const summary = net.real?.dashboard?.summary;
+  const lotes = net.real?.lotes || [];
+
+  const cifras = summary ? [
+    ['Productores', summary.producer_count],
+    ['Lotes', summary.plot_count],
+    ['Lotes medidos', summary.measured_plot_count],
+    ['Lotes con alerta', summary.plots_at_risk],
+    ['Propuestas pendientes', summary.pending_proposals],
+    ['Mediciones por revisar', summary.measurements_for_review],
+  ].map(([label, value]) => `<tr><td>${label}</td><td class="num"><b>${value}</b></td></tr>`).join('') : '';
+
+  const filas = lotes.length
+    ? lotes.map((l) => `<tr>
+        <td><b>${l.name}</b></td><td>${place(l.municipality)}</td>
+        <td class="num">${l.reading_count}</td>
+        <td><button class="btn ghost" type="button" data-nav="lote">Abrir</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" class="note">Sin conexión solo se conoce
+        <b>${view.plot.name}</b>, el lote del paquete descargado.</td></tr>`;
+
+  return `<div class="rwrap"><section class="card wide-card">
+      <h2>El centro</h2>
+      <div class="table-wrap"><table class="data"><tbody>
+        <tr><td>Nombre</td><td><b>${net.acopio.nombre}</b></td></tr>
+        <tr><td>Municipio</td><td>${place(net.acopio.municipio)}</td></tr>
+        ${net.acopio.validacion ? `<tr><td>Estado</td><td>${VALIDATION_LABEL[net.acopio.validacion] || net.acopio.validacion}</td></tr>` : ''}
+        ${cifras}
+      </tbody></table></div>
+      ${net.acopio.demo ? '<p class="note">Parte de la red que se muestra es demostrativa y está rotulada como tal.</p>' : ''}
+    </section>
+
+    <section class="card wide-card">
+      <h2>Sus lotes</h2>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Lote</th><th>Municipio</th><th class="num">Mediciones</th><th></th></tr></thead>
+        <tbody>${filas}</tbody></table></div>
+    </section>
+
+    <section class="card wide-card">
+      <h2>Quién opera</h2>
+      <div class="table-wrap"><table class="data"><tbody>
+        <tr><td>Responsable</td><td><b>Juan Morales</b> · Administrador</td></tr>
+        <tr><td>Decisiones</td><td>Las registra un técnico y quedan en auditoría</td></tr>
+      </tbody></table></div>
+      <p class="note">Las condiciones con las que se calcula viven en
+        <button class="btn ghost" type="button" data-nav="configuracion">Configuración →</button></p>
+    </section>
+  </div>`;
+}
+
+// Names the agronomy profile uses for the parameters it cites.
+const PARAM_LABEL = {
+  requirement_kg_ha: 'Requerimiento del cultivo',
+  sampling_depth_cm: 'Profundidad de muestreo',
+  bulk_density_g_cm3: 'Densidad aparente',
+  availability_fraction: 'Fracción disponible',
+  maximum_application_kg_ha: 'Máximo por aplicación',
+  maximum_bags_per_zone: 'Máximo de bultos por zona',
+  target_yield_t_ha: 'Rendimiento objetivo',
+};
+
 function viewConfiguracion() {
   const view = state.view;
-  const net = state.network;
   const p = view.cultivo || {};
   const req = p.requirement_kg_ha || {};
-  return panelCard('Configuración y perfil', `
-    <div class="table-wrap"><table class="data"><tbody>
-      <tr><td>Centro</td><td><b>${net.acopio.nombre}</b> · ${place(net.acopio.municipio)}</td></tr>
-      <tr><td>Lote</td><td>${view.plot.name} · ${fmt(view.plot.area_ha, 2)} ha</td></tr>
-      <tr><td>Cultivo</td><td>${p.crop || ''} ${p.variety || ''} · etapa ${p.stage || ''}</td></tr>
-      <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
-      <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
-      <tr><td>Densidad aparente</td><td>${Number.isFinite(p.bulk_density_g_cm3) ? fmt(p.bulk_density_g_cm3, 2) : '—'} g/cm³</td></tr>
-      <tr><td>Unidad del suelo</td><td>porcentaje de masa, convención elemental</td></tr>
-      <tr><td>Validación</td><td>${VALIDATION_LABEL[view.validacion] || view.validacion}</td></tr>
-    </tbody></table></div>`,
-  'El perfil de cultivo es de demostración: requiere que un agrónomo local lo valide.');
+  const max = p.maximum_application_kg_ha || {};
+  const avail = p.availability_fraction || {};
+
+  const citas = (p.sources || []).map((s) => `<tr>
+      <td>${PARAM_LABEL[s.parameter] || s.parameter}</td>
+      <td>${translateOne(s.citation)}${s.note ? ` <span class="note">${translateOne(s.note)}</span>` : ''}</td>
+    </tr>`).join('');
+
+  return `<div class="rwrap">
+    <section class="card wide-card">
+      <h2>Perfil de cultivo</h2>
+      <div class="table-wrap"><table class="data"><tbody>
+        <tr><td>Cultivo</td><td><b>${p.crop || ''} ${p.variety || ''}</b> · etapa ${p.stage || ''}</td></tr>
+        <tr><td>Alcance</td><td>${translateOne(p.scope) || '—'}</td></tr>
+        <tr><td>Rendimiento objetivo</td><td>${p.target_yield_t_ha ?? '—'} t/ha</td></tr>
+        <tr><td>Vigente desde</td><td>${p.effective_from || '—'}</td></tr>
+        <tr><td>Validación</td><td>${VALIDATION_LABEL[p.validation_status] || p.validation_status || '—'}
+          ${p.validated_by_role ? '' : ' · sin firma profesional'}</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="card wide-card">
+      <h2>Con qué calcula</h2>
+      <div class="table-wrap"><table class="data"><tbody>
+        <tr><td>Requerimiento</td><td>N ${req.N} · P ${req.P} · K ${req.K} kg/ha</td></tr>
+        <tr><td>Máximo por aplicación</td><td>N ${max.N} · P ${max.P} · K ${max.K} kg/ha</td></tr>
+        <tr><td>Fracción disponible</td><td>N ${avail.N} · P ${avail.P} · K ${avail.K}</td></tr>
+        <tr><td>Máximo de bultos por zona</td><td>${p.maximum_bags_per_zone ?? '—'}</td></tr>
+        <tr><td>Profundidad de muestreo</td><td>${p.sampling_depth_cm ?? '—'} cm</td></tr>
+        <tr><td>Densidad aparente</td><td>${Number.isFinite(p.bulk_density_g_cm3) ? fmt(p.bulk_density_g_cm3, 2) : '—'} g/cm³</td></tr>
+        <tr><td>Unidad del suelo</td><td>porcentaje de masa, convención elemental</td></tr>
+      </tbody></table></div>
+    </section>
+
+    ${citas ? `<section class="card wide-card">
+      <h2>De dónde sale cada supuesto</h2>
+      <div class="table-wrap"><table class="data"><tbody>${citas}</tbody></table></div>
+      <p class="note">Ninguno de estos valores es una prescripción validada: requieren
+        que un ingeniero agrónomo local los revise antes de usarlos en campo.</p>
+    </section>` : ''}
+  </div>`;
 }
 
 function render() {
@@ -1463,7 +1580,7 @@ function render() {
           <span class="side-label">Centro de acopio</span>
           <b>${net.acopio.nombre}</b>
           <span class="note">${place(net.acopio.municipio)}</span>
-          <button class="btn ghost" type="button" data-nav="configuracion">Ver perfil</button>
+          <button class="btn ghost" type="button" data-nav="perfil">Ver perfil</button>
         </div>
         <div class="side-user">
           <span class="side-avatar" aria-hidden="true">JM</span>
@@ -1482,7 +1599,7 @@ function render() {
           ${alertas ? `<b class="side-badge">${alertas}</b>` : ''}
         </button>
         <button class="btn ghost ask-cta" type="button">Preguntar</button>
-        <button class="icon-btn" type="button" data-nav="configuracion" aria-label="Perfil del centro">
+        <button class="icon-btn" type="button" data-nav="perfil" aria-label="Perfil del centro">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg>
         </button>
       </div>
