@@ -1,0 +1,47 @@
+id: potato-pasto-demo-v1
+crop: papa
+variety: Diacol Capiro
+stage: establecimiento y desarrollo
+scope: lote demostrativo de Pasto, Narino; no transferible sin validacion local
+requirement_kg_ha:
+  N: 180
+  P: 90
+  K: 240
+  unit: kg/ha
+  basis: elemental
+sampling_depth_cm: 20
+bulk_density_g_cm3: 0.90
+availability_fraction:
+  N: 0.0010
+  P: 0.0010
+  K: 0.0010
+maximum_application_kg_ha:
+  N: 220
+  P: 130
+  K: 300
+  unit: kg/ha
+  basis: elemental
+maximum_bags_per_zone: 40
+target_yield_t_ha: 25
+sources:
+  - parameter: requirement_kg_ha
+    citation: Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.
+    note: No es una prescripcion validada.
+  - parameter: sampling_depth_cm
+    citation: Supuesto de muestreo de demostracion IOmido v1.
+    note: Debe confirmarse con el protocolo de campo.
+  - parameter: bulk_density_g_cm3
+    citation: Estimacion demostrativa para suelo volcanico; requiere medicion del lote.
+    note: No proviene de una muestra de densidad aparente del lote.
+  - parameter: availability_fraction
+    citation: Factor operacional conservador de demostracion IOmido v1.
+    note: Debe calibrarse contra analisis de laboratorio y respuesta del cultivo.
+  - parameter: maximum_application_kg_ha
+    citation: Limite de seguridad de demostracion IOmido v1.
+    note: Requiere validacion tecnica antes de cualquier aplicacion.
+  - parameter: target_yield_t_ha
+    citation: Objetivo ilustrativo de la demo IOmido.
+version: "1.0.0"
+validation_status: demo_unvalidated
+validated_by_role: null
+effective_from: 2026-08-15

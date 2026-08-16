@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-08-15T00:00:00Z",
+  "open_meteo": {
+    "minimum_temperature_c": 2.4,
+    "maximum_temperature_c": 17.8,
+    "precipitation_mm": 34.5,
+    "evapotranspiration_mm": 57.1,
+    "blight_favorable_hours_48h": 18,
+    "forecast_days": 16
+  },
+  "seasonal": {
+    "rainfall_mm": 270.0,
+    "rainfall_anomaly_pct": -22.0,
+    "mean_temperature_c": 12.1,
+    "horizon_months": 6,
+    "source": "Versioned IOmido demo fixture derived from seasonal context; refresh before field use."
+  },
+  "enso": {
+    "phase": "El Nino",
+    "index_c": 0.7,
+    "persistence_probability": 0.97,
+    "published_at": "2026-08-04T00:00:00Z",
+    "source_url": "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_advisory/ensodisc.shtml",
+    "validation_status": "demo_unvalidated"
+  },
+  "nasa_power": {
+    "resolution_warning": "The 0.5 degree pixel smooths mountain extremes and is used for context, not next-day frost prediction.",
+    "historical_years": [
+      {"year": 2004, "rainfall_mm": 510, "minimum_temperature_c": 5.9, "mean_temperature_c": 11.2, "enso_index": 0.2},
+      {"year": 2006, "rainfall_mm": 265, "minimum_temperature_c": 7.7, "mean_temperature_c": 12.0, "enso_index": 1.0},
+      {"year": 2009, "rainfall_mm": 314, "minimum_temperature_c": 7.3, "mean_temperature_c": 12.2, "enso_index": 1.6},
+      {"year": 2011, "rainfall_mm": 620, "minimum_temperature_c": 6.8, "mean_temperature_c": 11.0, "enso_index": -1.1},
+      {"year": 2015, "rainfall_mm": 240, "minimum_temperature_c": 6.1, "mean_temperature_c": 12.5, "enso_index": 2.4},
+      {"year": 2018, "rainfall_mm": 389, "minimum_temperature_c": 5.7, "mean_temperature_c": 11.8, "enso_index": 0.9},
+      {"year": 2020, "rainfall_mm": 570, "minimum_temperature_c": 6.5, "mean_temperature_c": 11.1, "enso_index": -0.8},
+      {"year": 2023, "rainfall_mm": 300, "minimum_temperature_c": 6.2, "mean_temperature_c": 12.4, "enso_index": 1.3}
+    ]
+  }
+}
