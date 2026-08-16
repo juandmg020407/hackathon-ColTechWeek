@@ -7,6 +7,7 @@ import pytest
 from app.services.agent import GroundedAgent
 from app.services.anthropic_explainer import AnthropicEvidenceExplainer, _numbers
 from app.services.explainer import AIBudgetPolicy
+from app.config import Settings
 
 EVIDENCE = {
     "answer": "El lote tiene 18 mediciones validas y 3 zonas: zone-a: N 0.12 %, K 0.21 %.",
@@ -21,6 +22,11 @@ POLICY = AIBudgetPolicy(
     input_price_usd_per_million=1.00,
     output_price_usd_per_million=5.00,
 )
+
+
+def test_paid_explainer_is_opt_in(monkeypatch):
+    monkeypatch.delenv("AI_EXPLAINER_ENABLED", raising=False)
+    assert Settings(_env_file=None).ai_explainer_enabled is False
 
 
 class FakeUsage:
@@ -47,12 +53,14 @@ class FakeMessages:
         self.reply = reply
         self.input_tokens = input_tokens
         self.calls = 0
+        self.last_create_kwargs = None
 
     def count_tokens(self, **_kwargs):
         return type("Counted", (), {"input_tokens": self.input_tokens})()
 
-    def create(self, **_kwargs):
+    def create(self, **kwargs):
         self.calls += 1
+        self.last_create_kwargs = kwargs
         if isinstance(self.reply, Exception):
             raise self.reply
         return FakeResponse(self.reply, input_tokens=self.input_tokens)
@@ -91,11 +99,12 @@ def test_numbers_reads_domain_hyphens_as_separators_not_signs():
 
 
 def test_rewrite_that_keeps_the_numbers_is_used():
-    explainer, _ = build("Hay 18 mediciones validas en 3 zonas. En zone-a: N 0.12 %, K 0.21 %.")
+    explainer, client = build("Hay 18 mediciones validas en 3 zonas. En zone-a: N 0.12 %, K 0.21 %.")
     result = render(explainer)
     assert result["used"] is True
     assert "18 mediciones" in result["text"]
     assert result["cost_usd"] == pytest.approx(400 / 1e6 + 80 * 5 / 1e6)
+    assert client.messages.last_create_kwargs["thinking"] == {"type": "disabled"}
 
 
 def test_invented_number_is_rejected():
@@ -106,6 +115,17 @@ def test_invented_number_is_rejected():
     assert result["reason"] == "unsupported_numbers"
     # El costo de la llamada descartada se sigue contabilizando.
     assert result["spent_usd"] > 0
+
+
+def test_open_question_cannot_borrow_numbers_from_the_full_evidence():
+    explainer, _ = build("Priorice la zona 3.")
+    result = explainer.render(
+        question="que deberia priorizar?",
+        evidence={"answer": "", "zones": [{"id": "zone-3", "score": 0.8}]},
+        evidence_ids=["pkg-1"],
+    )
+    assert result["used"] is False
+    assert result["reason"] == "unsupported_numbers"
 
 
 def test_provider_failure_degrades_instead_of_raising():
@@ -197,6 +217,8 @@ def test_open_question_uses_compact_package_evidence(prepared_client, monkeypatc
     assert agent["answer"] == "La prioridad es revisar la propuesta pendiente."
     assert len(agent["evidence_ids"]) == 3
     assert fake.messages.calls == 1
+    prompt = fake.messages.last_create_kwargs["messages"][0]["content"]
+    assert '"boundary"' not in prompt
 
 
 def test_open_question_without_model_degrades_honestly(prepared_client, monkeypatch):

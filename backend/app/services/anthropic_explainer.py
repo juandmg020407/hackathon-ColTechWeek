@@ -45,7 +45,9 @@ validacion tecnica o que los datos estan degradados, eso se mantiene.
 validacion de un tecnico.
 5. Responde solo con la respuesta al usuario. Sin encabezados, sin vinetas, sin \
 comillas y sin comentarios sobre tu tarea.
-6. Maximo cuatro frases."""
+6. Si la respuesta calculada esta vacia, no hagas afirmaciones cuantitativas ni \
+incluyas cifras; responde de forma cualitativa con la evidencia disponible.
+7. Maximo cuatro frases."""
 
 
 def _numbers(text: str) -> set[str]:
@@ -123,7 +125,10 @@ class AnthropicEvidenceExplainer:
         grounded = evidence.get("answer", "")
         user_prompt = self._prompt(question, evidence)
 
-        allowed = _numbers(grounded) | _numbers(json.dumps(evidence, ensure_ascii=False))
+        # Las rutas con cifras ya vienen calculadas por el motor y solo pueden
+        # repetir esas cifras. Las preguntas abiertas deben ser cualitativas:
+        # permitir todos los numeros del package hacia casi inutil este guard.
+        allowed = _numbers(grounded)
 
         try:
             input_tokens = self._count_tokens(user_prompt)
@@ -146,6 +151,7 @@ class AnthropicEvidenceExplainer:
             response = self._client.messages.create(
                 model=self.model,
                 max_tokens=self.policy.max_output_tokens,
+                thinking={"type": "disabled"},
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_prompt}],
             )
@@ -199,7 +205,10 @@ class AnthropicEvidenceExplainer:
             + (
                 "Reescribe la respuesta calculada respetando las reglas."
                 if calculated
-                else "Responde la pregunta solo con la evidencia disponible."
+                else (
+                    "Responde la pregunta solo con la evidencia disponible, "
+                    "sin afirmaciones cuantitativas ni cifras."
+                )
             )
         )
 

@@ -120,6 +120,10 @@ La migración `001_initial.sql` crea:
 `centers`, `plots`, `readings`, `crop_profiles`, `formulations`, `model_runs`,
 `packages`, `proposals`, `decisions`, `audit_log`, `external_api_cache`.
 
+La migración `002_producers.sql` añade productores con origen de datos y estado
+de consentimiento explícitos, y vincula cada lote con su productor cuando se
+dispone de esa relación.
+
 SQLite activa claves foráneas, WAL, transacciones e índices. `client_id` es único.
 Triggers impiden `UPDATE` y `DELETE` sobre `audit_log`, y registran creación de
 propuestas y decisiones. Toda propuesta nace `pending` y `applied=false`.
@@ -131,8 +135,9 @@ Rutas principales:
 - Operación: `/health/live`, `/health/ready`, `/v1/governance`.
 - Modelos: `/v1/models`, `/v1/models/{id}/metrics`.
 - Configuración: `/v1/centers`, formulaciones y perfiles.
+- Red: dashboard por centro, productores y lotes por productor.
 - Lotes: CRUD, package, recompute y risk.
-- Lecturas: individual, bulk e importación Excel/CSV.
+- Lecturas: consulta por lote, individual, bulk e importación Excel/CSV.
 - Gobernanza: proposals, why, decisions, history y audit.
 - Conversación: `POST /v1/agent/ask`.
 
@@ -144,12 +149,14 @@ incluyen `request_id` y el middleware emite logs JSON con duración.
 
 `POST /v1/agent/ask` conserva rutas deterministas para las preguntas operativas
 más frecuentes. Para preguntas abiertas entrega a Claude un resumen compacto y
-auditable del package, sin las grillas ni series pesadas.
+auditable del package, sin grillas, series pesadas ni el polígono del lote.
 
 El modelo configurado es `claude-sonnet-5`. No decide ni aplica propuestas:
 
-- toda cifra de la redacción se contrasta contra la evidencia; si aparece una
-  que no estaba —incluido un redondeo—, la respuesta se descarta;
+- las rutas cuantitativas solo pueden repetir cifras de la respuesta
+  determinista; las preguntas abiertas generadas no pueden emitir cifras;
+- Sonnet 5 se llama con `thinking=disabled`, porque aquí redacta evidencia y el
+  tope de salida debe reservarse para texto visible;
 - si el modelo falla, tarda o se queda sin presupuesto, se devuelve el texto
   determinista o un rechazo explícito y la demo no se cae;
 - el costo real de cada llamada se acumula contra `AI_TOTAL_BUDGET_USD` y viaja
@@ -167,13 +174,15 @@ más de 0,036 USD usando el precio estándar conservador de Sonnet 5.
 - tamaño máximo de archivo configurable;
 - validación de nombres, extensiones, tipos y porcentajes;
 - no se registran secretos;
-- el agente intenta activarse por defecto y degrada al router determinista si no
-  existe `ANTHROPIC_API_KEY`;
+- el agente pagado está desactivado por defecto y requiere
+  `AI_EXPLAINER_ENABLED=true` además de `ANTHROPIC_API_KEY`;
 - precios de tokens solo por variables de entorno;
 - presupuesto máximo por defecto: 2 USD, verificado antes de cada llamada y
   acumulado con el consumo real que reporta la API dentro de cada proceso;
 - ese contador en memoria no sustituye un límite de gasto del proveedor y se
   reinicia en un nuevo proceso o arranque en frío;
+- antes de habilitarlo en serverless se debe fijar un límite de gasto en el
+  workspace de Anthropic;
 - `ANTHROPIC_API_KEY` vive en el `.env` local, que `.gitignore` excluye;
 - las pruebas no habilitan red ni proveedor pagado: el explicador se prueba
   contra un cliente falso.

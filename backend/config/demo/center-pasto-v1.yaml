@@ -4,9 +4,17 @@ center:
   municipality: Pasto, Narino
   version: "1.0.0"
   validation_status: demo_unvalidated
+producer:
+  id: producer-el-rosal-demo
+  center_id: center-pasto-demo
+  display_name: Productor demo El Rosal
+  municipality: Pasto, Narino
+  data_origin: demonstration
+  consent_status: demonstration
 plot:
   id: nar-001
   center_id: center-pasto-demo
+  producer_id: producer-el-rosal-demo
   crop_profile_id: potato-pasto-demo-v1
   name: Lote El Rosal
   municipality: Pasto, Narino

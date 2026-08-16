@@ -107,13 +107,18 @@ function colorbar() {
 }
 
 function networkBounds() {
-  const producers = state.network.productores;
+  const producers = state.network.productores
+    .filter((producer) => Number.isFinite(producer.lat) && Number.isFinite(producer.lon));
+  const points = producers.length
+    ? producers.map((producer) => ({ lat: producer.lat, lon: producer.lon }))
+    : (state.view?.contorno || []).map(([lat, lon]) => ({ lat, lon }));
+  if (!points.length) throw new Error('No hay ubicaciones para representar la red.');
   const pad = 0.03;
   return {
-    north: Math.max(...producers.map((p) => p.lat)) + pad,
-    south: Math.min(...producers.map((p) => p.lat)) - pad,
-    east: Math.max(...producers.map((p) => p.lon)) + pad,
-    west: Math.min(...producers.map((p) => p.lon)) - pad,
+    north: Math.max(...points.map((point) => point.lat)) + pad,
+    south: Math.min(...points.map((point) => point.lat)) - pad,
+    east: Math.max(...points.map((point) => point.lon)) + pad,
+    west: Math.min(...points.map((point) => point.lon)) - pad,
   };
 }
 
@@ -744,15 +749,15 @@ function viewResumen() {
       <div class="hero-sub">${view.plot.name} · ${view.cultivo?.crop || ''} ${view.cultivo?.variety || ''} · medido ${new Date(view.generado).toLocaleDateString('es-CO')}</div>
     </section>
 
-    <section class="card facts-card">
-      <div class="facts-head">
-        <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
-        <p class="note">${net?.real
-          ? 'Del backend: <code>/v1/centers/{id}/dashboard</code>'
-          : 'Del paquete descargado, sin conexión'}</p>
-      </div>
-      <div class="kpi-grid">${kpis}</div>
-    </section>
+    ${net?.real ? `<section class="card real-plots">
+      <h2>Lotes del centro · datos reales</h2>
+      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
+        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
+      </li>`).join('')}</ul>
+      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
+    </section>` : ''}
+
+    <div class="kpi-grid">${kpis}</div>
 
     <div class="mvp-main">
       <section class="card map-card">
@@ -858,7 +863,7 @@ function viewResumenRed() {
       <ul class="moves-list">${net.real.lotes.map((l) => `<li>
         <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
       </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers</code> y <code>/v1/plots</code>.</p>
+      <p class="note">Del backend: <code>/v1/centers/{id}/dashboard</code>.</p>
     </section>` : ''}
 
     <div class="kpi-grid">${kpis}</div>
@@ -1313,7 +1318,6 @@ function render() {
       else zoomBy(button.dataset.map === 'in' ? 1 : -1);
     });
   }
-
   if (state.nav === 'lote') wireTabs(state.tabInicial);
   if (state.nav === 'resumen' || state.nav === 'mapa' || state.nav === 'lote') {
     paintNutrientToggle();

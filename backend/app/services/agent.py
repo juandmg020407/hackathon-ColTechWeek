@@ -149,10 +149,17 @@ class GroundedAgent:
             })
         seasonal = package["climate"].get("seasonal_context") or {}
         crop_profile = package.get("crop_profile") or {}
+        plot = package.get("plot") or {}
         return {
             "answer": "",
             "validation_status": package.get("validation_status"),
-            "plot": package.get("plot"),
+            "plot": {
+                key: plot.get(key)
+                for key in (
+                    "id", "center_id", "producer_id", "crop_profile_id",
+                    "name", "municipality", "area",
+                )
+            },
             "measurement_summary": {
                 "count": package["measurements"].get("count", len(points)),
                 "valid_for_model": package["measurements"].get("valid_for_model"),

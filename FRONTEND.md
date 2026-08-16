@@ -243,7 +243,7 @@ Reglas de validación:
     "name": "Lote El Rosal",
     "municipality": "Pasto, Nariño",
     "crop": "papa",
-    "area_ha": 0.69
+    "area_ha": 1.28
   },
   "grid": {
     "unit": "pct",

@@ -31,8 +31,9 @@ medido en suelo. Primero aplica el perfil agronómico explícito y versionado.
 - Catálogo elemental por centro sin marcas ni precios.
 - Búsqueda entera exacta con objetivo lexicográfico.
 - Propuestas pendientes y auditoría append-only; nada se aplica sin decisión.
+- Dashboard persistido de centro → productores → lotes, sin KPIs sintéticos.
 - Agente conversacional determinista, anclado al último package.
-- 26 pruebas offline; ninguna llama APIs pagadas.
+- 42 pruebas offline; ninguna llama APIs pagadas.
 
 ## Arranque
 
@@ -58,8 +59,9 @@ Demo completa sin Internet:
 python backend/scripts/demo_backend.py
 ```
 
-La demo ejecuta health, importación, package, predicciones, incertidumbre,
-siguiente punto, riesgos, formulaciones, explicación, decisión y auditoría.
+La demo ejecuta health, importación, package, dashboard persistido del centro,
+predicciones, incertidumbre, siguiente punto, riesgos, formulaciones,
+explicación, decisión y auditoría.
 
 ## Evidencia ML actual
 
@@ -73,6 +75,7 @@ laboratorio. Ver [MODEL_CARD.md](MODEL_CARD.md).
 ## Documentación
 
 - [BACKEND.md](BACKEND.md): arquitectura y contrato.
+- [API_FRONTEND.md](API_FRONTEND.md): catálogo y secuencia para construir el frontend.
 - [backend/README.md](backend/README.md): operación local.
 - [backend/openapi-v2.json](backend/openapi-v2.json): snapshot OpenAPI.
 - [MODEL_CARD.md](MODEL_CARD.md): métricas, límites y gobernanza del modelo.
