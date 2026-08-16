@@ -1,4 +1,5 @@
-<h1 align="center">IOmido</h1>
+<h1 align="center"><<img width="1400" height="400" alt="image" src="https://github.com/user-attachments/assets/ce35261d-ab36-4c11-889e-af5a7f35f92c" />
+></h1>
 
 <p align="center">
   <strong>Un sensor de suelo, muchas fincas.</strong><br>
