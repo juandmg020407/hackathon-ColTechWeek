@@ -542,7 +542,7 @@ productores no puede arrancar con una factura mensual de servidor. Que el
 cómputo científico corra en una función que solo cobra cuando alguien abre un
 lote es lo que hace que el modelo de negocio cierre.
 
-### 7.4 Que dos personas escriban esto en 24 horas
+### 7.4 Que un equipo de tres escriba esto en 24 horas
 
 5 377 líneas de backend, 3 459 de frontend, 66 pruebas offline, 35 endpoints con
 OpenAPI, un esquema con triggers de auditoría y un model card con métricas
