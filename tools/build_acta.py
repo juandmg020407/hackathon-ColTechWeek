@@ -538,7 +538,9 @@ def build():
     folio = "AC-2026-0816-001"
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    pdf = canvas.Canvas(str(OUT), pagesize=A4)
+    # invariant elimina timestamps/IDs variables: dos builds con el mismo paquete
+    # deben producir exactamente los mismos bytes para que el acta sea auditable.
+    pdf = canvas.Canvas(str(OUT), pagesize=A4, invariant=1)
     pdf.setTitle("Acta de fertilización · Lote El Rosal")
     pdf.setAuthor("IOmido · Acopio Pasto")
     pdf.setSubject("Plan de fertilización por zonas aceptado por un técnico")
