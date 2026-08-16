@@ -267,7 +267,10 @@ table.data tr.row-out td { color: var(--low); }
   min-height: 0;
 }
 
-.col { display: grid; gap: var(--gap); min-height: 0; grid-template-rows: auto auto 1fr; }
+/* min-width:0 everywhere a grid item holds text: without it the track refuses
+   to shrink below its content and the column overflows into .main's clip. */
+.col { display: grid; gap: var(--gap); min-height: 0; min-width: 0; grid-template-rows: auto auto 1fr; }
+.col > * { min-width: 0; }
 
 .card {
   /* Slightly translucent so the illustration reads behind, never through text. */
@@ -482,7 +485,9 @@ table.data tr.row-out td { color: var(--low); }
 .colorbar .ticks { display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* ── kpis ─────────────────────────────────────────────── */
-.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap); flex: none; }
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); flex: none; }
+.kpis .kpi { min-width: 0; }
+.kpi .label, .kpi .hint { overflow-wrap: anywhere; }
 .kpi {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -522,9 +527,11 @@ table.data tr.row-out td { color: var(--low); }
 .mk.hold { background: var(--mid); }
 
 /* ── tabs ─────────────────────────────────────────────── */
-.tabs-card { min-height: 0; }
-/* Four tabs do not fit a narrow column; they scroll instead of being clipped. */
-.tabs { display: flex; gap: 3px; flex: none; border-bottom: 1px solid var(--border); margin-bottom: .7em; overflow-x: auto; scrollbar-width: thin; }
+.tabs-card { min-height: 0; min-width: 0; }
+.tabs-card > * { min-width: 0; }
+/* Four tabs rarely fit a narrow column on one line, so they wrap. Scrolling
+   would hide the fourth one behind a gesture nobody knows is there. */
+.tabs { display: flex; flex-wrap: wrap; gap: 3px 2px; flex: none; border-bottom: 1px solid var(--border); margin-bottom: .7em; }
 .tab {
   background: none; border: 0; border-bottom: 2px solid transparent;
   padding: .4em .7em; font: inherit; font-size: .84em; font-weight: 600;
