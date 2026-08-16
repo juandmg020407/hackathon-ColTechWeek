@@ -168,6 +168,10 @@ la confianza baja automáticamente de 0,90 a 0,65 y se informa.
 Son **reglas transparentes con límites visibles**, no un modelo entrenado con
 ejemplos inventados para presumir una precisión que no existe.
 
+> Hasta aquí, el recorrido completo sin tecnicismos. ¿Quieres ver cómo funciona
+> por dentro —los modelos, las fórmulas y cada llamada a las APIs? Está todo en
+> **[TECNICO.md](TECNICO.md)**.
+
 ---
 
 ## La demo en un minuto
