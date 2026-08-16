@@ -51,13 +51,15 @@ class Settings(BaseSettings):
     random_seed: int = 42
     log_level: str = "INFO"
 
-    ai_explainer_enabled: bool = False
-    ai_total_budget_usd: float = Field(default=1.0, ge=0, le=4)
-    ai_max_input_tokens: int = Field(default=2_000, gt=0)
-    ai_max_output_tokens: int = Field(default=500, gt=0)
-    ai_model: str = "disabled"
-    ai_input_price_usd_per_million: float = Field(default=0.0, ge=0)
-    ai_output_price_usd_per_million: float = Field(default=0.0, ge=0)
+    ai_explainer_enabled: bool = True
+    ai_total_budget_usd: float = Field(default=2.0, ge=0, le=4)
+    ai_max_input_tokens: int = Field(default=8_000, gt=0)
+    ai_max_output_tokens: int = Field(default=800, gt=0)
+    ai_model: str = "claude-sonnet-5"
+    # Se usan los precios estandar de Sonnet 5, no la tarifa promocional
+    # temporal, para que el control siga siendo conservador despues de agosto.
+    ai_input_price_usd_per_million: float = Field(default=3.0, ge=0)
+    ai_output_price_usd_per_million: float = Field(default=15.0, ge=0)
     ai_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
     # El SDK tambien lee ANTHROPIC_API_KEY del entorno; declararla aqui permite
     # tomarla del .env local sin exportarla a mano.

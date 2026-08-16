@@ -249,18 +249,26 @@ function panelRiesgos() {
   </div>`;
 }
 
-const ASK_SUGGESTIONS = ['dónde debo medir', 'qué formulación sugieren', 'por qué hay incertidumbre'];
+const ASK_SUGGESTIONS = [
+  'qué debo priorizar',
+  'dónde debo medir',
+  'qué formulación sugieren',
+  'por qué hay incertidumbre',
+];
 
 function panelAsistente() {
   const suggestions = ASK_SUGGESTIONS;
-  return `<div class="chat" id="chat"></div>
+  const welcome = apiBase
+    ? 'Estoy conectado al agente. Pregúntame por este lote, su propuesta, riesgos o mediciones.'
+    : 'Modo sin conexión: responderé solo con el paquete descargado de este lote.';
+  return `<div class="chat" id="chat" aria-live="polite"><div class="bubble bot">${welcome}</div></div>
     <div class="suggest">${suggestions.map((s) => `<button class="chip as-suggest" type="button">¿${s}?</button>`).join('')}</div>
     <form class="ask" id="ask">
       <input id="ask-input" type="text" placeholder="Pregunte sobre el lote…" autocomplete="off" aria-label="Pregunte sobre el lote">
       <button class="btn icon" id="mic" type="button" title="${canListen ? 'Preguntar por voz' : 'Voz no disponible aquí'}" ${canListen ? '' : 'disabled'}>🎙</button>
       <button class="btn" type="submit">Enviar</button>
     </form>
-    <p class="note">${canSpeak ? 'Responde en voz alta.' : 'Este navegador no reproduce voz.'} Responde sin red usando el paquete descargado.</p>`;
+    <p class="note">${canSpeak ? 'Responde en voz alta.' : 'Este navegador no reproduce voz.'} ${apiBase ? 'Las respuestas usan evidencia del backend.' : 'Sin red no consulta el modelo.'}</p>`;
 }
 
 function panelMediciones() {
@@ -376,6 +384,8 @@ function wireTabs(initial) {
   for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => show(tab.dataset.tab));
   }
+  const openMeasurements = document.querySelector('[data-open-measurements]');
+  if (openMeasurements) openMeasurements.addEventListener('click', () => show('mediciones'));
   show(initial || 'propuesta');
 }
 
@@ -661,7 +671,8 @@ function viewLote() {
         ${view.descartados.length ? `<div class="amber">
           <b>Una medición quedó fuera</b>
           <p>${view.descartados[0].motivo}</p>
-          <div class="amber-actions"><button class="btn ghost" type="button">Corregir ubicación</button><button class="btn ghost" type="button">Guardar igual</button></div>
+          <p>Se conserva en el historial, pero no alimenta el modelo.</p>
+          <div class="amber-actions"><button class="btn ghost" type="button" data-open-measurements>Ver mediciones →</button></div>
         </div>` : ''}
 
         <section class="card tabs-card">
@@ -734,10 +745,6 @@ function render() {
   for (const button of document.querySelectorAll('[data-ver-lote]')) {
     button.addEventListener('click', () => go('lote'));
   }
-  for (const button of document.querySelectorAll('.rail-go')) {
-    button.addEventListener('click', () => go(button.dataset.go));
-  }
-
   if (state.nav === 'lote') wireTabs(state.tabInicial);
   if (state.nav === 'resumen' || state.nav === 'mapa' || state.nav === 'lote') {
     paintNutrientToggle();

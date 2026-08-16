@@ -1,4 +1,4 @@
-"""Deterministic, grounded conversational intent router."""
+"""Grounded conversational agent with deterministic fast paths."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def _normalise(value: str) -> str:
 
 
 class GroundedAgent:
-    version = "deterministic-grounded-router/1.0.0"
+    version = "grounded-evidence-agent/2.0.0"
 
     def __init__(
         self,
@@ -24,8 +24,8 @@ class GroundedAgent:
         explainer: EvidenceExplainer | None = None,
     ):
         self.repository = repository
-        # El explicador es opcional y solo reescribe. El intent, las cifras y la
-        # evidencia salen del router aunque el modelo este activo.
+        # El modelo solo recibe evidencia compacta y no puede introducir cifras
+        # nuevas. Las preguntas conocidas conservan sus respuestas deterministas.
         self.explainer = explainer
 
     def ask(self, plot_id: str, question: str) -> dict[str, Any]:
@@ -44,7 +44,7 @@ class GroundedAgent:
             "prediction_confidence": self._prediction_confidence,
         }
         if intent is None:
-            return {
+            fallback = {
                 "answered": False,
                 "intent": "unsupported",
                 "answer": (
@@ -58,10 +58,9 @@ class GroundedAgent:
                 "router_version": self.version,
                 "llm_used": False,
             }
+            return self._answer_from_evidence(question, package, fallback)
         answer, evidence_ids = builders[intent](package)
-        sources = [
-            source.get("name") for source in package.get("sources", []) if source.get("name")
-        ]
+        sources = self._source_names(package)
         result = {
             "answered": True,
             "intent": intent,
@@ -74,6 +73,150 @@ class GroundedAgent:
             "limitations": package.get("warnings", []),
         }
         return self._phrase(question, result)
+
+    def _answer_from_evidence(
+        self,
+        question: str,
+        package: dict[str, Any],
+        fallback: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Responde preguntas abiertas sin entregar al modelo grillas enormes."""
+        if self.explainer is None:
+            return fallback
+
+        evidence_ids = [
+            package["id"],
+            package["model_run"]["id"],
+            package["proposal"]["id"],
+        ]
+        rendered = self.explainer.render(
+            question=question,
+            evidence=self._conversation_evidence(package),
+            evidence_ids=evidence_ids,
+        )
+        fallback["explainer"] = rendered
+        if not rendered.get("used"):
+            return fallback
+
+        fallback.update({
+            "answered": True,
+            "intent": "grounded_question",
+            "answer": rendered["text"],
+            "evidence_ids": evidence_ids,
+            "sources": self._source_names(package),
+            "limitations": package.get("warnings", []),
+            "llm_used": True,
+        })
+        return fallback
+
+    @staticmethod
+    def _source_names(package: dict[str, Any]) -> list[str]:
+        names = [
+            source.get("name")
+            for source in package.get("sources", [])
+            if source.get("name")
+        ]
+        return list(dict.fromkeys(names))
+
+    @staticmethod
+    def _conversation_evidence(package: dict[str, Any]) -> dict[str, Any]:
+        """Resumen conversable del package; excluye matrices y series pesadas."""
+        points = package["measurements"].get("points", [])
+        proposal = package["proposal"]
+        recommendations = []
+        for recommendation in proposal.get("recommendations", []):
+            plan = recommendation.get("integer_plan", {})
+            assessment = recommendation.get("agronomic_assessment") or {}
+            recommendations.append({
+                "zone_id": recommendation.get("zone_id"),
+                "agronomic_assessment": {
+                    key: assessment.get(key)
+                    for key in (
+                        "soil_measurement", "estimated_crop_available", "crop_requirement",
+                        "calculated_deficit", "zone_area", "validation_status",
+                        "technical_validation_reasons", "warning",
+                    )
+                },
+                "integer_plan": {
+                    key: plan.get(key)
+                    for key in (
+                        "formulations", "total_bags", "total_weight",
+                        "nutrient_contribution", "requirement", "shortfall", "excess",
+                        "validation_status", "technical_review_required",
+                        "why_this_combination_won",
+                    )
+                },
+            })
+        seasonal = package["climate"].get("seasonal_context") or {}
+        crop_profile = package.get("crop_profile") or {}
+        return {
+            "answer": "",
+            "validation_status": package.get("validation_status"),
+            "plot": package.get("plot"),
+            "measurement_summary": {
+                "count": package["measurements"].get("count", len(points)),
+                "valid_for_model": package["measurements"].get("valid_for_model"),
+                "suspicious": sum(
+                    bool(point.get("quality", {}).get("suspicious")) for point in points
+                ),
+                "outside_plot": sum(
+                    point.get("quality", {}).get("valid_for_model") is False for point in points
+                ),
+                "unit": package["measurements"].get("unit"),
+            },
+            "zones": [
+                {
+                    key: zone.get(key)
+                    for key in (
+                        "id", "area", "centroid_npk", "mean_uncertainty", "cluster_method"
+                    )
+                }
+                for zone in package["spatial"].get("zones", [])
+            ],
+            "next_sample": package["spatial"].get("next_sample"),
+            "climate": {
+                "risks": [
+                    {
+                        key: risk.get(key)
+                        for key in (
+                            "type", "score", "severity", "confidence", "window", "inputs",
+                            "recommended_action", "limitations",
+                        )
+                    }
+                    for risk in package["climate"].get("risks", [])
+                ],
+                "seasonal_context": {
+                    key: seasonal.get(key)
+                    for key in ("enso", "analog_years", "analog_model")
+                },
+                "degraded": package["climate"].get("degraded"),
+                "warnings": package["climate"].get("warnings", []),
+            },
+            "crop_profile": {
+                key: crop_profile.get(key)
+                for key in (
+                    "id", "crop", "variety", "stage", "scope", "requirement_kg_ha",
+                    "maximum_application_kg_ha", "maximum_bags_per_zone",
+                    "target_yield_t_ha", "version", "validation_status",
+                )
+            },
+            "proposal": {
+                "status": proposal.get("status"),
+                "validation_status": proposal.get("validation_status"),
+                "human_decision_required": proposal.get("human_decision_required"),
+                "applied": proposal.get("applied"),
+                "recommendations": recommendations,
+                "explanation": proposal.get("explanation"),
+            },
+            "model": {
+                key: package["model_run"].get(key)
+                for key in (
+                    "model_name", "model_version", "observation_count", "metrics", "limitations"
+                )
+            },
+            "warnings": package.get("warnings", []),
+            "sources": GroundedAgent._source_names(package),
+        }
 
     def _phrase(self, question: str, result: dict[str, Any]) -> dict[str, Any]:
         """Deja que el explicador reescriba la respuesta, si hay uno activo.
@@ -140,7 +283,8 @@ class GroundedAgent:
         for recommendation in proposal["recommendations"]:
             plan = recommendation["integer_plan"]
             selected = ", ".join(
-                f"{item['bags']} bultos {item['label']}" for item in plan["formulations"]
+                f"{item['bags']} {'bulto' if item['bags'] == 1 else 'bultos'} {item['label']}"
+                for item in plan["formulations"]
             ) or "0 bultos"
             zone_text.append(f"{recommendation['zone_id']}: {selected}")
         answer = (
