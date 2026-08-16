@@ -1,5 +1,8 @@
 # Model card — IOmido Soil Intelligence Engine 2.0.0
 
+Contexto del producto en [README.md](README.md); arquitectura y detalle de cada
+modelo en [TECNICO.md](TECNICO.md).
+
 ## Propósito
 
 Interpolar mediciones georreferenciadas de N, P y K elementales en porcentaje,
@@ -74,7 +77,9 @@ está por debajo de 0.95 y no debe interpretarse como calibración perfecta.
 - prescribir aplicación sin validación técnica;
 - transferir el perfil demo a otro cultivo, etapa o región;
 - entrenar o presentar clasificadores con etiquetas sintéticas;
-- afirmar que GP supera a IDW con las métricas actuales.
+- afirmar que GP supera a IDW con las métricas actuales;
+- presentar los riesgos como detección de incendios: se modelan helada, sequía y
+  gota tardía, más el contexto ENSO, y nada más.
 
 ## Riesgos
 
@@ -93,6 +98,20 @@ Cada plan se guarda como propuesta `pending`, `applied=false` y
 auditoría append-only. Las respuestas cuantitativas del agente parten de rutas
 deterministas; las preguntas abiertas generadas no pueden emitir cifras y el
 modelo nunca recalcula dosis.
+
+## Pendiente antes de un uso de campo
+
+1. Calibrar el sensor contra muestras de laboratorio.
+2. Medir la densidad aparente real del lote y validar la profundidad de muestreo
+   contra el protocolo usado.
+3. Validar requerimiento por etapa, factor de disponibilidad y máximos con un
+   ingeniero agrónomo local, y firmar el perfil.
+4. Sustituir los fixtures climáticos por consulta en vivo.
+5. Confirmar el inventario real de formulaciones de cada centro.
+6. Ejecutar un piloto y reevaluar GP contra IDW con más lotes y más temporadas.
+
+Ninguno de estos pendientes autoriza presentar el perfil de demo como una
+prescripción validada.
 
 ## Reproducibilidad
 

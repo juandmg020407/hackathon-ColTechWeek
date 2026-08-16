@@ -100,5 +100,6 @@ No se muestran marcas, nombres químicos, precios ni ahorro monetario.
 2. Último package vivo para uso offline entre dominios.
 3. Manifest con iconos y pruebas de accesibilidad.
 
-Detalles en [`../FRONTEND.md`](../FRONTEND.md) y roadmap en
-[`../TAREAS.md`](../TAREAS.md).
+Contexto del producto en [`../README.md`](../README.md), arquitectura y modelos
+en [`../TECNICO.md`](../TECNICO.md), y el catálogo de endpoints que consume
+`lib/api.js` en [`../docs/API.md`](../docs/API.md).

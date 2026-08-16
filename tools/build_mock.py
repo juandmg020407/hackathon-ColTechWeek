@@ -40,11 +40,12 @@ def main() -> int:
             package = response.json()
 
     encoded = json.dumps(package, ensure_ascii=False, indent=2) + "\n"
-    targets = [ROOT / "mock" / "package-nar-001.json", ROOT / "frontend" / "mock" / "package-nar-001.json"]
-    for target in targets:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(encoded, encoding="utf-8")
-        print(f"wrote {target.relative_to(ROOT)}")
+    # Solo frontend/mock: es el que sirve la pagina, porque Vercel publica
+    # frontend/ como outputDirectory y ahi /mock/... resuelve.
+    target = ROOT / "frontend" / "mock" / "package-nar-001.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(encoded, encoding="utf-8")
+    print(f"wrote {target.relative_to(ROOT)}")
     return 0
 
 

@@ -1,97 +1,254 @@
-# IOmido
+<h1 align="center">IOmido</h1>
 
-IOmido es un backend local-first de apoyo a decisiones para centros de acopio,
-técnicos y redes de pequeños productores. Esta rama entrega el núcleo `v0.2`
-antes de continuar el frontend: porcentajes NPK elementales, inferencia espacial
-para pocos datos, incertidumbre, clima, optimización entera y decisión humana.
+<p align="center">
+  <strong>Un sensor de suelo, muchas fincas.</strong><br>
+  Convierte una medición puntual de NPK en un mapa del lote con incertidumbre visible,<br>
+  una receta de fertilización <em>recomendada</em> y una decisión que siempre firma una persona.
+</p>
 
-La demostración oficial usa papa, un lote en Pasto y 19 mediciones del archivo
-`data/data_ejemplo.csv.xlsx`. La primera fila se conserva exactamente como:
+<p align="center">
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white">
+  <img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-1.6-F7931E?style=flat-square&logo=scikitlearn&logoColor=white">
+  <img alt="NumPy" src="https://img.shields.io/badge/NumPy-2.2-013243?style=flat-square&logo=numpy&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-WAL%20%2B%20triggers-003B57?style=flat-square&logo=sqlite&logoColor=white">
+  <img alt="Claude Sonnet 5" src="https://img.shields.io/badge/Claude-Sonnet%205-D97757?style=flat-square&logo=anthropic&logoColor=white">
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-serverless-000000?style=flat-square&logo=vercel&logoColor=white">
+</p>
+
+<p align="center">
+  <img alt="58 tests" src="https://img.shields.io/badge/tests-58%20offline-2EA043?style=flat-square">
+  <img alt="Contrato v2.0" src="https://img.shields.io/badge/contrato-v2.0%20·%2035%20endpoints-1F6FEB?style=flat-square">
+  <img alt="Human in the loop" src="https://img.shields.io/badge/decisión-humana%20obligatoria-6E56CF?style=flat-square">
+  <img alt="Track 04" src="https://img.shields.io/badge/CTW%202026-Track%2004-EAB308?style=flat-square">
+</p>
+
+---
+
+## El problema
+
+Un centro de acopio de papa en Nariño compra a decenas de pequeños productores de
+media a dos hectáreas. Ninguno tiene análisis de suelo reciente: el laboratorio
+cuesta más de lo que deja una cosecha pequeña y los resultados llegan cuando ya se
+sembró. Entonces se fertiliza por costumbre —el mismo bulto, la misma dosis, en
+todo el lote y todos los años.
+
+Y un lote no es homogéneo. En las **19 mediciones reales** de esta demo, dos
+puntos separados **45 metros** dan potasio de **1 %** y de **13 %**, y el
+nitrógeno va de **1 % a 27 %** dentro de la misma hectárea y cuarto. Fertilizar
+eso con una dosis única es equivocarse en casi toda la superficie: sobra donde ya
+había, falta donde el suelo estaba pobre, y el excedente de N y P termina lavado
+en el río.
+
+Comprar un sensor por finca no lo resuelve, porque nadie lo va a comprar.
+
+---
+
+## De la tierra a la decisión
+
+### ① La medición en campo
+
+<img src="docs/media/1.jpg" alt="Agricultor insertando el sensor NPK en el suelo de un lote de papa en Pasto, Nariño" width="100%">
+
+El técnico del centro de acopio recorre las fincas con **un solo sensor
+compartido por toda la red**. Lo clava en la tierra y anota N, P, K y la
+coordenada. Nada más. El productor no compra hardware, no instala software y no
+paga suscripción.
+
+Así se levantaron las 19 lecturas del lote **El Rosal** (papa Diacol Capiro,
+1,28 ha, Pasto, Nariño) sobre las que corre todo lo que sigue. No son datos
+generados.
+
+### ② Recolección y envío a la nube
+
+<img src="docs/media/2.jpg" alt="La lectura del sensor viajando del teléfono del técnico a la nube" width="100%">
+
+Cada lectura se registra con un `client_id` que la hace **idempotente**: si el
+técnico pierde señal a mitad de un lote y reintenta, no se duplica nada. También
+puede llegar en lote desde un Excel (`POST /v1/readings/import`).
+
+La lectura fuera del polígono no se borra: se **conserva y se anota**. De las 19,
+18 entran al modelo y una queda marcada por geometría, con su motivo. Un dato mal
+ubicado que desaparece en silencio es un dato que nadie puede auditar después.
+
+### ③ La IA procesa, y cruza cinco fuentes externas
+
+<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
+
+| API | Qué aporta |
+|---|---|
+| **Open-Meteo Forecast**<br>`api.open-meteo.com/v1/forecast` | 16 días de pronóstico horario **en la coordenada exacta del lote**, no de la cabecera municipal. De aquí salen la mínima prevista (helada), el balance lluvia − evapotranspiración (sequía) y las horas a 10–24 °C con HR ≥ 90 % (gota tardía). Abierta y sin llave |
+| **NASA POWER**<br>`power.larc.nasa.gov/api/temporal/daily/point` | 20 años de reanálisis diario del mismo punto. Es la **memoria**: sin ella «va a llover poco» no significa nada. Con ella se responde a qué año histórico se parece esta temporada |
+| **NOAA CPC — ENSO advisory** | Fase e índice de **El Niño / La Niña**: la escala estacional que ni el pronóstico de 16 días ni la climatología capturan. Va versionado con fecha y URL porque NOAA no publica ese aviso como API JSON estable, y preferimos decirlo a fingir un endpoint |
+| **Anthropic Claude** `claude-sonnet-5` | Redacta la respuesta del asistente en español claro sobre evidencia estructurada. **No calcula, no decide y no puede emitir una cifra que no esté en los datos** |
+| **OpenStreetMap tiles** | Mapa base **opcional**. Si no carga —lo normal en una finca sin señal— el mapa de suelo sigue siendo legible |
+
+Toda fuente externa pasa por la misma política: timeout, reintentos con backoff,
+caché en SQLite, *circuit breaker* y último valor válido. Y si no hay Internet, el
+sistema **sigue funcionando con fixtures versionados y lo declara degradado en la
+propia respuesta**. Una demo que se cae por el wifi del auditorio no es una demo;
+una que disimula que usa datos viejos es peor.
+
+### ④ Análisis, mapa de calor y receta optimizada
+
+<img src="docs/media/4.jpg" alt="Mapa de calor de nutrientes del lote con zonas de manejo y la receta NPK propuesta" width="100%">
+
+Tres **procesos gaussianos Matérn** —uno por nutriente— llevan 18 puntos a 140
+celdas de 10 × 10 m. Cada celda recibe media, desviación e intervalo del 95 %, así
+que el mapa dice también **dónde no sabe**: lo rayado es lo incierto, nunca lo
+pobre. Y sugiere la **siguiente** medición, a 54 m de la más cercana, para
+aprender lo máximo con un solo punto más.
+
+Sobre esas zonas, una **búsqueda entera exacta** enumera 12 341 combinaciones del
+catálogo que el centro tiene en bodega y devuelve la mejor:
 
 ```text
-N 2 %, P 1 %, K 1 %
+Zona 1 · 0,67 ha        8 bultos de 20-10-30  +  1 bulto de 30-30-40
+                        faltante 0,0 kg  ·  exceso 48,9 kg
 ```
 
-Una formulación `30-30-40` significa 30 % N, 30 % P y 40 % K de la masa del
-bulto, bajo convención elemental. El backend nunca resta ese grado al porcentaje
-medido en suelo. Primero aplica el perfil agronómico explícito y versionado.
+Bultos enteros, porque nadie aplica 2,7 bultos. Sin marcas, sin nombres químicos
+y **sin precios**: el objetivo es nutricional, no monetario, y no publicamos un
+ahorro que no podemos sustentar.
 
-## Estado de la entrega
+### ⑤ El agricultor recibe una receta *recomendada*
 
-- Contrato API `2.0` y OpenAPI comprobable.
-- SQLite como fuente de verdad para configuración, lecturas, modelos, packages,
-  propuestas, decisiones, auditoría y caché externo.
-- Un GP Matern por N, P y K, con media, desviación, intervalo del 95 % y umbral
-  dinámico de incertidumbre.
-- Benchmark espacial leave-one-out contra IDW.
-- KMeans reproducible para zonas y selección activa de la siguiente medición.
-- Open-Meteo, NASA POWER y contexto ENSO con caché, timeout, reintentos,
-  circuit breaker y modo degradado.
-- Perfil de papa/Pasto en YAML marcado `demo_unvalidated`.
-- Catálogo elemental por centro sin marcas ni precios.
-- Búsqueda entera exacta con objetivo lexicográfico.
-- Propuestas pendientes y auditoría append-only; nada se aplica sin decisión.
-- Dashboard persistido de centro → productores → lotes, sin KPIs sintéticos.
-- Agente conversacional determinista, anclado al último package.
-- Todo el texto que lee una persona va en español; las claves, enumeraciones y
-  versiones de modelo siguen en inglés como identificadores de contrato.
-- Cada excepción de dominio tiene su propio código de error y estado HTTP.
-- 57 pruebas offline; ninguna llama APIs pagadas.
+<img src="docs/media/5.jpg" alt="El agricultor revisando junto al técnico la receta nutricional recomendada para su lote" width="100%">
 
-## Arranque
+La palabra es deliberada. **Recomendada, no prescrita.** Toda propuesta nace en la
+base de datos como `pending`, `applied = false` y `requires_technical_validation`,
+y el productor puede **aceptar, rechazar, modificar o remitir** al técnico.
+
+Es supervisión humana significativa en el sentido del **AI Act**, y no está
+sostenida por una promesa en un slide:
+
+- el sistema **propone**, una persona **decide** — el esquema de la base no
+  permite otra cosa;
+- toda salida trae su explicación paso a paso, su modelo, sus fuentes y el
+  **SHA-256 de los datos de entrada**;
+- la incertidumbre es visible, no se esconde detrás de un color bonito;
+- lo que el sistema **no sabe** viaja en la misma respuesta que la recomendación;
+- las decisiones quedan en una auditoría **append-only**: triggers de SQLite
+  rechazan `UPDATE` y `DELETE`, así que el pasado no se reescribe;
+- los datos son del productor: cada uno lleva `data_origin` y `consent_status`
+  explícitos, y no puntuamos agricultores ni evaluamos crédito.
+
+### ⑥ Aplicación precisa y anticipación al clima
+
+<img src="docs/media/6.jpg" alt="Aplicación precisa por zona y alerta anticipada de riesgo climático estacional" width="100%">
+
+La receta llega a la zona que la necesita, en la cantidad que le corresponde, y
+**en el momento en que tiene sentido aplicarla**. Tres motores de riesgo
+explicables acompañan cada propuesta:
+
+- **Helada** — mínima prevista por Open-Meteo, agravada por fase ENSO seca.
+- **Sequía** — balance hídrico lluvia − evapotranspiración, más la anomalía
+  estacional y El Niño. Es la misma señal que precede a una temporada seca
+  crítica en el altiplano nariñense.
+- **Gota tardía** (*Phytophthora infestans*) — horas favorables en las próximas
+  48 h. Es lo que arruina un cultivo de papa en el alto andino.
+
+Cada riesgo entrega score, severidad, ventana temporal, entradas exactas,
+fuentes, versión de la regla y **qué le cambió a la propuesta**. Si las fuentes
+están degradadas, la confianza baja automáticamente de 0,90 a 0,65 y se dice.
+
+Son **reglas transparentes con umbrales visibles, no un clasificador entrenado**.
+Podríamos haber generado etiquetas sintéticas y presentar un modelo con 94 % de
+accuracy sobre datos inventados por nosotros mismos. Eso no es machine learning,
+es saber llamar a `.fit()`.
+
+---
+
+## La demo en un minuto
+
+Centro de acopio demo con tres formulaciones en bodega: `30-30-40`, `20-10-30` y
+`10-20-20`.
+
+1. **Resumen del centro** — qué lotes necesitan medición o revisión, hoy.
+2. **Mapa del lote** — N, P y K en porcentaje; lo rayado es lo incierto.
+3. **Propuesta por zona** — `20-10-30 × 8 + 30-30-40 × 1`, con su faltante y su
+   exceso.
+4. **¿Por qué?** — modelo, entradas, fuentes, hash de los datos y lo que **no**
+   se sabe.
+5. **Clima** — el riesgo con su ventana, su confianza y su efecto.
+6. **Decisión** — aceptar o remitir; queda en auditoría.
+
+## Correrlo
 
 ```powershell
 python -m pip install -r backend/requirements.txt
-Set-Location backend
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000    # desde backend/
 ```
 
-Documentación interactiva: <http://localhost:8000/docs>.
-
-El primer arranque crea la base, carga la configuración versionada e importa las
-19 mediciones del lote demo. No hay ningún paso manual antes de abrir la
-aplicación; `GET /health/ready` informa cuántos lotes tienen evidencia cargada.
-
-## Verificación
-
-Desde la raíz:
+En otra terminal:
 
 ```powershell
-python -m pytest backend/tests -q
+cd frontend
+python -m http.server 5173
 ```
 
-Demo completa sin Internet:
+Abrir <http://localhost:5173>. El primer arranque crea la base, carga la
+configuración versionada e importa las 19 mediciones solo: no hay paso manual.
+Sin backend la aplicación abre igual contra el mock; sin Internet el backend
+funciona igual y lo declara.
 
 ```powershell
-python backend/scripts/demo_backend.py
+python -m pytest backend/tests -q        # 58 pruebas, ninguna toca la red
+python backend/scripts/demo_backend.py   # el pipeline entero sin Internet
 ```
 
-La demo ejecuta health, importación, package, dashboard persistido del centro,
-predicciones, incertidumbre, siguiente punto, riesgos, formulaciones,
-explicación, decisión y auditoría.
+## Lo que afirmamos y lo que no
 
-## Evidencia ML actual
+Un jurado puede verificar esto en el código, no solo leerlo aquí.
 
-Sobre 18 observaciones dentro del polígono (una de las 19 queda fuera), el
-benchmark LOO da RMSE medio GP `4.675924` e IDW `4.619368`, en puntos
-porcentuales. Por tanto IOmido **no afirma que GP sea más preciso** en este
-dataset. GP sigue siendo el núcleo del package porque aporta una distribución
-predictiva y aprendizaje activo, pero requiere más datos y calibración de
-laboratorio. Ver [MODEL_CARD.md](MODEL_CARD.md).
+**Sí:**
+
+- El pipeline completo corre sobre datos reales de un lote real.
+- Interpola, cuantifica su propia incertidumbre y pide la siguiente medición.
+- Resuelve la mezcla entera óptima dentro de sus límites y lo demuestra
+  (`optimal_within_bounds: true`, 12 341 combinaciones enumeradas).
+- Los riesgos modifican la propuesta con explicación y fuente.
+- Toda decisión queda en un registro que la base impide reescribir.
+
+**No, y lo decimos en la propia respuesta de la API:**
+
+- El sensor **no está calibrado** contra laboratorio. Va en `warnings` en cada
+  llamada.
+- El perfil agronómico es `demo_unvalidated`: requerimientos, densidad aparente y
+  factor de disponibilidad son supuestos de demostración, no una prescripción
+  firmada por un agrónomo.
+- **El proceso gaussiano no le gana a IDW en este dataset.** RMSE medio GP
+  `4,675924` contra IDW `4,619368` puntos porcentuales. El backend lo reporta
+  como `gp_better_than_idw: false`. Elegimos GP por su distribución predictiva y
+  su muestreo activo, no por precisión demostrada.
+- Los riesgos modelados son **helada, sequía y gota tardía**, más el contexto
+  ENSO. **No modelamos incendios**: la señal de sequía indica condiciones
+  propicias, y eso es todo lo que podemos afirmar.
+- No estimamos ahorro en pesos, no predecimos rendimiento y no puntuamos
+  agricultores.
+
+Preferimos un sistema que sepa lo que no sabe.
 
 ## Documentación
 
-- [BACKEND.md](BACKEND.md): arquitectura y contrato.
-- [API_FRONTEND.md](API_FRONTEND.md): catálogo y secuencia para construir el frontend.
-- [backend/README.md](backend/README.md): operación local.
-- [backend/openapi-v2.json](backend/openapi-v2.json): snapshot OpenAPI.
-- [MODEL_CARD.md](MODEL_CARD.md): métricas, límites y gobernanza del modelo.
-- [TAREAS.md](TAREAS.md): alcance terminado y validaciones externas pendientes.
+| Documento | Qué encontrarás |
+|---|---|
+| [TECNICO.md](TECNICO.md) | Stack, arquitectura, cada modelo, cada API externa, **cómo se usa la IA** y por qué esto no se podía construir hace dos años |
+| [MODEL_CARD.md](MODEL_CARD.md) | Métricas reproducibles, usos permitidos y prohibidos, riesgos |
+| [docs/API.md](docs/API.md) | Catálogo de los 35 endpoints y códigos de error |
+| [backend/README.md](backend/README.md) | Operar el backend |
+| [frontend/README.md](frontend/README.md) | Operar el frontend |
 
-## Límite científico
+## Antes de que esto llegue a un lote de verdad
 
-El perfil `potato-pasto-demo-v1` contiene supuestos de demostración, no una
-prescripción validada. Todas sus propuestas devuelven
-`requires_technical_validation`. Antes de uso de campo se necesitan análisis de
-laboratorio, densidad aparente del lote, validación del protocolo de muestreo y
-firma de un profesional agronómico local.
+1. Calibrar el sensor contra muestras de laboratorio.
+2. Medir la densidad aparente real y validar la profundidad de muestreo.
+3. Que un ingeniero agrónomo local firme requerimientos, disponibilidad y
+   máximos por cultivo, variedad y etapa.
+4. Consultar clima en vivo en vez de los fixtures versionados.
+5. Cargar el inventario real de formulaciones de cada centro.
+6. Pilotear y reevaluar GP contra IDW con más lotes y más temporadas.
+
+Ninguno de esos pendientes autoriza presentar el perfil de demo como una
+prescripción validada, y el código no lo permite: toda propuesta sale marcada
+`requires_technical_validation`.

@@ -2,6 +2,9 @@
 
 Backend FastAPI local-first. Requiere Python 3.11 o superior.
 
+Arquitectura, modelos y uso de IA en [`../TECNICO.md`](../TECNICO.md); catálogo
+de endpoints en [`../docs/API.md`](../docs/API.md).
+
 ## Instalar y arrancar
 
 Desde la raíz del repositorio:
@@ -22,7 +25,7 @@ fixtures climáticos se declaran degradados.
 python -m pytest backend/tests -q
 ```
 
-Resultado de referencia: `26 passed`. Todos los tests usan SQLite temporal,
+Resultado de referencia: `58 passed`. Todos los tests usan SQLite temporal,
 fixtures o clientes falsos. Ninguno habilita APIs externas o un LLM.
 
 ## Demo sin red

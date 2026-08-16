@@ -1,7 +1,11 @@
-# API IOmido para el frontend
+# API IOmido — catálogo de endpoints
 
-Contrato actual: `2.0`. En desarrollo, la documentación interactiva está en
-`http://localhost:8000/docs` y el documento máquina en `/openapi.json`.
+Contrato actual: `2.0`, 35 rutas. En desarrollo, la documentación interactiva
+está en `http://localhost:8000/docs` y el documento máquina en `/openapi.json`.
+El snapshot versionado vive en [`../backend/openapi-v2.json`](../backend/openapi-v2.json).
+
+Contexto de producto en [`../README.md`](../README.md); arquitectura, modelos y
+uso de IA en [`../TECNICO.md`](../TECNICO.md).
 
 ## Orden recomendado de consumo
 
