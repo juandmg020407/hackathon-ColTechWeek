@@ -20,7 +20,7 @@ ver [README.md](README.md); para las métricas y sus límites,
 | Frontend | HTML + CSS + JS de módulos, **sin build ni dependencias** | 3 459 líneas que se sirven tal cual. Cero `node_modules`, cero cadena de compilación que se rompa a las 3 a. m. |
 | Despliegue | Vercel: estático + una función Python ASGI | Sin servidor que mantener y sin costo fijo |
 
-Backend: 5 377 líneas de Python. Frontend: 3 459 de JS/CSS/HTML. Pruebas: 58,
+Backend: 5 377 líneas de Python. Frontend: 3 459 de JS/CSS/HTML. Pruebas: 66,
 todas offline.
 
 ## 2. Arquitectura
@@ -93,6 +93,7 @@ Resumen de todo lo que entra al sistema:
 | Fuente | Endpoint | Qué aporta | ¿Llave? |
 |---|---|---|---|
 | Sensor NPK del centro | `data/data_ejemplo.csv.xlsx` | 19 lecturas reales georreferenciadas del lote El Rosal | — |
+| IDEAM (Socrata) | `datos.gov.co/resource/{s54a-sgyg, sbwg-7ju4, uext-mhny}.json` | Observación de estaciones físicas colombianas cercanas al lote | No |
 | Open-Meteo Forecast | `api.open-meteo.com/v1/forecast` | 16 días de pronóstico horario en la coordenada del lote | No |
 | NASA POWER | `power.larc.nasa.gov/api/temporal/daily/point` | 20 años de reanálisis diario del mismo punto | No |
 | NOAA CPC ENSO | boletín versionado con fecha y URL | Fase e índice de El Niño / La Niña | n/a |
@@ -116,7 +117,51 @@ preserva exactamente como `N 2 %, P 1 %, K 1 %` y el importador lo verifica
 dato mal ubicado no se borra, se anota. Es la diferencia entre un pipeline y una
 limpieza manual que nadie puede auditar después.
 
-### 3.2 Open-Meteo Forecast — `api.open-meteo.com/v1/forecast`
+### 3.2 IDEAM — el único dato de instrumento
+
+Open-Meteo y NASA POWER son **productos de modelo**: interpolan y reanalizan. El
+IDEAM opera pluviómetros y termómetros físicos, y publica sus lecturas como
+datasets Socrata en el portal de datos abiertos de Colombia, sin llave de API:
+
+| Variable | Recurso | Unidad |
+|---|---|---|
+| Precipitación | `s54a-sgyg` | mm |
+| Temperatura del aire a 2 m | `sbwg-7ju4` | °C |
+| Humedad relativa a 2 m | `uext-mhny` | % |
+
+**Selección de estación.** Se filtra por caja numérica sobre `latitud`/`longitud`
+—no por municipio, porque un lote no tiene por qué compartir municipio con su
+estación más cercana— exigiendo dato de los últimos 7 días, y se elige la más
+próxima. Para el lote El Rosal salen 11 candidatas y gana **Universidad de
+Nariño – AUT `[52045080]` a 2,47 km**, que publicó ayer. Las series se piden por
+`codigoestacion` y no por nombre: los nombres del dataset traen espacios
+inconsistentes (`'UNIVERSIDAD DE NARINO  - AUT'`) y son mal identificador.
+
+**El dato público no es dato limpio.** El dataset republica la misma lectura
+varias veces: se observaron **19 registros idénticos** para un mismo instante,
+sensor y estación. Sumar sin deduplicar inflaba la lluvia acumulada un **31 %**
+—45,4 mm frente a los 34,6 mm reales— y el 24 de julio traía `n=2736` registros
+donde lo correcto son 144 (uno cada 10 minutos). Se deduplica por marca de tiempo
+y **se reporta cuántos registros se descartaron**, porque un número que nadie
+puede auditar no vale más que una estimación.
+
+**Cobertura parcial, dicha en voz alta.** En la ventana de 30 días la estación
+solo reportó **12 días** de precipitación. Los 11,1 mm acumulados no son un total
+mensual, y presentarlos como tal sería una lectura falsa: el package devuelve
+`days_with_data` junto al acumulado y una limitación explícita.
+
+**No alimenta las reglas de riesgo.** Entra como `climate.observed_context` y
+como una entrada más de `sources[]`, para contrastar el modelo contra el
+instrumento. Convertirlo en entrada del cálculo exige validar primero cuánto
+representa una estación a 2,5 km del lote, y eso es trabajo de piloto.
+`test_ideam.py` verifica que ningún `risk.inputs` contenga una clave del IDEAM.
+
+Las tres series se piden en paralelo con `asyncio.gather`: en serie costaban
+**7,08 s** de reloj y en paralelo **3,08 s**, y la segunda consulta sale de la
+caché SQLite en **0,02 s** (TTL de 6 h, porque una estación publica cada diez
+minutos pero el package no necesita ese detalle).
+
+### 3.3 Open-Meteo Forecast — `api.open-meteo.com/v1/forecast`
 
 Pronóstico de 16 días para una coordenada arbitraria, sin llave de API y sin
 costo. Aporta lo que ninguna otra fuente da: **el futuro cercano en el punto
@@ -132,7 +177,7 @@ Se piden `temperature_2m_min/max`, `precipitation_sum`,
   (*Phytophthora infestans*), que es lo que arruina un cultivo de papa en el alto
   andino.
 
-### 3.3 NASA POWER — `power.larc.nasa.gov/api/temporal/daily/point`
+### 3.4 NASA POWER — `power.larc.nasa.gov/api/temporal/daily/point`
 
 20 años de reanálisis diario (`T2M`, `T2M_MIN`, `PRECTOTCORR`) para el mismo
 punto. Aporta la **memoria**: sin ella, «va a llover poco» no significa nada. Con
@@ -140,7 +185,7 @@ ella se pregunta *«¿a qué año se parece este?»* y se responde con
 `NearestNeighbors` sobre cuatro variables normalizadas (lluvia, mínima, media,
 índice ENSO). El resultado son los años análogos que acompañan la propuesta.
 
-### 3.4 Boletín ENSO (NOAA CPC) — versionado, no consultado
+### 3.5 Boletín ENSO (NOAA CPC) — versionado, no consultado
 
 Fase e índice de El Niño / La Niña. Modula los riesgos de helada (+0,08) y sequía
 (+0,15) cuando la fase es seca. Aporta la **escala estacional**, que ni el
@@ -151,14 +196,14 @@ razón que decimos en voz alta: **NOAA CPC no publica ese aviso como una API JSO
 estable**. Fingir un endpoint que no existe habría sido más cómodo y menos
 honesto.
 
-### 3.5 Catálogo del centro y perfil de cultivo
+### 3.6 Catálogo del centro y perfil de cultivo
 
 Configuración versionada, no datos de mercado. Tres formulaciones (`30-30-40`,
 `20-10-30`, `10-20-20`) de 50 kg, declaradas por el centro. **Sin marcas, sin
 nombres químicos, sin precios.** El objetivo del optimizador es nutricional, no
 monetario: no publicamos una cifra de ahorro que no podemos sustentar.
 
-### 3.6 La política que aplica a toda fuente externa
+### 3.7 La política que aplica a toda fuente externa
 
 `ResilientJSONSource` envuelve cada llamada JSON con timeout configurable,
 reintentos acotados, backoff exponencial con *jitter*, caché en SQLite con TTL
@@ -422,7 +467,7 @@ un límite de gasto en el *workspace* de Anthropic antes de habilitarlo.
 - No aprende de los datos del productor sin consentimiento explícito: los
   productores llevan `data_origin` y `consent_status` en la base.
 - No puntúa agricultores ni evalúa crédito.
-- No entra en las pruebas: los 58 tests corren contra un cliente falso, sin red y
+- No entra en las pruebas: los 66 tests corren contra un cliente falso, sin red y
   sin llave.
 
 ## 7. Por qué esto no se podía construir hace dos años
@@ -465,13 +510,19 @@ Un sistema donde el LLM es el cerebro no se puede apagar.
 
 Open-Meteo devuelve 16 días de pronóstico horario para una coordenada arbitraria
 de los Andes, sin registro y sin costo. NASA POWER devuelve 20 años de reanálisis
-diario para el mismo punto. Hace pocos años, contexto climático a resolución de
-lote significaba un contrato con un proveedor meteorológico — un gasto que un
-centro de acopio de papa nunca va a aprobar para 40 proveedores pequeños.
+diario para el mismo punto. Y el IDEAM publica las lecturas crudas de sus
+estaciones como datasets consultables por API, lo que hace veinte años vivía en
+un archivo institucional y hace diez se pedía por oficio. Hace pocos años,
+contexto climático a resolución de lote significaba un contrato con un proveedor
+meteorológico — un gasto que un centro de acopio de papa nunca va a aprobar para
+40 proveedores pequeños.
 
 Que estas APIs existan, sean gratuitas y respondan por coordenada es lo que
 convierte «alerta de helada por lote» en una función de producto y no en una
-línea de presupuesto.
+línea de presupuesto. Y la política de datos abiertos del Estado colombiano es
+parte de esa infraestructura: sin ella, contrastar un modelo global contra un
+pluviómetro real a 2,5 km del lote no sería posible para nadie fuera de una
+institución.
 
 ### 7.3 El stack científico completo dentro de una función efímera
 
@@ -493,7 +544,7 @@ lote es lo que hace que el modelo de negocio cierre.
 
 ### 7.4 Que dos personas escriban esto en 24 horas
 
-5 377 líneas de backend, 3 459 de frontend, 58 pruebas offline, 35 endpoints con
+5 377 líneas de backend, 3 459 de frontend, 66 pruebas offline, 35 endpoints con
 OpenAPI, un esquema con triggers de auditoría y un model card con métricas
 reproducidas. Con asistencia de IA en el desarrollo, dentro de la ventana de 24
 horas de la hackathon.
@@ -611,7 +662,7 @@ propuesta nunca se presenta como una orden.
 ## 10. Verificación
 
 ```powershell
-python -m pytest backend/tests -q       # 58 pruebas, ninguna toca la red
+python -m pytest backend/tests -q       # 66 pruebas, ninguna toca la red
 python backend/scripts/demo_backend.py  # pipeline completo sin Internet
 python tools/build_mock.py              # regenera el mock desde el motor real
 ```
@@ -620,6 +671,7 @@ python tools/build_mock.py              # regenera el mock desde el motor real
 |---|---:|
 | `test_operations.py` | 16 |
 | `test_explainer.py` | 14 |
+| `test_ideam.py` | 8 |
 | `test_domain_agronomy.py` | 8 |
 | `test_api_integration.py` | 7 |
 | `test_ml.py` | 7 |

@@ -11,6 +11,7 @@ import httpx
 
 from ..ml.climate import AnalogYearModel, build_risks
 from ..repositories.contracts import CacheRepository
+from .ideam import IdeamStationSource
 from .resilient import ResilientJSONSource, SourcePolicy, SourceResult
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -27,8 +28,12 @@ class ClimateFusion:
         timeout_seconds: float = 5.0,
         max_retries: int = 2,
         transport: httpx.AsyncBaseTransport | None = None,
+        ideam: IdeamStationSource | None = None,
     ):
         self.fixture = json.loads(Path(fixture_path).read_text(encoding="utf-8"))
+        # Opcional: si no se inyecta, el package sale sin la sección observada
+        # en vez de fallar. Es contexto, no una dependencia del cálculo.
+        self.ideam = ideam
         common = dict(
             repository=repository,
             enabled=external_enabled,
@@ -118,8 +123,27 @@ class ClimateFusion:
             source_evidence,
             confidence_factor=confidence_factor,
         )
+
+        # El IDEAM entra al final y por separado: es observación de instrumento,
+        # no una entrada de las reglas. Si falla, el resto del contexto climático
+        # se entrega igual.
+        observed: dict[str, Any] | None = None
+        if self.ideam is not None:
+            try:
+                observed = await self.ideam.observe(latitude, longitude)
+            except Exception as error:  # noqa: BLE001 - una fuente extra no tumba el package
+                warnings.append(
+                    f"No se pudo consultar la observación del IDEAM ({error}); "
+                    "el package sigue sin ese contraste."
+                )
+                observed = None
+        if observed:
+            source_evidence.extend(observed.get("sources", []))
+            warnings.extend(observed.get("warnings", []))
+
         return {
             "risks": risks,
+            "observed_context": observed,
             "seasonal_context": {
                 "forecast": seasonal,
                 "enso": enso,

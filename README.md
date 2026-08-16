@@ -17,7 +17,8 @@
 </p>
 
 <p align="center">
-  <img alt="58 tests" src="https://img.shields.io/badge/tests-58%20offline-2EA043?style=flat-square">
+  <img alt="66 tests offline" src="https://img.shields.io/badge/tests-66%20offline-2EA043?style=flat-square">
+  <img alt="Datos IDEAM" src="https://img.shields.io/badge/datos-IDEAM%20·%20datos.gov.co-DC2626?style=flat-square">
   <img alt="Contrato v2.0" src="https://img.shields.io/badge/contrato-v2.0%20·%2035%20endpoints-1F6FEB?style=flat-square">
   <img alt="Human in the loop" src="https://img.shields.io/badge/decisión-humana%20obligatoria-6E56CF?style=flat-square">
   <img alt="Track 04" src="https://img.shields.io/badge/CTW%202026-Track%2004-EAB308?style=flat-square">
@@ -71,17 +72,24 @@ La lectura fuera del polígono no se borra: se **conserva y se anota**. De las 1
 18 entran al modelo y una queda marcada por geometría, con su motivo. Un dato mal
 ubicado que desaparece en silencio es un dato que nadie puede auditar después.
 
-### ③ La IA procesa, y cruza cinco fuentes externas
+### ③ La IA procesa, y cruza seis fuentes externas
 
-<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
+<img src="docs/media/3.jpg" alt="Diagrama del procesamiento por IA cruzando las APIs de IDEAM, Open-Meteo, NASA POWER, NOAA CPC y Anthropic" width="100%">
 
 | API | Qué aporta |
 |---|---|
+| **IDEAM**<br>`datos.gov.co` · Socrata | La **observación real**: estaciones físicas de la autoridad meteorológica colombiana. Para el lote El Rosal, la estación *Universidad de Nariño – AUT* está a **2,47 km** y publicó ayer. Es el único dato de instrumento; los demás productos climáticos son modelos. Abierta y sin llave |
 | **Open-Meteo Forecast**<br>`api.open-meteo.com/v1/forecast` | 16 días de pronóstico horario **en la coordenada exacta del lote**, no de la cabecera municipal. De aquí salen la mínima prevista (helada), el balance lluvia − evapotranspiración (sequía) y las horas a 10–24 °C con HR ≥ 90 % (gota tardía). Abierta y sin llave |
 | **NASA POWER**<br>`power.larc.nasa.gov/api/temporal/daily/point` | 20 años de reanálisis diario del mismo punto. Es la **memoria**: sin ella «va a llover poco» no significa nada. Con ella se responde a qué año histórico se parece esta temporada |
 | **NOAA CPC — ENSO advisory** | Fase e índice de **El Niño / La Niña**: la escala estacional que ni el pronóstico de 16 días ni la climatología capturan. Va versionado con fecha y URL porque NOAA no publica ese aviso como API JSON estable, y preferimos decirlo a fingir un endpoint |
 | **Anthropic Claude** `claude-sonnet-5` | Redacta la respuesta del asistente en español claro sobre evidencia estructurada. **No calcula, no decide y no puede emitir una cifra que no esté en los datos** |
 | **OpenStreetMap tiles** | Mapa base **opcional**. Si no carga —lo normal en una finca sin señal— el mapa de suelo sigue siendo legible |
+
+Traer al IDEAM tuvo un costo real: su dataset **republica la misma lectura hasta
+19 veces**. Sumar sin deduplicar inflaba la lluvia acumulada un **31 %** (45,4 mm
+frente a los 34,6 mm reales). El sistema deduplica por marca de tiempo y reporta
+cuántos registros descartó, porque un dato público no es lo mismo que un dato
+limpio.
 
 Toda fuente externa pasa por la misma política: timeout, reintentos con backoff,
 caché en SQLite, *circuit breaker* y último valor válido. Y si no hay Internet, el
@@ -195,7 +203,7 @@ Sin backend la aplicación abre igual contra el mock; sin Internet el backend
 funciona igual y lo declara.
 
 ```powershell
-python -m pytest backend/tests -q        # 58 pruebas, ninguna toca la red
+python -m pytest backend/tests -q        # 66 pruebas, ninguna toca la red
 python backend/scripts/demo_backend.py   # el pipeline entero sin Internet
 ```
 

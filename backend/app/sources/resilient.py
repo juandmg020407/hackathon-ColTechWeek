@@ -70,6 +70,7 @@ class ResilientJSONSource:
         policy: SourcePolicy,
         enabled: bool,
         transport: httpx.AsyncBaseTransport | None = None,
+        list_envelope_key: str | None = None,
     ):
         self.name = name
         self.url = url
@@ -77,6 +78,10 @@ class ResilientJSONSource:
         self.policy = policy
         self.enabled = enabled
         self.transport = transport
+        # Socrata (datos.gov.co) responde con un array en la raiz, no con un
+        # objeto. El cache y SourceResult trabajan con dict, asi que en vez de
+        # relajar ese contrato se envuelve la lista bajo una clave explicita.
+        self.list_envelope_key = list_envelope_key
 
     @staticmethod
     def cache_key(params: dict[str, Any]) -> str:
@@ -134,6 +139,8 @@ class ResilientJSONSource:
                     response = await client.get(self.url, params=params)
                     response.raise_for_status()
                     payload = response.json()
+                    if isinstance(payload, list) and self.list_envelope_key:
+                        payload = {self.list_envelope_key: payload}
                     if not isinstance(payload, dict):
                         raise ValueError("la respuesta de la fuente debe ser un objeto JSON")
                 fetched_at = _utc_now()

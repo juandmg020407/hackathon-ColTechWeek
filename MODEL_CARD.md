@@ -87,7 +87,9 @@ está por debajo de 0.95 y no debe interpretarse como calibración perfecta.
 - correlación o señal compartida entre nutrientes del sensor;
 - polígono de demo aproximado;
 - supuestos agronómicos no validados;
-- resolución climática insuficiente para microclimas de montaña;
+- resolución climática insuficiente para microclimas de montaña, solo
+  parcialmente atenuada por la observación del IDEAM: la estación más cercana
+  está a 2,47 km y en la ventana de 30 días reportó 12 días de precipitación;
 - fixtures climáticos envejecidos en modo offline;
 - KMeans fuerza separación aunque la estructura agronómica pueda ser continua.
 

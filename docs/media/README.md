@@ -12,15 +12,20 @@ una lleva su imagen. Copia aquí los archivos con **exactamente** estos nombres:
 | `5.jpg` | ⑤ El agricultor recibe la receta | El agricultor revisando la receta junto al técnico. La etiqueta debe decir **«recomendada»**, nunca «prescrita» ni «ordenada» |
 | `6.jpg` | ⑥ Aplicación precisa y anticipación | Aplicación por zona y alerta anticipada de riesgo climático estacional (El Niño, sequía, helada, gota tardía) |
 
-## Las cinco APIs para la imagen `3.jpg`
+## Las seis APIs para la imagen `3.jpg`
 
 | API | Texto corto para la imagen |
 |---|---|
+| **IDEAM** · `datos.gov.co` | Estaciones físicas colombianas. La más cercana al lote está a **2,47 km** → el único dato de instrumento |
 | **Open-Meteo Forecast** | 16 días de pronóstico horario en la coordenada exacta del lote → helada, sequía y gota tardía |
 | **NASA POWER** | 20 años de reanálisis diario del mismo punto → a qué año histórico se parece esta temporada |
 | **NOAA CPC · ENSO** | Fase e índice de El Niño / La Niña → escala estacional |
 | **Anthropic Claude Sonnet 5** | Redacta en español sobre evidencia. No calcula ni decide |
 | **OpenStreetMap** | Mapa base opcional; el mapa de suelo funciona sin él |
+
+Si el espacio aprieta, **IDEAM es la que no puede faltar**: es la autoridad
+meteorológica colombiana y la única fuente de observación real; las otras
+climáticas son productos de modelo.
 
 ## Recomendaciones
 

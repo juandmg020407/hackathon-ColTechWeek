@@ -49,6 +49,15 @@ class Settings(BaseSettings):
     external_sources_enabled: bool = False
     external_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
     external_max_retries: int = Field(default=2, ge=0, le=5)
+
+    # Observación de estaciones del IDEAM por datos.gov.co. Timeout propio y más
+    # alto: Socrata agrega del lado del servidor y la consulta de descubrimiento
+    # ha tardado ~2,7 s medidos, contra el sub-segundo de Open-Meteo.
+    ideam_timeout_seconds: float = Field(default=8.0, gt=0, le=30)
+    ideam_window_days: int = Field(default=30, gt=0, le=365)
+    # ~27 km de lado; suficiente para encontrar estación en zona andina poblada
+    # sin traer candidatas de otro piso térmico.
+    ideam_search_radius_deg: float = Field(default=0.25, gt=0, le=2)
     max_import_bytes: int = Field(default=5_000_000, gt=0)
     grid_cell_size_m: float = Field(default=10.0, gt=0, le=100)
     random_seed: int = 42

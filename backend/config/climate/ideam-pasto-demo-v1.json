@@ -1,0 +1,74 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-08-16T00:00:00Z",
+  "available": true,
+  "station": {
+    "code": "0052045080",
+    "name": "UNIVERSIDAD DE NARINO - AUT [52045080]",
+    "latitude": 1.23,
+    "longitude": -77.28,
+    "last_seen": "2026-08-15T23:50:00.000",
+    "distance_km": 2.47,
+    "operator": "IDEAM · Instituto de Hidrología, Meteorología y Estudios Ambientales",
+    "candidates_considered": 11
+  },
+  "window": {
+    "days_requested": 30,
+    "until": "2026-08-16"
+  },
+  "measurements": {
+    "precipitation": {
+      "observations": 1693,
+      "raw_rows": 4285,
+      "duplicate_rows_discarded": 2592,
+      "days_with_data": 12,
+      "first_observation": "2026-07-17",
+      "last_observation": "2026-08-15",
+      "unit": "mm",
+      "accumulated": 11.1
+    },
+    "air_temperature": {
+      "observations": 282,
+      "raw_rows": 714,
+      "duplicate_rows_discarded": 432,
+      "days_with_data": 12,
+      "first_observation": "2026-07-17",
+      "last_observation": "2026-08-15",
+      "unit": "°C",
+      "minimum": 10.4,
+      "maximum": 21.6,
+      "mean": 15.35
+    },
+    "relative_humidity": {
+      "observations": 258,
+      "raw_rows": 690,
+      "duplicate_rows_discarded": 432,
+      "days_with_data": 11,
+      "first_observation": "2026-07-17",
+      "last_observation": "2026-08-15",
+      "unit": "%",
+      "minimum": 45.0,
+      "maximum": 94.0,
+      "mean": 69.15
+    }
+  },
+  "last_observation": "2026-08-15",
+  "lag_days": 1,
+  "source_version": "ideam-socrata-station/1.0.0",
+  "note": "Observación de estaciones físicas del IDEAM, no un pronóstico. No alimenta las reglas de riesgo: sirve para contrastar los productos de modelo contra un instrumento real cercano.",
+  "limitations": [
+    "La estación está a 2.47 km del lote: su lluvia y su temperatura no son las del lote.",
+    "El dataset republica lecturas duplicadas; se deduplica por marca de tiempo antes de agregar.",
+    "La serie cubre 12 de los 30 días pedidos: el acumulado no es un total mensual."
+  ],
+  "sources": [
+    {
+      "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+      "url": "https://www.datos.gov.co/browse?q=IDEAM",
+      "fetched_at": "2026-08-15",
+      "degraded": false,
+      "stale": false,
+      "failed": false
+    }
+  ]
+}

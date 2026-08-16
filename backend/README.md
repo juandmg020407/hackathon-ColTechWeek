@@ -25,7 +25,7 @@ fixtures climáticos se declaran degradados.
 python -m pytest backend/tests -q
 ```
 
-Resultado de referencia: `58 passed`. Todos los tests usan SQLite temporal,
+Resultado de referencia: `66 passed`. Todos los tests usan SQLite temporal,
 fixtures o clientes falsos. Ninguno habilita APIs externas o un LLM.
 
 ## Demo sin red

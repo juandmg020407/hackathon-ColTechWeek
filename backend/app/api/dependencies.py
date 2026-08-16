@@ -21,6 +21,7 @@ from ..services.agent import GroundedAgent
 from ..services.importer import ReadingImporter
 from ..services.network import CenterNetworkService
 from ..sources.climate import ClimateFusion
+from ..sources.ideam import IdeamStationSource
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +43,22 @@ def build_container(settings: Settings) -> AppContainer:
         cell_size_m=settings.grid_cell_size_m,
         seed=settings.random_seed,
     )
+    ideam = IdeamStationSource(
+        repository,
+        settings.config_root / "climate" / "ideam-pasto-demo-v1.json",
+        external_enabled=settings.external_sources_enabled,
+        timeout_seconds=settings.ideam_timeout_seconds,
+        max_retries=settings.external_max_retries,
+        window_days=settings.ideam_window_days,
+        search_radius_deg=settings.ideam_search_radius_deg,
+    )
     climate = ClimateFusion(
         repository,
         settings.config_root / "climate" / "pasto-demo-v1.json",
         external_enabled=settings.external_sources_enabled,
         timeout_seconds=settings.external_timeout_seconds,
         max_retries=settings.external_max_retries,
+        ideam=ideam,
     )
     engine = SoilIntelligenceEngine(
         repository,

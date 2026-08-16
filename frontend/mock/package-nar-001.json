@@ -43,6 +43,14 @@
       "failed": false
     },
     {
+      "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+      "url": "https://www.datos.gov.co/browse?q=IDEAM",
+      "fetched_at": "2026-08-15",
+      "degraded": true,
+      "stale": true,
+      "failed": false
+    },
+    {
       "name": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
       "url": null,
       "parameter": "requirement_kg_ha",
@@ -85,17 +93,18 @@
     "agronomy": "soil-mass-balance/2.0.0",
     "optimizer": "bounded-exact-integer/2.0.0"
   },
-  "generated_at": "2026-08-16T07:52:33.697900Z",
+  "generated_at": "2026-08-16T09:02:53.806324Z",
   "degraded": true,
   "warnings": [
     "Open-Meteo Forecast: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
     "NASA POWER: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
+    "IDEAM: el acceso a Internet está desactivado; se usa un fixture versionado. El dato no se presenta como actual.",
     "Los porcentajes del sensor no están calibrados contra muestras de laboratorio.",
     "Las predicciones espaciales orientan el muestreo y la revisión; no son análisis de laboratorio.",
     "Conjunto pequeño (18 observaciones dentro del lote): las métricas tienen alta variabilidad.",
     "El perfil de cultivo está sin validar: ningún plan candidato es una prescripción aplicada."
   ],
-  "id": "package-568bd23014a3cc07",
+  "id": "package-682e01f3fca6d74e",
   "plot": {
     "id": "nar-001",
     "center_id": "center-pasto-demo",
@@ -2730,16 +2739,16 @@
       "gp_better_than_idw": false,
       "claim": "No se afirma que el GP supere a IDW con este conjunto de datos."
     },
-    "inference_ms": 397.023,
+    "inference_ms": 280.514,
     "input_hash": "e088f55208bdf1f3f0f378e29a917d1f9ce3a168dafff8e5e09875b22a2b40e3",
     "limitations": [
       "Los porcentajes del sensor no están calibrados contra muestras de laboratorio.",
       "Las predicciones espaciales orientan el muestreo y la revisión; no son análisis de laboratorio.",
       "Conjunto pequeño (18 observaciones dentro del lote): las métricas tienen alta variabilidad."
     ],
-    "id": "model-run-f731bec51b0d14c2",
+    "id": "model-run-cf499e9d1e4ee732",
     "plot_id": "nar-001",
-    "created_at": "2026-08-16T07:52:33.697900Z"
+    "created_at": "2026-08-16T09:02:53.806324Z"
   },
   "climate": {
     "risks": [
@@ -2786,6 +2795,14 @@
             "fetched_at": "2026-08-04T00:00:00Z",
             "degraded": false,
             "stale": false,
+            "failed": false
+          },
+          {
+            "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+            "url": "https://www.datos.gov.co/browse?q=IDEAM",
+            "fetched_at": "2026-08-15",
+            "degraded": true,
+            "stale": true,
             "failed": false
           }
         ],
@@ -2844,6 +2861,14 @@
             "degraded": false,
             "stale": false,
             "failed": false
+          },
+          {
+            "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+            "url": "https://www.datos.gov.co/browse?q=IDEAM",
+            "fetched_at": "2026-08-15",
+            "degraded": true,
+            "stale": true,
+            "failed": false
           }
         ],
         "model_version": "drought-water-balance-rule/2.0.0",
@@ -2896,6 +2921,14 @@
             "degraded": false,
             "stale": false,
             "failed": false
+          },
+          {
+            "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+            "url": "https://www.datos.gov.co/browse?q=IDEAM",
+            "fetched_at": "2026-08-15",
+            "degraded": true,
+            "stale": true,
+            "failed": false
           }
         ],
         "model_version": "late-blight-hours-rule/2.0.0",
@@ -2907,6 +2940,84 @@
         ]
       }
     ],
+    "observed_context": {
+      "version": "1.0.0",
+      "generated_at": "2026-08-16T00:00:00Z",
+      "available": true,
+      "station": {
+        "code": "0052045080",
+        "name": "UNIVERSIDAD DE NARINO - AUT [52045080]",
+        "latitude": 1.23,
+        "longitude": -77.28,
+        "last_seen": "2026-08-15T23:50:00.000",
+        "distance_km": 2.47,
+        "operator": "IDEAM · Instituto de Hidrología, Meteorología y Estudios Ambientales",
+        "candidates_considered": 11
+      },
+      "window": {
+        "days_requested": 30,
+        "until": "2026-08-16"
+      },
+      "measurements": {
+        "precipitation": {
+          "observations": 1693,
+          "raw_rows": 4285,
+          "duplicate_rows_discarded": 2592,
+          "days_with_data": 12,
+          "first_observation": "2026-07-17",
+          "last_observation": "2026-08-15",
+          "unit": "mm",
+          "accumulated": 11.1
+        },
+        "air_temperature": {
+          "observations": 282,
+          "raw_rows": 714,
+          "duplicate_rows_discarded": 432,
+          "days_with_data": 12,
+          "first_observation": "2026-07-17",
+          "last_observation": "2026-08-15",
+          "unit": "°C",
+          "minimum": 10.4,
+          "maximum": 21.6,
+          "mean": 15.35
+        },
+        "relative_humidity": {
+          "observations": 258,
+          "raw_rows": 690,
+          "duplicate_rows_discarded": 432,
+          "days_with_data": 11,
+          "first_observation": "2026-07-17",
+          "last_observation": "2026-08-15",
+          "unit": "%",
+          "minimum": 45.0,
+          "maximum": 94.0,
+          "mean": 69.15
+        }
+      },
+      "last_observation": "2026-08-15",
+      "lag_days": 1,
+      "source_version": "ideam-socrata-station/1.0.0",
+      "note": "Observación de estaciones físicas del IDEAM, no un pronóstico. No alimenta las reglas de riesgo: sirve para contrastar los productos de modelo contra un instrumento real cercano.",
+      "limitations": [
+        "La estación está a 2.47 km del lote: su lluvia y su temperatura no son las del lote.",
+        "El dataset republica lecturas duplicadas; se deduplica por marca de tiempo antes de agregar.",
+        "La serie cubre 12 de los 30 días pedidos: el acumulado no es un total mensual."
+      ],
+      "sources": [
+        {
+          "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+          "url": "https://www.datos.gov.co/browse?q=IDEAM",
+          "fetched_at": "2026-08-15",
+          "degraded": true,
+          "stale": true,
+          "failed": false
+        }
+      ],
+      "degraded": true,
+      "warnings": [
+        "IDEAM: el acceso a Internet está desactivado; se usa un fixture versionado. El dato no se presenta como actual."
+      ]
+    },
     "seasonal_context": {
       "forecast": {
         "rainfall_mm": 270.0,
@@ -2988,12 +3099,21 @@
         "degraded": false,
         "stale": false,
         "failed": false
+      },
+      {
+        "name": "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]",
+        "url": "https://www.datos.gov.co/browse?q=IDEAM",
+        "fetched_at": "2026-08-15",
+        "degraded": true,
+        "stale": true,
+        "failed": false
       }
     ],
     "degraded": true,
     "warnings": [
       "Open-Meteo Forecast: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
-      "NASA POWER: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual."
+      "NASA POWER: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
+      "IDEAM: el acceso a Internet está desactivado; se usa un fixture versionado. El dato no se presenta como actual."
     ]
   },
   "crop_profile": {
@@ -3069,9 +3189,9 @@
     "effective_from": "2026-08-15"
   },
   "proposal": {
-    "id": "proposal-0ff9a69dcaad27ef",
+    "id": "proposal-4dd9603093337e34",
     "plot_id": "nar-001",
-    "package_id": "package-568bd23014a3cc07",
+    "package_id": "package-682e01f3fca6d74e",
     "status": "pending",
     "validation_status": "requires_technical_validation",
     "human_decision_required": true,
@@ -3829,7 +3949,7 @@
       "steps": [
         {
           "step": "Inferencia espacial",
-          "evidence_id": "model-run-f731bec51b0d14c2",
+          "evidence_id": "model-run-cf499e9d1e4ee732",
           "detail": "Tres procesos gaussianos Matérn, uno por nutriente, produjeron la media y la incertidumbre de cada celda."
         },
         {
@@ -3846,11 +3966,12 @@
         }
       ],
       "evidence": {
-        "model_run_id": "model-run-f731bec51b0d14c2",
+        "model_run_id": "model-run-cf499e9d1e4ee732",
         "source_names": [
           "Open-Meteo Forecast",
           "NASA POWER",
-          "NOAA Climate Prediction Center ENSO advisory"
+          "NOAA Climate Prediction Center ENSO advisory",
+          "IDEAM · Estación UNIVERSIDAD DE NARINO - AUT [52045080]"
         ],
         "input_hash": "e088f55208bdf1f3f0f378e29a917d1f9ce3a168dafff8e5e09875b22a2b40e3"
       },
@@ -3860,6 +3981,6 @@
         "El clima está en modo degradado o no actual: hay que refrescarlo antes de ir a campo."
       ]
     },
-    "created_at": "2026-08-16T07:52:33.697900Z"
+    "created_at": "2026-08-16T09:02:53.806324Z"
   }
 }
