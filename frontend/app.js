@@ -1860,13 +1860,39 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(() => scheduleDraw(), 160);
 });
 
-async function boot() {
+// El backend desplegado es una función que se apaga cuando nadie la usa, y
+// despertarla con el stack científico encima tarda más que la espera de una
+// petición. La primera visita se dibuja igual con la copia local para no dejar
+// la pantalla en blanco, pero antes se quedaba ahí hasta que alguien recargaba:
+// por eso el tablero decía «sin red» en un despliegue que sí funcionaba.
+const WAKE_RETRIES_MS = [1500, 3000, 6000, 12000];
+
+async function loadState() {
   const [pkg, net] = await Promise.all([getPackage(), getNetwork()]);
   state.view = adapt(pkg.data);
   state.network = net.data;
   state.live = pkg.live;
+  return pkg.live && net.live;
+}
+
+async function waitForBackend() {
+  for (const delay of WAKE_RETRIES_MS) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    // `state.nav` no se toca: el reintento completa los datos sin sacar a nadie
+    // de la sección que esté mirando. Se dibuja después de cada intento que
+    // termine, para que la pantalla nunca muestre algo distinto del estado.
+    const live = await loadState().catch(() => null);
+    if (live === null) continue;
+    render();
+    if (live) return;
+  }
+}
+
+async function boot() {
+  const live = await loadState();
   state.nav = navFromHash();
   render();
+  if (!live && apiBase) waitForBackend();
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
