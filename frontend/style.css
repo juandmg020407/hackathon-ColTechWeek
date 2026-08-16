@@ -419,10 +419,6 @@ table.data tr.row-out td { color: var(--low); }
 .rwrap.rwrap-mvp > * { flex: none; }
 .rwrap.rwrap-mvp .mvp-main { flex: 1 1 auto; min-height: 0; }
 .rwrap-mvp .map-card .map-stage { flex: none; height: clamp(220px, 32vh, 380px); }
-.open-lote {
-  width: 100%; min-height: 56px; font-size: 1.05em; font-weight: 700;
-  border-radius: var(--radius);
-}
 
 /* ── interactive map ──────────────────────────────────── */
 .map-stage { cursor: grab; touch-action: none; }
@@ -773,7 +769,6 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
 
   .kpi-grid .kpi { min-height: 92px; }
   .bot-grid { grid-template-columns: 1.3fr 1fr 1fr; }
-  .open-lote { width: auto; justify-self: start; min-width: 280px; }
 }
 
 @media (max-width: 1099px) {
