@@ -263,6 +263,27 @@ function panelAsistente() {
     <p class="note">${canSpeak ? 'Responde en voz alta.' : 'Este navegador no reproduce voz.'} Responde sin red usando el paquete descargado.</p>`;
 }
 
+function panelMediciones() {
+  const { mediciones, sampling } = state.view;
+  const pct = (value) => `${fmt(value, value % 1 === 0 ? 0 : 1)} %`;
+
+  const rows = mediciones.map((m, index) => `<tr class="${m.valido ? '' : 'rejected'}">
+      <td>${index + 1}</td>
+      <td class="num">${pct(m.N)}</td>
+      <td class="num">${pct(m.P)}</td>
+      <td class="num">${pct(m.K)}</td>
+      <td>${m.valido ? (m.sospechoso ? 'revisar' : 'usada') : 'fuera'}${m.motivo ? `<span class="why-dot" title="${m.motivo}">?</span>` : ''}</td>
+    </tr>`).join('');
+
+  return `<div class="scroll-y">
+      <table class="readings">
+        <thead><tr><th>#</th><th class="num">N</th><th class="num">P</th><th class="num">K</th><th>Estado</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p class="note">${sampling.valid} de ${sampling.total} mediciones alimentan el modelo. Porcentaje de masa del suelo, lectura cruda del sensor.</p>`;
+}
+
 function bubble(role, text) {
   const chat = document.getElementById('chat');
   const node = document.createElement('div');
@@ -283,7 +304,12 @@ async function answer(question) {
 }
 
 function wireTabs(initial) {
-  const panels = { propuesta: panelPropuesta, riesgos: panelRiesgos, asistente: panelAsistente };
+  const panels = {
+    propuesta: panelPropuesta,
+    riesgos: panelRiesgos,
+    mediciones: panelMediciones,
+    asistente: panelAsistente,
+  };
   const body = document.getElementById('tab-body');
 
   const show = (name) => {
@@ -642,6 +668,7 @@ function viewLote() {
           <div class="tabs" role="tablist">
             <button class="tab" data-tab="propuesta" role="tab" aria-selected="true">Propuesta</button>
             <button class="tab" data-tab="riesgos" role="tab" aria-selected="false">Lo que viene${view.riesgos.length ? ` <span class="badge-n">${view.riesgos.length}</span>` : ''}</button>
+            <button class="tab" data-tab="mediciones" role="tab" aria-selected="false">Mediciones</button>
             <button class="tab" data-tab="asistente" role="tab" aria-selected="false">Preguntar</button>
           </div>
           <div class="tab-body" id="tab-body"></div>

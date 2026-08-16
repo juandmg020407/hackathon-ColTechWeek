@@ -344,6 +344,17 @@ body {
 .btn.icon.rec { background: var(--low); animation: pulse 1.2s infinite; }
 @keyframes pulse { 50% { opacity: .55; } }
 
+table.readings { width: 100%; border-collapse: collapse; font-size: .82em; }
+table.readings th, table.readings td { text-align: left; padding: .32em .5em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.readings th { color: var(--muted); font-weight: 700; font-size: .88em; position: sticky; top: 0; background: var(--surface); }
+table.readings td.num, table.readings th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.readings tr.rejected td { color: var(--low); background: #fdf2f1; }
+.why-dot {
+  display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: .35em;
+  border-radius: 50%; background: var(--border); color: var(--ink);
+  font-size: 9px; font-weight: 700; cursor: help;
+}
+
 .scroll-y { overflow-y: auto; min-height: 0; }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
