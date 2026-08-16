@@ -225,15 +225,19 @@ body {
 .map-title span { display: block; font-weight: 400; color: var(--muted); font-size: 0.86em; }
 
 /* ── MVP summary: a decision queue, not a network board ── */
-.rwrap-mvp {
+/* A column, not a fixed row template: the summary gains and loses cards
+   (real plots, stale notice) and only the map row may take the slack.
+   Doubled class so it beats the plain .rwrap rule declared further down. */
+.rwrap.rwrap-mvp {
   min-height: 0;
   flex: 1;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--gap);
-  align-content: stretch;
   width: 100%;
 }
+.rwrap.rwrap-mvp > * { flex: none; }
+.rwrap.rwrap-mvp .mvp-main { flex: 1 1 auto; min-height: 0; }
 .rwrap-mvp .map-card .map-stage { flex: none; height: clamp(220px, 32vh, 380px); }
 .open-lote {
   width: 100%; min-height: 56px; font-size: 1.05em; font-weight: 700;
@@ -252,17 +256,19 @@ body {
   display: grid; gap: 4px;
 }
 .map-ctl button {
-  width: 38px; height: 38px;
+  width: 44px; height: 44px;
   background: rgb(255 255 255 / 94%);
   border: 1px solid var(--border); border-radius: 8px;
   font: inherit; font-size: 17px; font-weight: 700; line-height: 1;
   color: var(--ink); cursor: pointer;
 }
+.map-ctl button:disabled { opacity: .4; cursor: not-allowed; }
+.map-ctl button:disabled:hover { background: rgb(255 255 255 / 94%); border-color: var(--border); }
 .map-ctl button:hover { background: var(--brand-soft); border-color: var(--brand-border); }
 .map-ctl button:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
 
 .map-probe {
-  position: absolute; bottom: 10px; left: 56px; z-index: 4;
+  position: absolute; bottom: 10px; left: 62px; z-index: 4;
   background: rgb(255 255 255 / 95%);
   border: 1px solid var(--border); border-radius: 8px;
   padding: 6px 10px; font-size: .78em; line-height: 1.35;
@@ -529,8 +535,10 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
     max-width: 1560px;
     margin-inline: auto;
     width: 100%;
-    grid-template-rows: auto auto minmax(340px, 1fr) auto;
   }
+
+  .resumen-c { grid-template-rows: auto auto minmax(340px, 1fr) auto; }
+  .rwrap.rwrap-mvp .mvp-main { min-height: 340px; }
 
   .net-grid,
   .rwrap-mvp .mvp-main {
