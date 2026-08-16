@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # --- gobernanza ---
     # por encima de este gasto, la propuesta necesita visto bueno de un tecnico
     umbral_revision_cop: int = 1_500_000
+    # a quien se le avisa cuando una propuesta supera el umbral
+    tecnico_de_guardia: str = "tec-nar-03"
+    # registro append-only de propuestas, decisiones y auditoria
+    db_path: str = "sereno.sqlite3"
 
     # --- red ---
     cors_origins: str = "http://localhost:5173,http://localhost:3000"

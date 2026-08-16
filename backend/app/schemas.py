@@ -71,6 +71,9 @@ class Zona(BaseModel):
     kg_ha: dict[str, int]
     productos: list[Producto]
     costo_cop: int
+    # con este id el frontend decide sobre la zona: POST /v1/decisions y
+    # GET /v1/decisions/{id}/why. Toda propuesta nace pendiente.
+    propuesta_id: str | None = None
 
 
 class NextSample(BaseModel):

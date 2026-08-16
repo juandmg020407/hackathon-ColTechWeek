@@ -27,10 +27,10 @@ def contexto(lat: float, lon: float, estacional_raw: dict | None) -> Estacional:
     e = enso.estado()
 
     implicacion = e["implicacion_regional"]
-    if e["fenomeno"] == "El Nino" and e.get("prob_muy_fuerte", 0) >= 0.5:
+    if e["fenomeno"] == "El Niño" and e.get("prob_muy_fuerte", 0) >= 0.5:
         implicacion += (
-            f" Se espera que pegue mas duro entre {e['pico_esperado']}, "
-            f"justo cuando la papa sembrada ahora este llenando tuberculo."
+            f" Se espera que pegue más duro entre {e['pico_esperado']}, "
+            f"justo cuando la papa sembrada ahora esté llenando tubérculo."
         )
 
     return Estacional(
@@ -75,7 +75,7 @@ def evaluar(lat: float, lon: float, estacional_raw: dict | None) -> Riesgo | Non
     if dispersion is not None:
         confianza = "media" if dispersion < 35 else "baja"
 
-    seco = e["fenomeno"] == "El Nino"
+    seco = e["fenomeno"] == "El Niño"
     return Riesgo(
         id=f"rk-estacional-{e['actualizado'].isoformat()}",
         tipo="estacional",
@@ -85,22 +85,22 @@ def evaluar(lat: float, lon: float, estacional_raw: dict | None) -> Riesgo | Non
         ventana={"desde": e["actualizado"].isoformat(), "hasta": "2027-01-31"},
         titulo=f"Viene {e['fenomeno']} y va a pegar duro",
         resumen=(
-            f"{e['fenomeno']} ya esta activo. Hay {int(prob * 100)} por ciento de "
+            f"{e['fenomeno']} ya está activo. Hay {int(prob * 100)} por ciento de "
             f"probabilidad de que sea muy fuerte, con lo peor entre "
             f"{e['pico_esperado']}. " + e["implicacion_regional"]
         ),
         que_hacer=(
             [
-                "Piense la siembra para que el llenado de tuberculo no caiga en lo mas seco.",
-                "Suba el potasio: ayuda a la mata a aguantar frio y falta de agua.",
-                "Guarde agua ahora si tiene con que. Reservorio, tanque, lo que sea.",
-                "No se exceda con el nitrogeno: sin lluvia no se aprovecha y se pierde la plata.",
+                "Piense la siembra para que el llenado de tubérculo no caiga en lo más seco.",
+                "Suba el potasio: ayuda a la mata a aguantar frío y falta de agua.",
+                "Guarde agua ahora si tiene con qué. Reservorio, tanque, lo que sea.",
+                "No se exceda con el nitrógeno: sin lluvia no se aprovecha y se pierde la plata.",
             ]
             if seco
             else [
-                "Prepare drenajes: el exceso de agua pudre el tuberculo.",
-                "Revise el calendario de fungicida: con mas lluvia la gota aparece antes.",
-                "Fraccione el abono en mas aplicaciones para que no se lave.",
+                "Prepare drenajes: el exceso de agua pudre el tubérculo.",
+                "Revise el calendario de fungicida: con más lluvia la gota aparece antes.",
+                "Fraccione el abono en más aplicaciones para que no se lave.",
             ]
         ),
         por_que=PorQue(
@@ -115,9 +115,9 @@ def evaluar(lat: float, lon: float, estacional_raw: dict | None) -> Riesgo | Non
                 "boletin_dias_de_antiguedad": e["dias_desde_actualizacion"],
             },
             regla=(
-                "Estado ENSO del boletin vigente de NOAA CPC, cruzado con el "
-                "pronostico estacional ECMWF SEAS5 a nueve meses para el punto "
-                "del lote. La severidad sube si el deficit de lluvia proyectado "
+                "Estado ENSO del boletín vigente de NOAA CPC, cruzado con el "
+                "pronóstico estacional ECMWF SEAS5 a nueve meses para el punto "
+                "del lote. La severidad sube si el déficit de lluvia proyectado "
                 "supera el 25 por ciento."
             ),
             fuentes=[

@@ -9,7 +9,7 @@ comprimido.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -24,9 +24,32 @@ from ..sources import nasa
 from . import climatology, soil
 
 AVISO = (
-    "La calibracion del sensor a ppm es provisional y no esta validada contra "
+    "La calibración del sensor a ppm es provisional y no está validada contra "
     "laboratorio. Los precios de fertilizante son de referencia."
 )
+
+
+def resumen(df: pd.DataFrame) -> dict:
+    """
+    Area y conteos sin correr el modelo.
+
+    Lo pide GET /v1/plots, que es la primera pantalla de la app: no puede
+    costar los siete segundos del pipeline completo. Usa la misma geometria
+    que el paquete -mismo contorno, misma celda-, asi que el area que ve el
+    agricultor en la lista es exactamente la del mapa.
+    """
+    lat0, lon0 = float(df.Latitud.median()), float(df.Longitud.median())
+    d = df.copy()
+    d["x"], d["y"] = soil.a_metros(d.Latitud.values, d.Longitud.values, lat0, lon0)
+    d = soil.quality(d)
+    ok = d[d.valido]
+    _, _, _, dentro, _ = soil.grid(ok)
+    return {
+        "area_ha": soil.area_de_mascara(dentro),
+        "mediciones": int(len(ok)),
+        "descartadas": int((~d.valido).sum()),
+        "centro": (round(lat0, 6), round(lon0, 6)),
+    }
 
 
 def _suelo(df: pd.DataFrame, meta: dict) -> dict:
@@ -42,6 +65,7 @@ def _suelo(df: pd.DataFrame, meta: dict) -> dict:
     xs, ys, puntos, dentro, borde = soil.grid(ok)
     campos = soil.interpolate(ok, puntos)
     sigma = soil.incertidumbre(campos)
+    sigma_umbral = soil.umbral_incertidumbre(ok, puntos, sigma, dentro)
 
     # zonas de manejo sobre las celdas de adentro
     rasgos = np.column_stack([campos[c][0] for c in campos])
@@ -52,7 +76,7 @@ def _suelo(df: pd.DataFrame, meta: dict) -> dict:
                                random_state=0).fit_predict(norm[dentro])
 
     area_celda = (soil.CELDA_M ** 2) / 10_000.0
-    area_total = round(int(dentro.sum()) * area_celda, 2)
+    area_total = soil.area_de_mascara(dentro)
 
     zonas: list[Zona] = []
     for z in range(soil.N_ZONAS):
@@ -85,7 +109,7 @@ def _suelo(df: pd.DataFrame, meta: dict) -> dict:
             P=[round(float(v)) for v in campos["P_ppm"][0]],
             K=[round(float(v)) for v in campos["K_ppm"][0]],
             sigma=[round(float(v)) for v in sigma],
-            sigma_umbral=soil.SIGMA_NO_SE,
+            sigma_umbral=sigma_umbral,
             mask=[int(v) for v in dentro],
         ),
         "contorno": [
@@ -101,7 +125,8 @@ def _suelo(df: pd.DataFrame, meta: dict) -> dict:
         "descartados": [
             PuntoDescartado(
                 lat=round(float(r.Latitud), 6), lon=round(float(r.Longitud), 6),
-                motivo=f"Este punto queda a {r.dist_centro_m / 1000:.1f} km del lote. Se equivoco de finca?")
+                motivo=(f"Este punto queda a {soil.distancia_hablada(r.dist_centro_m)} "
+                        f"del lote. ¿Se equivocó de finca?"))
             for r in descartados.itertuples()
         ],
         "next_sample": NextSample(
@@ -112,18 +137,37 @@ def _suelo(df: pd.DataFrame, meta: dict) -> dict:
     }
 
 
+DIAS_DE_VENTANA = 5
+
+
 def _ventana(riesgos: list) -> Ventana:
-    """Cuando aplicar, mirando lo que viene."""
+    """
+    Cuando aplicar, mirando lo que viene.
+
+    La ventana es un rango, no una fecha. El agricultor no sale al lote el
+    dia que le diga un sistema: sale cuando consigue el bulto, cuando tiene
+    con quien, y cuando el barro deja pasar. Un rango es lo unico que puede
+    cumplir; una fecha exacta es pedirle algo que no controla.
+    """
     hoy = datetime.now().date()
+    rango = lambda d: (d + timedelta(days=DIAS_DE_VENTANA)).isoformat()
+
     for r in riesgos:
         if r.tipo == "helada" and r.severidad in ("alta", "critica"):
-            return Ventana(desde=r.ventana["hasta"], hasta=r.ventana["hasta"],
-                           motivo="Espere a que pase la helada. La mata estresada no aprovecha el abono.")
+            despues = date.fromisoformat(r.ventana["hasta"]) + timedelta(days=1)
+            return Ventana(
+                desde=despues.isoformat(), hasta=rango(despues),
+                motivo="Espere a que pase la helada. La mata estresada no aprovecha el abono.",
+            )
         if r.tipo == "sequia" and r.severidad in ("alta", "critica"):
-            return Ventana(desde=hoy.isoformat(), hasta=hoy.isoformat(),
-                           motivo="Aplique solo si tiene riego. Sin agua el abono no sirve.")
-    return Ventana(desde=hoy.isoformat(), hasta=hoy.isoformat(),
-                   motivo="No hay nada que lo impida en los proximos dias.")
+            return Ventana(
+                desde=hoy.isoformat(), hasta=rango(hoy),
+                motivo="Aplique solo si tiene riego. Sin agua el abono no sirve.",
+            )
+    return Ventana(
+        desde=hoy.isoformat(), hasta=rango(hoy),
+        motivo="No hay nada que lo impida en los próximos días.",
+    )
 
 
 def _voz(zonas: list[Zona], receta: Receta, riesgos: list,
@@ -137,7 +181,7 @@ def _voz(zonas: list[Zona], receta: Receta, riesgos: list,
         RespuestaVoz(
             id="v1", claves=["cuanto", "abono", "echo", "fertilizante", "abonar"],
             texto=(f"A su lote le faltan {soil.frase_bultos([p.model_dump() for p in principal.productos])}."
-                   if principal else "Todavia no tengo suficientes mediciones de su lote."),
+                   if principal else "Todavía no tengo suficientes mediciones de su lote."),
         ),
         RespuestaVoz(
             id="v2", claves=["cuando", "aplico", "dia", "lluvia", "echar"],
@@ -162,8 +206,8 @@ def _voz(zonas: list[Zona], receta: Receta, riesgos: list,
             id="v5",
             claves=["antes", "pasado", "otras", "veces", "historia", "similar"],
             texto=(
-                f"La ultima vez que el clima estuvo asi fue en {a.ano}. "
-                f"En los meses que siguieron cayeron {a.lluvia_mm} milimetros de lluvia "
+                f"La última vez que el clima estuvo así fue en {a.ano}. "
+                f"En los meses que siguieron cayeron {a.lluvia_mm} milímetros de lluvia "
                 f"y la temperatura bajo hasta {a.temperatura_minima_c} grados."
             ),
         ))
@@ -204,12 +248,15 @@ async def construir(df: pd.DataFrame, meta: dict) -> Package:
     ajustes: list[Ajuste] = adjust.calcular(riesgos)
     zonas = adjust.aplicar(s["zonas"], ajustes)
 
+    from ..governance.proposals import id_de   # la convencion del id vive alla
+
     finales: list[Zona] = []
     for z in zonas:
         plan, costo = soil.blend(z.kg_ha, z.area_ha)
         finales.append(z.model_copy(update={
             "productos": [Producto(**p) for p in plan],
             "costo_cop": costo,
+            "propuesta_id": id_de(meta["id"], z.id),
         }))
 
     total = sum(z.costo_cop for z in finales)

@@ -187,10 +187,10 @@ def resumen(lluvia: dict[str, float], tmin: dict[str, float],
         "temperatura_minima_normal_c": n_tmin,
         "percentil_lluvia_pronosticada": pct,
         "anos_analogos": casos,
-        "fuente": "NASA POWER, comunidad agroclimatologia, resolucion 0.5 grados",
+        "fuente": "NASA POWER, comunidad agroclimatologia, resolución 0.5 grados",
         "advertencia_resolucion": (
-            "El pixel de 0.5 grados promedia valles y montanas, asi que suaviza "
-            "los extremos locales. Sirve para saber que es normal aqui, no para "
+            "El píxel de 0.5 grados promedía valles y montanas, así que suaviza "
+            "los extremos locales. Sirve para saber que es normal aquí, no para "
             "predecir la helada de manana."
         ),
     }

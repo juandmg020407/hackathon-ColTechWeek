@@ -87,13 +87,13 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
         titulo=f"Riesgo de helada {'estas noches' if plural else 'esta noche'}",
         resumen=(
             f"{len(fechas)} {'noches' if plural else 'noche'} con cielo despejado, "
-            f"aire seco y minima cerca de {t_min:.0f} grados. Es la combinacion "
+            f"aire seco y mínima cerca de {t_min:.0f} grados. Es la combinacion "
             f"que quema la mata."
         ),
         que_hacer=[
             "Riegue en la tarde. El suelo humedo suelta calor de noche y sube la temperatura del surco.",
-            "Si tiene con que, cubra las partes mas bajas del lote: el aire frio se acumula abajo.",
-            "No aplique nitrogeno estos dias. La mata estresada no lo aprovecha.",
+            "Si tiene con qué, cubra las partes más bajas del lote: el aire frío se acumula abajo.",
+            "No aplique nitrógeno estos días. La mata estresada no lo aprovecha.",
             "Si tiene papa proxima a cosecha, considere adelantarla.",
         ],
         por_que=PorQue(

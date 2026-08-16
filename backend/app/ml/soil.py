@@ -20,14 +20,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from scipy.optimize import linprog
-from scipy.spatial import ConvexHull, Delaunay
+from scipy.spatial import ConvexHull, Delaunay, cKDTree
 from sklearn.cluster import KMeans
 from sklearn.ensemble import IsolationForest
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel, Matern, WhiteKernel
 
 CELDA_M = 5.0
-SIGMA_NO_SE = 8.0
+# solo se usa si el lote tiene tan pocos puntos que no se puede derivar el
+# umbral del muestreo. El valor real lo calcula umbral_incertidumbre().
+SIGMA_POR_DEFECTO = 25.0
 N_ZONAS = 3
 RADIO_LOTE_M = 300.0
 
@@ -101,15 +103,75 @@ def quality(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def distancia_hablada(metros: float) -> str:
+    """
+    La distancia como la diria alguien en campo, y sin exagerarla.
+
+    Bajo el kilometro se habla en metros, que es lo que se camina. Por
+    encima se trunca en vez de redondear: 1.250 m es «1,2 km», no «1,3».
+    Redondear hacia arriba una distancia que sirve para decirle a alguien
+    que se equivoco de finca es inflar la unica evidencia del reclamo.
+    """
+    if metros < 1000:
+        return f"{round(metros / 10) * 10:.0f} metros"
+    return f"{int(metros / 100) / 10:.1f} km".replace(".", ",")
+
+
 def calidad_de_punto(lat, lon, centro_lat, centro_lon) -> tuple[bool, str | None]:
     """Version puntual de M1, para la ingesta de una lectura suelta."""
     x, y = a_metros(np.array([lat]), np.array([lon]), centro_lat, centro_lon)
     d = float(np.hypot(x[0], y[0]))
     if d > RADIO_LOTE_M:
         return False, (
-            f"Este punto queda a {d / 1000:.1f} km del lote. Se equivoco de finca?"
+            f"Este punto queda a {distancia_hablada(d)} del lote. "
+            f"¿Se equivocó de finca?"
         )
     return True, None
+
+
+# cuantas desviaciones robustas se tolera antes de marcar la lectura como rara
+Z_SOSPECHOSO = 3.5
+
+
+def rareza_de_punto(lectura: dict, df: pd.DataFrame) -> tuple[bool, str | None]:
+    """
+    La otra mitad de M1, sobre una lectura suelta: que tan lejos esta del
+    resto del lote en valor, no en posicion.
+
+    Se usa mediana y desviacion absoluta mediana en vez de media y sigma
+    porque con 18 muestras un solo valor extremo desplaza la media y el
+    detector deja de ver justamente lo que busca.
+
+    Marcar NO es descartar. Un valor alto dentro del lote suele ser
+    informacion -una mancha de abono viejo, un sitio donde se quemo maleza-
+    y con tan pocos puntos no hay derecho a borrarlo.
+    """
+    for cruda, columna in (("N_raw", "N"), ("P_raw", "p"), ("K_raw", "k")):
+        if columna not in df.columns:
+            continue
+        serie = pd.to_numeric(df[columna], errors="coerce").dropna().to_numpy(float)
+        if len(serie) < 8:
+            continue
+        mediana = float(np.median(serie))
+        mad = float(np.median(np.abs(serie - mediana)))
+        if mad <= 0:
+            continue
+        z = 0.6745 * (float(lectura[cruda]) - mediana) / mad
+        if z >= Z_SOSPECHOSO:
+            return True, (
+                "Lectura mucho más alta que el resto del lote. ¿Midió sobre abono?"
+            )
+        if z <= -Z_SOSPECHOSO:
+            return True, (
+                "Lectura mucho más baja que el resto del lote. Revise que la sonda "
+                "haya quedado bien clavada."
+            )
+    return False, None
+
+
+def area_de_mascara(dentro: np.ndarray) -> float:
+    """Hectareas del lote a partir de las celdas que caen dentro del contorno."""
+    return round(int(dentro.sum()) * (CELDA_M ** 2) / 10_000.0, 2)
 
 
 # --------------------------------------------------------------- M2
@@ -168,6 +230,43 @@ def incertidumbre(campos: dict) -> np.ndarray:
         campos[c][1] / max(campos[c][0].max() - campos[c][0].min(), 1e-6)
         for c in campos
     ], axis=0) * 100.0
+
+
+def umbral_incertidumbre(df: pd.DataFrame, puntos: np.ndarray,
+                         sigma: np.ndarray, dentro: np.ndarray) -> float:
+    """
+    A partir de que sigma el mapa deja de pintar color y pinta rayado.
+
+    El umbral no se fija a ojo: sale del propio muestreo. Se mide el
+    espaciamiento tipico entre mediciones vecinas y se toma el sigma que el
+    modelo tiene a esa distancia de un punto real. La lectura es directa:
+
+        una celda va rayada cuando el modelo esta peor informado sobre ella
+        que lo que suele estarlo a medio camino entre dos mediciones.
+
+    Se auto-calibra. Con 18 puntos el espaciamiento es de unos 16 m y el
+    umbral queda cerca de 26, que raya un tercio del lote. Si el sensor
+    vuelve y mide mas fino, el espaciamiento baja, el umbral baja con el y
+    el mapa se vuelve mas exigente en vez de quedarse en un numero viejo.
+
+    Un umbral fijo demasiado bajo raya el lote entero y el mapa deja de
+    decir nada; demasiado alto lo pinta todo de color y promete una certeza
+    que no tenemos. Las dos fallas son la misma: perder la unica funcion del
+    rayado, que es marcar donde hay que ir a medir.
+    """
+    xy = df[["x", "y"]].to_numpy()
+    if len(xy) < 3 or not dentro.any():
+        return SIGMA_POR_DEFECTO
+
+    arbol = cKDTree(xy)
+    vecinos, _ = arbol.query(xy, k=2)
+    espaciamiento = float(np.median(vecinos[:, 1]))
+
+    a_la_medicion, _ = arbol.query(puntos)
+    cerca = dentro & (a_la_medicion <= espaciamiento)
+    if not cerca.any():
+        return SIGMA_POR_DEFECTO
+    return round(float(np.percentile(sigma[cerca], 75)), 1)
 
 
 # --------------------------------------------------------------- M4
