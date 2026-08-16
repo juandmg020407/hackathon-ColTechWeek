@@ -1,245 +1,207 @@
-# IOmido— brief del proyecto
+# IOmido — brief de producto
 
-> *El sereno es el frío húmedo que cae de noche sobre los cultivos. Los paperos de Nariño le tienen respeto: es lo que quema la mata. El producto avisa del sereno, y deja sereno al que lo usa.*
+## En una frase
 
-Hackathon Colombia Tech Week 2026 · Track 04 Planeta y Comunidad · Entrega domingo 09:00
+IOmido permite que un centro de acopio lleve inteligencia de suelo y clima a su
+red de pequeños productores usando un sensor compartido, inferencia espacial con
+incertidumbre y recomendaciones NPK revisadas por un técnico.
 
----
+## Encaje con Track 04
 
-## 1. En una frase
+El reto pide ayudar a comunidades y pequeños productores a adaptarse al clima,
+reducir desperdicio y tomar mejores decisiones. IOmido responde con un canal
+operativo concreto:
 
-**Un asistente de voz en español colombiano que le dice a un papero de menos de una hectárea qué viene, qué significa para su lote y qué puede hacer — usando su propio suelo medido, el pronóstico estacional y las alertas públicas del país.**
+- el centro de acopio financia y coordina;
+- el técnico mueve el sensor entre fincas;
+- el productor recibe la recomendación sin comprar software ni hardware;
+- la red obtiene alertas tempranas y prioriza dónde intervenir.
 
----
+El objetivo no es vender un mapa aislado. Es convertir la asistencia técnica de
+una finca a la vez en una capacidad compartida por toda la red de proveedores.
 
-## 2. El giro respecto a la idea original
+## Problema específico
 
-La primera versión optimizaba fertilización: sensor → mapa de calor → receta de abono. Útil, pero mira hacia atrás: describe el suelo tal como está hoy.
+Los centros de acopio dependen de muchos lotes pequeños, pero normalmente no
+tienen información comparable y oportuna sobre el suelo de cada proveedor. Una
+medición puntual tampoco describe todo el lote y un pronóstico regional no explica
+qué significa el clima para una recomendación concreta.
 
-**El país no está en una situación normal.** El Niño está activo desde el 4 de agosto de 2026, con 63% de probabilidad de convertirse en un evento muy fuerte con pico entre noviembre de 2026 y enero de 2027. Para un cultivo de papa a 2.500 msnm en Nariño eso significa cielos despejados, noches frías y déficit hídrico: **heladas y sequía en la mitad del ciclo del cultivo.**
+IOmido une tres escalas:
 
-Un mapa de calor no sirve de nada frente a eso. Lo que sirve es saberlo con meses de anticipación y ajustar.
+1. **Punto:** lectura NPK del sensor.
+2. **Lote:** inferencia espacial e incertidumbre.
+3. **Red:** priorización de fincas y riesgo de abastecimiento para el centro.
 
-Entonces la tesis cambia:
+## Público objetivo
 
-> **No le decimos cuánto abono echar. Le decimos cuánto abono echar dado lo que viene.**
+### Cliente inicial
 
-Ese "dado lo que viene" no es retórica, es agronomía:
+Centros de acopio de papa que trabajan con redes de pequeños productores y cuentan
+con una persona técnica o un aliado que pueda recorrer los lotes.
 
-| Lo que viene | Qué cambia en la recomendación |
-|---|---|
-| Sequía prolongada | **Bajar nitrógeno.** Sin agua no se absorbe, se volatiliza y se pierde la plata |
-| Riesgo de helada | **Subir potasio.** El K regula el potencial osmótico y mejora la tolerancia al frío |
-| Lluvia fuerte en 48 h | **Aplazar la aplicación.** Se lava y termina en la quebrada |
-| Condiciones de gota | Alerta sanitaria antes de que aparezca en la mata |
+### Usuarios
 
-Las dos mitades del producto se necesitan: el suelo dice *qué tiene*, el pronóstico dice *qué va a pasar*, y la recomendación sale del cruce.
+- Gestor del centro: ve la red y decide qué lotes priorizar.
+- Técnico: toma mediciones, revisa la incertidumbre y valida propuestas.
+- Productor: recibe una recomendación comprensible y conserva la decisión final.
 
----
+### Beneficio público
 
-## 3. El hardware es la premisa
+- acceso compartido a agricultura de precisión;
+- menos aplicación innecesaria de nutrientes;
+- decisiones anticipadas frente a clima adverso;
+- mayor continuidad de abastecimiento local;
+- construcción responsable de datos de suelo con consentimiento.
 
-Nada de esto funciona sin resolver primero cómo se obtienen los datos, y ahí está nuestra ventaja: **un integrante del equipo diseñó el dispositivo.**
+## Caso demostrativo
 
-Es una sonda que se clava en la tierra y mide NPK, construida cumpliendo la normativa del ICA y el Ministerio de Agricultura. Cuesta una fracción de una sonda comercial —ChrysaLabs se arrienda por unos **USD 10.000 al año**— y no requiere drones, laboratorio ni instalación fija.
+La demo usa un cultivo de papa de 0,69 ha en Pasto, Nariño:
 
-Esa diferencia de costo **es** el proyecto. Cultivar una hectárea de papa pastusa cuesta unos $15,6 millones: una sonda comercial sale más cara que el cultivo entero. La agricultura de precisión no llegó al minifundio por precio, no por falta de ganas.
+- 19 mediciones georreferenciadas;
+- N, P y K reportados como porcentaje;
+- primera fila: N 2 %, P 1 %, K 1 %;
+- una lectura fuera del lote, detectada por distancia;
+- mapa de 5 m por celda;
+- incertidumbre visible y siguiente punto sugerido.
 
-**Y el sensor no es de una finca: rota por la vereda.** Con 30 fincas compartiendo un aparato el costo por finca cae 30 veces, y cada finca medida mejora el modelo de las vecinas porque comparten suelo, altitud y clima. Un sensor fijo por finca nunca genera ese efecto.
+La demo debe presentarse desde la perspectiva de un centro de acopio que abre el
+lote de uno de sus productores proveedores.
 
----
+## Propuesta de valor
 
-## 4. Modelo de negocio: B2B2F
+### Para el centro
 
-**Paga la empresa. Usa el agricultor.**
+- una vista consistente de sus lotes proveedores;
+- priorización de visitas y mediciones;
+- riesgo de suelo y clima explicable;
+- trazabilidad de propuestas y decisiones;
+- un sensor que se comparte en vez de uno por finca.
 
-El agricultor de media hectárea no tiene con qué comprar software ni internet estable para sostener una conversación por voz. Pero hay actores en la cadena que sí tienen ambas cosas — y a quienes les conviene directamente que sus proveedores optimicen gastos y no pierdan cosecha.
+### Para el productor
 
-| | |
-|---|---|
-| **Quién paga** | Agroindustria y procesadoras, comercializadoras, cooperativas, bancos agrarios, alcaldías y UMATA |
-| **Por qué le conviene** | Sus proveedores son quienes pierden la cosecha cuando llega una helada. Un evento climático en Nariño no es un problema del agricultor: es un problema de **suministro** para quien compra la papa |
-| **Qué recibe** | Riesgo agregado de toda su base de proveedores, trazabilidad de origen, optimización del insumo que en muchos casos ellos mismos financian, y reporte de sostenibilidad |
-| **Qué recibe el agricultor** | La recomendación completa, gratis, en su idioma y por voz |
-| **De quién son los datos** | Del agricultor. El aporte al mapa público es opcional y revocable |
+- recomendación gratuita y comprensible;
+- formulación expresada como grado NPK, no como marca o nombre químico;
+- explicación de por qué cambió la propuesta;
+- derecho a aceptar, rechazar o pedir revisión;
+- propiedad y control sobre sus mediciones.
 
-### Por qué esto no es lo mismo que Agrosmart
+## Semántica NPK
 
-Agrosmart le vende benchmarking de sostenibilidad a Cargill y Coca-Cola **y además cobra suscripción al agricultor**: el valor fluye hacia arriba y el productor es, en la práctica, el sensor.
+La fuente de demo no está en ppm. Cada lectura es el porcentaje reportado por el
+sensor. La `v0.2` usará una convención única:
 
-Nuestra diferencia es explícita: **el agricultor nunca paga y sus datos siguen siendo suyos.** La empresa paga por el agregado, el riesgo de suministro y la trazabilidad — cosas que solo tienen sentido a escala de cartera y que al agricultor individual no le sirven de nada.
-
-### Y resuelve el problema práctico
-
-La empresa tiene internet, capacidad de pago y personal técnico. El agricultor tiene 2G y un teléfono modesto. **Cada uno recibe la interfaz que su realidad permite:**
-
-| | Quién | Canal | Red |
-|---|---|---|---|
-| **A** | Empresa, cooperativa o UMATA — cartera de proveedores, riesgo agregado | Panel web | Buena |
-| **B** | Técnico que carga el sensor y hace la ronda | PWA offline-first | Intermitente |
-| **C** | El agricultor | WhatsApp, notas de voz en español colombiano | 2G |
-| **D** | Quien tiene teléfono de botones | SMS de 160 caracteres | Sin datos |
-
----
-
-## 5. Qué hace, concretamente
-
-### 5.1 Lee el suelo
-Un sensor que se clava en la tierra entrega N, P y K. Con los 18 puntos válidos del lote de Pasto, un Proceso Gaussiano interpola el lote completo **con su incertidumbre**, lo divide en zonas de manejo y calcula el faltante de nutrientes por zona.
-
-Y algo que descubrimos en los datos y que define el aporte de IA: **el sensor no mide tres cosas, mide una.** La correlación entre P y K es de 0,9917 y P ≈ 0,356·N. El aparato deriva los tres valores de una sola señal de conductividad. Recuperar tres grados de libertad a partir de uno solo es posible inyectando información externa (prior de suelos, contexto, clima) — y eso no lo hace ninguna regla fija.
-
-### 5.2 Mira lo que viene
-Seis motores de riesgo, todos sobre datos públicos y gratuitos:
-
-| | Riesgo | Cómo |
-|---|---|---|
-| R1 | **Helada** | Mínimas, cobertura nubosa, punto de rocío y viento del pronóstico horario. Las heladas de radiación en Nariño ocurren con cielo despejado y aire seco — exactamente lo que trae El Niño |
-| R2 | **Sequía / déficit hídrico** | Balance hídrico: precipitación acumulada contra evapotranspiración de referencia, más el pronóstico estacional a 9 meses |
-| R3 | **Gota (tizón tardío)** | *Phytophthora infestans* es la enfermedad número uno de la papa en Colombia. El riesgo se calcula solo con clima: horas de humedad relativa sobre 90% y temperatura entre 10 y 24 °C |
-| R4 | **Incendios cerca** | Focos activos de NASA FIRMS en un radio alrededor del lote, con dirección del viento |
-| R5 | **Deslizamiento** | Lluvia acumulada de 3 y 7 días contra umbrales de intensidad-duración, ponderada por la pendiente del terreno |
-| R6 | **Estacional / ENSO** | Estado de El Niño y su implicación local para el ciclo del cultivo |
-
-### 5.3 Lo dice en voz colombiana
-Azure Speech con `es-CO-SalomeNeural`. **500.000 caracteres gratis al mes** — unas 2.500 respuestas mensuales, indefinidamente. El agricultor pregunta por nota de voz y recibe una nota de voz.
-
-No es una conversación en vivo: en 2G eso no existe. Es mensajería asíncrona, que es lo que WhatsApp hace mejor que nadie.
-
-### 5.4 Y usa veinte años de historia para dar contexto
-NASA POWER entrega **7.305 días de datos agroclimáticos diarios** del punto exacto del lote, sin llave y gratis. Con eso el sistema deja de usar adjetivos y empieza a usar números: no dice "va a estar seco", dice "los próximos meses caen en el percentil 8 de los últimos veinte años".
-
-Y lo más valioso: **años análogos.** En vez de pedirle a un modelo que prediga a nueve meses —donde nadie acierta— se buscan los años con la misma fase de El Niño y se muestra lo que efectivamente ocurrió:
-
-```
-ONI actual proyectado: +1.3
-  2006  El Niño        →  265 mm,  mínima 7,7 °C
-  2009  El Niño fuerte →  314 mm,  mínima 7,3 °C
-  2018  El Niño        →  389 mm,  mínima 5,7 °C
-Normal histórica de la mínima: 8,9 °C
+```text
+suelo.N_pct
+suelo.P_pct
+suelo.K_pct
 ```
 
-En años de El Niño la mínima cae entre 1,2 y 3,2 grados. Eso es razonamiento por casos: interpretable, verificable y con datos reales, no una caja negra.
+Las formulaciones también se describen únicamente por sus porcentajes:
 
-**Fusión multi-escala:** veinte años de satélite a 0,5° para saber qué es normal, pronóstico a escala de kilómetros para lo que viene, y la medición puntual del sensor para lo que hay. Ninguna sola alcanza — y es justo lo que un dron no da.
+```text
+30-30-40 = 30 % N · 30 % P · 40 % K
+```
 
-### 5.5 Y nunca decide solo
-Ver la sección 7.
+No se expondrán marcas, nombres químicos, precios nacionales ni supuestos de ahorro.
+El centro registra las formulaciones realmente disponibles en su zona.
 
----
+## La lógica objetivo
 
-## 6. La demo
+1. Validar que cada lectura esté entre 0 % y 100 % y conservar el valor original.
+2. Detectar errores geográficos y lecturas atípicas.
+3. Interpolar N, P y K por separado con incertidumbre.
+4. Consultar un perfil versionado de cultivo, variedad y etapa.
+5. Calcular el faltante relativo por zona.
+6. Aplicar ajustes climáticos explícitos.
+7. Comparar el faltante con las formulaciones disponibles en el centro.
+8. Resolver una mezcla entera que minimice faltantes, exceso y cantidad de bultos.
+9. Crear una propuesta pendiente de decisión humana.
 
-**Un lote real de 0,69 hectáreas en Pasto, Nariño. Coordenadas 1,2478 / −77,2672. Dieciocho mediciones reales de un sensor NPK. Variedad Diacol Capiro.**
+Ningún umbral agronómico, formulación o peso de bulto debe quedar escondido como
+una constante de código. Cada parámetro debe tener versión, fuente y fecha.
 
-No es un caso hipotético. El recorrido de la demo:
+## Por qué la IA es necesaria
 
-1. **El lote.** Mapa de zonas con la incertidumbre visible. Un punto de los datos está a 1,2 km del resto: el sistema lo rechaza en vivo y explica por qué.
-2. **La pregunta.** El agricultor manda una nota de voz: *«¿le echo abono este fin de semana?»*
-3. **La respuesta, en voz colombiana.** No es un número: *«Todavía no. El jueves llueve fuerte y se le lava. Pero hay algo más importante: viene El Niño y va a pegar duro entre noviembre y enero, justo cuando su papa esté llenando tubérculo. Le conviene subir el potasio ahora para que aguante el frío.»*
-4. **El porqué.** Un botón muestra de dónde salió cada pieza: qué dato, qué modelo, qué tan seguro está.
-5. **La decisión es del agricultor.** El sistema propone. El agricultor confirma, rechaza o pide que lo revise el técnico. Nada se ejecuta solo.
-6. **El bien público.** Cada medición, anonimizada, alimenta el primer mapa abierto de fertilidad de suelos del país.
+- Hay muchos menos puntos que celdas en el lote.
+- La interpolación debe devolver incertidumbre, no solo color.
+- El sistema debe escoger dónde medir para aprender más con menos recorridos.
+- Los riesgos deben cruzarse con el estado del lote y no mostrarse como alertas
+  genéricas.
+- Las correcciones del técnico pueden convertirse, con suficiente volumen, en
+  etiquetas para mejorar el sistema.
 
----
+La calibración contra laboratorio es un trabajo futuro. Hasta entonces IOmido no
+afirma precisión de laboratorio ni recuperación de nutrientes ocultos.
 
-## 7. IA responsable — cómo está construido
+## Demo de un minuto
 
-### 7.1 El marco
+1. **Problema:** un centro atiende muchos paperos con poca información por lote.
+2. **Captura:** el técnico inserta el sensor y registra NPK más ubicación.
+3. **IA:** el mapa completa las zonas no medidas, raya lo incierto y sugiere el
+   siguiente punto.
+4. **Clima:** una alerta modifica o aplaza la propuesta y explica el motivo.
+5. **Acción:** el centro revisa una formulación como `30-30-40`; el productor
+   decide.
+6. **Escala:** un sensor, muchas fincas, una red más resiliente.
 
-**AI Act de la Unión Europea:** los artículos 14 (supervisión humana) y 50 (transparencia) entraron en vigor el **2 de agosto de 2026**, hace menos de dos semanas.
+## Modelo de sostenibilidad
 
-**Seamos precisos: hoy este sistema no es de alto riesgo.** El apoyo a decisiones agrícolas no está en el Anexo III. Pero la ruta natural de escala sí lo vuelve alto riesgo: en el momento en que un banco lo use para evaluar crédito agrícola, o el Estado para asignar subsidios de fertilizante, cae de lleno en el Anexo III (acceso a servicios esenciales y evaluación de solvencia).
+- Suscripción o servicio por centro de acopio.
+- Sensor compartido dentro de la red de proveedores.
+- Incorporación de nuevos lotes con el mismo flujo.
+- Expansión desde papa en Pasto a otros municipios, centros y cultivos.
 
-**Por eso lo construimos con ese estándar desde ahora, voluntariamente.** No porque estemos obligados, sino porque rehacerlo después no es viable.
+No se fija un precio comercial en la demo. La validación de disposición a pagar y
+el costo operativo forman parte del piloto.
 
-En Colombia el marco es el **CONPES 4144 de 2025**, la Política Nacional de Inteligencia Artificial, con sus ejes de ética y gobernanza y de mitigación de riesgos.
+## IA responsable
 
-### 7.2 Las nueve reglas
+1. El sistema propone; una persona decide.
+2. La incertidumbre es visible.
+3. Las fuentes y versiones acompañan cada salida.
+4. Las recomendaciones fuera de límites pasan a revisión técnica.
+5. Las decisiones se registran sin reescribir el pasado.
+6. No se puntúan agricultores ni se evalúa crédito.
+7. Los datos pertenecen al productor.
+8. El uso agregado requiere consentimiento.
+9. Las limitaciones se muestran junto a la recomendación.
 
-1. **Propone, nunca ejecuta.** Toda recomendación es una propuesta con estado `pendiente`. Alguien la acepta, la rechaza o la deriva. Sin confirmación no pasa nada.
-2. **Doble firma para lo caro.** Si la recomendación implica un gasto sobre el umbral configurado, requiere revisión de un técnico agrónomo antes de mostrarse como aceptable.
-3. **Incertidumbre obligatoria.** Ninguna cifra sale sin rango ni nivel de confianza. Si el modelo no sabe, el mapa lo pinta rayado y la voz lo dice.
-4. **Derecho a explicación.** «¿Por qué me dice eso?» es un botón, no un párrafo de términos y condiciones. Devuelve los datos de entrada, la versión del modelo y las fuentes.
-5. **Trazabilidad completa.** Cada recomendación guarda entradas, versión de modelo, fuentes con su marca de tiempo y quién decidió qué. Registro append-only, en línea con el artículo 12.
-6. **Divulgación.** La voz se identifica como asistente automático en el primer contacto de cada sesión. Artículo 50.
-7. **Límites declarados.** El sistema tiene una lista explícita de lo que no sabe hacer: no diagnostica plagas por descripción verbal, no recomienda dosis de plaguicidas, no reemplaza un análisis de laboratorio. Ante esos casos remite a la UMATA.
-8. **Cero decisiones automáticas sobre personas.** No puntúa agricultores, no evalúa solvencia, no ordena listas de beneficiarios.
-9. **Los datos son del agricultor.** El aporte al mapa público es opt-in explícito, revocable, y el agregado se publica anonimizado y con grilla gruesa para que no se pueda reidentificar una finca.
+## Estado actual y objetivo
 
-### 7.3 Por qué esto también es buena ingeniería
-
-El human-in-the-loop no es un costo de cumplimiento: **es el mecanismo de aprendizaje del sistema.** Cada vez que un técnico corrige una propuesta, esa corrección es una etiqueta. Con 19 mediciones no se entrena nada; con 5.000 propuestas revisadas por técnicos, sí.
-
-La supervisión humana es lo que llena el conjunto de entrenamiento.
-
----
-
-## 8. Qué es honesto decir y qué no
-
-Un jurado técnico premia el rigor y castiga el exceso. Lo que decimos:
-
-- ✅ Tenemos 18 mediciones reales de un lote real en Pasto.
-- ✅ Detectamos y probamos que el sensor tiene un grado de libertad, no tres.
-- ✅ El pipeline completo corre y entrega un paquete de 3,2 KB.
-- ✅ Los seis motores de riesgo usan fuentes públicas verificables.
-- ⚠️ **La calibración de sensor a ppm es provisional.** No está validada contra laboratorio. Lo decimos en la app, en el pitch y en el código.
-- ⚠️ **Los precios de fertilizante son de referencia** hasta conectar SIPSA.
-- ⚠️ **No hay validación en campo.** Lo que hay es un pipeline correcto y un diseño defendible. La validación es el siguiente paso, y sabemos exactamente cuál es: conseguir pares sensor ↔ laboratorio.
-
-Nunca decimos «precisión de laboratorio», ni «predecimos su cosecha», ni un porcentaje de acierto que no hayamos medido.
-
----
-
-## 9. Contra qué competimos
-
-| | Agrosmart | Agranimo | ChrysaLabs / Stenon | **Sereno** |
-|---|---|---|---|---|
-| Qué mide | Clima, agua | Micro-clima | Nutrientes | **Nutrientes + riesgo** |
-| Desde dónde | Satélite + sensores | Satélite + drones | Sonda | **Sonda + datos públicos** |
-| Para quién | Medianos, Cargill, Coca-Cola | Exportadores de fruta | Agricultura de precisión | **Menos de 1 hectárea** |
-| Costo | R$1 por hectárea al mes | Sensores propios | ~USD 10.000 al año | **Un aparato por vereda** |
-| Interfaz | App con dashboard | Dashboard | Dashboard | **Voz, en 2G** |
-| Los datos van a | La cadena corporativa | El productor | El productor | **El productor y el país** |
-
-Agrosmart cobra por hectárea: con media hectárea, ese modelo no le sirve *a Agrosmart*. No es un descuido suyo, es un hueco estructural que no se cierra con más capital.
-
-Y el análisis de suelo con IA en tiempo real ya existe — cuesta diez mil dólares al año. Cultivar una hectárea de papa pastusa cuesta unos 15,6 millones de pesos. El aparato costaría más que el cultivo entero.
-
----
-
-## 10. Cómo se puntúa
-
-| Criterio | Pts | Cómo lo atacamos |
+| Área | `v0.1` actual | `v0.2` objetivo |
 |---|---|---|
-| Impacto público | 25 | Usuario real y específico, ahorro en pesos, y un bien público de datos abiertos |
-| Uso real de IA | 25 | La IA es el núcleo: recuperar 3 grados de libertad de 1, GP con incertidumbre, seis motores de riesgo y un agente con herramientas |
-| Demo funcional | 20 | Corre con datos reales, offline, y se ve en el video de 1 minuto |
-| Viabilidad + escala | 15 | Sensor compartido por vereda, voz gratis hasta 2.500 respuestas al mes, flywheel de datos |
-| Ejecución técnica + UX | 15 | Presupuesto de 20 KB, arquitectura documentada, gobernanza desde el día uno |
+| Unidad de suelo | El código todavía etiqueta parte de la salida como ppm | Porcentaje NPK de extremo a extremo |
+| Fertilizantes | Catálogo, nombres y precios heredados en código | Grados NPK configurados por el centro, sin precio |
+| Optimización | Modelo continuo con redondeo posterior | Optimización entera y objetivo nutricional |
+| Usuario principal | Tablero de un lote | Centro de acopio → red → lote |
+| Persistencia | Excel, memoria y SQLite local | Base durable y multiusuario |
+| Voz | Respuestas locales del navegador | Canal opcional para el productor |
+| Riesgos | Helada, sequía, gota y estacional | Motores calibrados y activados según disponibilidad |
 
----
+## Qué afirmamos y qué no
 
-## 11. Fuentes de datos
+### Sí
 
-Todas públicas, todas gratuitas, todas citables.
+- Existe un pipeline funcional sobre el lote de Pasto.
+- El sistema interpola, muestra incertidumbre y recomienda una nueva medición.
+- Los riesgos modifican la propuesta con una explicación.
+- Hay un flujo local de propuestas y decisiones.
 
-| Fuente | Qué aporta | Volumen | Llave |
-|---|---|---|---|
-| **NASA POWER** | Datos agroclimáticos diarios del punto exacto: temperatura, lluvia, humedad, radiación, punto de rocío, viento | **7.305 días × 8 parámetros** | No |
-| **Open-Meteo Forecast** | Pronóstico horario, humedad y temperatura del suelo | 16 días | No |
-| **Open-Meteo Seasonal** | ECMWF SEAS5, con Índice de Eventos Extremos | 180 días, 51 miembros | No |
-| **Open-Meteo Archive** | ERA5 histórico desde 1940 | — | No |
-| **NASA FIRMS** | Focos de incendio activos casi en tiempo real | VIIRS/MODIS | Gratis por correo |
-| **SoilGrids (ISRIC)** | pH, carbono orgánico, textura, nitrógeno total a 250 m | No |
-| **NOAA CPC** | Estado y pronóstico de ENSO | No |
-| **SIPSA (DANE)** | Precios de insumos agropecuarios | No |
-| **ICA** | Fertilizantes con registro vigente | No |
+### Todavía no
 
-Licencias CC-BY en la mayoría — y como nosotros consumimos datos abiertos, publicamos abierto. Coherencia, no marketing.
+- Precisión de laboratorio.
+- Ahorro económico validado.
+- Predicción de rendimiento.
+- Despliegue multi-centro listo para producción.
+- Validación agronómica o piloto en campo.
 
----
+## Criterios de la hackathon
 
-## 12. Equipo y reparto
-
-Dos personas. Uno en backend y modelos, otro en frontend. El contrato de API está congelado en `FRONTEND.md` para que nadie espere al otro.
+| Criterio | Evidencia que debe ver el jurado |
+|---|---|
+| Impacto público · 25 | El centro habilita asistencia de precisión para pequeños productores |
+| Uso real de IA · 25 | GP, incertidumbre, muestreo activo, anomalías y riesgo contextual |
+| Demo funcional · 20 | Flujo completo del lote de Pasto en el video de un minuto |
+| Viabilidad y escala · 15 | Un sensor compartido y crecimiento centro por centro |
+| Ejecución técnica y UX · 15 | Paquete ligero, modo degradado, explicación y decisión humana |
