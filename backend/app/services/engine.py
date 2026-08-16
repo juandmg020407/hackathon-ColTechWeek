@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from starlette.concurrency import run_in_threadpool
+
 from ..agronomy import AgronomicCalculator
 from ..domain.models import NPKPercent
 from ..ml.spatial import SoilSpatialEngine
@@ -16,6 +18,15 @@ from .contracts import contract_metadata, utc_now
 
 class EngineError(ValueError):
     pass
+
+
+class PlotHasNoReadingsError(EngineError):
+    """El lote existe pero todavía no tiene evidencia sobre la que calcular.
+
+    Se separa de `EngineError` porque no es un fallo: es el estado inicial de
+    todo lote nuevo, y el cliente debe poder distinguirlo para ofrecer la
+    importación en vez de mostrar un error genérico.
+    """
 
 
 class SoilIntelligenceEngine:
@@ -38,21 +49,19 @@ class SoilIntelligenceEngine:
     async def recompute(self, plot_id: str) -> dict[str, Any]:
         plot = self.repository.get_plot(plot_id)
         if plot is None:
-            raise EngineError(f"plot {plot_id} does not exist")
+            raise EngineError(f"el lote {plot_id} no existe")
         readings = self.repository.list_readings(plot_id)
         if not readings:
-            raise EngineError("plot has no readings; import or submit readings first")
-
-        spatial_result = self.spatial.run(plot, readings)
-        for annotation in spatial_result["quality"]:
-            self.repository.update_reading_quality(
-                annotation["reading_id"],
-                valid_for_model=annotation["valid_for_model"],
-                suspicious=annotation["suspicious"],
-                method=annotation["method"],
-                score=annotation["score"],
-                reason=annotation["reason"],
+            raise PlotHasNoReadingsError(
+                f"el lote {plot_id} no tiene mediciones: importe un archivo o "
+                "registre una lectura antes de calcular"
             )
+
+        # El GP y el benchmark leave-one-out son CPU pura y tardan cientos de
+        # milisegundos: dentro del event loop dejarían al proceso sin atender
+        # ni siquiera el health check mientras corren.
+        spatial_result = await run_in_threadpool(self.spatial.run, plot, readings)
+        self.repository.update_reading_qualities(spatial_result["quality"])
         generated_at = utc_now()
         model_run = spatial_result["model_run"] | {
             "id": stable_id(
@@ -68,10 +77,12 @@ class SoilIntelligenceEngine:
         climate_context = await self.climate.evaluate(latitude, longitude)
         profile = self.repository.get_crop_profile(plot.crop_profile_id)
         if profile is None:
-            raise EngineError(f"crop profile {plot.crop_profile_id} does not exist")
+            raise EngineError(f"el perfil de cultivo {plot.crop_profile_id} no existe")
         formulations = self.repository.list_formulations(plot.center_id, active_only=True)
         if not formulations:
-            raise EngineError(f"center {plot.center_id} has no active formulations")
+            raise EngineError(
+                f"el centro {plot.center_id} no tiene formulaciones activas en su catálogo"
+            )
 
         recommendations: list[dict[str, Any]] = []
         for zone in spatial_result["zones"]:
@@ -114,7 +125,8 @@ class SoilIntelligenceEngine:
         ]
         warnings = list(climate_context["warnings"]) + list(model_run["limitations"])
         warnings.append(
-            "The crop profile is demo_unvalidated; no candidate plan is an applied prescription."
+            "El perfil de cultivo está sin validar: ningún plan candidato es una "
+            "prescripción aplicada."
         )
         metadata = contract_metadata(
             validation_status="requires_technical_validation",
@@ -201,32 +213,41 @@ class SoilIntelligenceEngine:
     ) -> dict[str, Any]:
         explanation = {
             "summary": (
-                "Candidate integer formulation plans were derived from spatial estimates, "
-                "explicit demo agronomy assumptions and the center's active catalog."
+                "Los planes candidatos de formulación entera salen de las estimaciones "
+                "espaciales, de los supuestos agronómicos explícitos de la demo y del "
+                "catálogo activo del centro de acopio."
             ),
             "steps": [
                 {
-                    "step": "spatial inference",
+                    "step": "Inferencia espacial",
                     "evidence_id": model_run["id"],
-                    "detail": "Three Matern Gaussian Processes produced means and uncertainty.",
-                },
-                {
-                    "step": "agronomic accounting",
                     "detail": (
-                        "Soil percentage was converted to sampled-layer mass and availability; "
-                        "it was not subtracted from bag percentage."
+                        "Tres procesos gaussianos Matérn, uno por nutriente, produjeron "
+                        "la media y la incertidumbre de cada celda."
                     ),
                 },
                 {
-                    "step": "integer optimization",
+                    "step": "Balance agronómico",
                     "detail": (
-                        "Each zone used exact bounded integer search with shortfall, excess, "
-                        "bag count and formulation count in that order."
+                        "El porcentaje del suelo se convirtió a masa de la capa muestreada "
+                        "y se aplicó un factor de disponibilidad explícito. Nunca se restó "
+                        "del porcentaje del bulto."
                     ),
                 },
                 {
-                    "step": "climate context",
-                    "detail": "Risk rules used the fused sources and can block application timing.",
+                    "step": "Optimización entera",
+                    "detail": (
+                        "Cada zona resolvió una búsqueda entera exacta y acotada que "
+                        "minimiza, en ese orden, faltante, exceso, número de bultos y "
+                        "número de formulaciones distintas."
+                    ),
+                },
+                {
+                    "step": "Contexto climático",
+                    "detail": (
+                        "Las reglas de riesgo usaron las fuentes fusionadas y pueden "
+                        "aplazar el momento de aplicación."
+                    ),
                 },
             ],
             "evidence": {
@@ -235,9 +256,9 @@ class SoilIntelligenceEngine:
                 "input_hash": model_run["input_hash"],
             },
             "unknowns": [
-                "The sensor has not been calibrated against laboratory samples.",
-                "The crop profile has not been validated by a local agronomist.",
-                "Offline or stale climate data must be refreshed before field action.",
+                "El sensor no está calibrado contra muestras de laboratorio.",
+                "El perfil de cultivo no ha sido validado por un agrónomo local.",
+                "El clima está en modo degradado o no actual: hay que refrescarlo antes de ir a campo.",
             ],
         }
         return {

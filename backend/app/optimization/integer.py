@@ -39,17 +39,19 @@ class IntegerFormulationOptimizer:
             key=lambda formulation: formulation.id,
         )
         if not active:
-            raise OptimizationError("the center has no active formulations")
+            raise OptimizationError("el centro no tiene formulaciones activas")
         if zone_area_ha <= 0:
-            raise OptimizationError("zone_area_ha must be positive")
+            raise OptimizationError("el área de la zona debe ser positiva")
         if maximum_bags <= 0:
-            raise OptimizationError("maximum_bags must be positive")
+            raise OptimizationError("el máximo de bultos debe ser positivo")
         for formulation in active:
             require_elemental_basis(formulation.basis)
         missing_targets = set(NUTRIENTS) - set(target_kg_ha)
         missing_limits = set(NUTRIENTS) - set(maximum_application_kg_ha)
         if missing_targets or missing_limits:
-            raise OptimizationError("target and maximum application must define N, P and K")
+            raise OptimizationError(
+                "el objetivo y el máximo de aplicación deben definir N, P y K"
+            )
 
         requirement = {
             nutrient: max(0.0, float(target_kg_ha[nutrient]) * zone_area_ha)
@@ -98,7 +100,9 @@ class IntegerFormulationOptimizer:
                 best_contribution = contribution
 
         if best_counts is None or best_contribution is None or best_objective is None:
-            raise OptimizationError("no combination satisfies the configured maximum application limits")
+            raise OptimizationError(
+                "ninguna combinación respeta los límites máximos de aplicación configurados"
+            )
 
         shortfall = {
             nutrient: max(0.0, requirement[nutrient] - best_contribution[nutrient])
@@ -184,9 +188,9 @@ class IntegerFormulationOptimizer:
             "validation_status": result_validation_status,
             "technical_review_required": result_validation_status != "validated",
             "why_this_combination_won": (
-                f"It is the lexicographic optimum among {feasible} feasible integer "
-                "combinations: first least elemental nutrient shortfall, then least "
-                "excess, then fewest bags, then fewest distinct formulations."
+                f"Es el óptimo lexicográfico entre {feasible} combinaciones enteras "
+                "factibles: primero el menor faltante elemental, después el menor "
+                "exceso, después menos bultos y por último menos formulaciones distintas."
             ),
         }
 

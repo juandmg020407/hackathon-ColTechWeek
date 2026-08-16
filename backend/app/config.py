@@ -42,7 +42,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     write_api_key: str = ""
     demo_mode: bool = True
-    demo_auto_import: bool = False
+    # En serverless la base vive en /tmp y desaparece entre arranques en frío.
+    # Sin esta siembra el lote demo queda vacío, /package falla y el despliegue
+    # acaba sirviendo el mock del frontend en vez del backend real.
+    demo_auto_import: bool = True
     external_sources_enabled: bool = False
     external_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
     external_max_retries: int = Field(default=2, ge=0, le=5)

@@ -83,4 +83,4 @@ def test_configurable_profile_drives_explicit_soil_mass_balance():
     assert result["sampling_layer"]["depth"] == {"value": 20.0, "unit": "cm"}
     assert result["calculated_deficit"]["N"] == 144
     assert result["validation_status"] == "requires_technical_validation"
-    assert "not subtracted" in result["warning"]
+    assert "No se restó del porcentaje de la formulación" in result["warning"]

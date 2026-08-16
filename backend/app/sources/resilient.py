@@ -111,7 +111,7 @@ class ResilientJSONSource:
                 cached,
                 offline_payload,
                 offline_fetched_at,
-                "network access is disabled; using a versioned offline fixture",
+                "el acceso a Internet está desactivado; se usa un fixture versionado sin conexión",
             )
 
         circuit_until = _parse_time(cached.get("circuit_open_until")) if cached else None
@@ -120,10 +120,10 @@ class ResilientJSONSource:
                 cached,
                 offline_payload,
                 offline_fetched_at,
-                f"circuit is open until {circuit_until.isoformat()}",
+                f"el cortacircuitos sigue abierto hasta {circuit_until.isoformat()}",
             )
 
-        last_error = "unknown source failure"
+        last_error = "fallo no identificado de la fuente"
         seeded_random = random.Random(f"{self.name}:{key}")
         for attempt in range(self.policy.max_retries + 1):
             try:
@@ -135,7 +135,7 @@ class ResilientJSONSource:
                     response.raise_for_status()
                     payload = response.json()
                     if not isinstance(payload, dict):
-                        raise ValueError("source response must be a JSON object")
+                        raise ValueError("la respuesta de la fuente debe ser un objeto JSON")
                 fetched_at = _utc_now()
                 expires_at = fetched_at + timedelta(seconds=self.policy.ttl_seconds)
                 self.repository.put_external_cache(
@@ -200,5 +200,5 @@ class ResilientJSONSource:
             degraded=True,
             stale=True,
             failed=True,
-            warning=f"{self.name}: {reason}; data is not presented as current",
+            warning=f"{self.name}: {reason}. El dato no se presenta como actual.",
         )

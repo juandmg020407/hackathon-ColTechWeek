@@ -51,15 +51,19 @@ class AgronomicCalculator:
         reasons: list[str] = []
         if profile.validation_status != "validated":
             reasons.append(
-                f"crop profile {profile.id}@{profile.version} is {profile.validation_status}"
+                f"El perfil de cultivo {profile.id}@{profile.version} está "
+                f"'{profile.validation_status}' y no es una prescripción validada."
             )
         if limits_exceeded:
             reasons.append(
-                "calculated deficit exceeds the configured maximum for "
+                "El faltante calculado supera el máximo configurado para "
                 + ", ".join(limits_exceeded)
+                + "."
             )
         if active_constraints:
-            reasons.append("climate context requires timing or dose review")
+            reasons.append(
+                "El contexto climático obliga a revisar el momento o la dosis de aplicación."
+            )
         validation_status = "validated" if not reasons else "requires_technical_validation"
 
         return {
@@ -95,8 +99,9 @@ class AgronomicCalculator:
             "validation_status": validation_status,
             "technical_validation_reasons": reasons,
             "warning": (
-                "Soil percentage was converted through sampled soil mass and an explicit "
-                "availability factor. It was not subtracted from formulation percentage."
+                "El porcentaje del suelo se convirtió a través de la masa de suelo "
+                "muestreada y de un factor de disponibilidad explícito. No se restó "
+                "del porcentaje de la formulación."
             ),
         }
 
@@ -111,18 +116,27 @@ class AgronomicCalculator:
                 constraints.append({
                     "id": "verify-water-before-application",
                     "risk": risk_type,
-                    "effect": "do not present the candidate as ready to apply until water is verified",
+                    "effect": (
+                        "No presentar el candidato como listo para aplicar hasta "
+                        "verificar la disponibilidad de agua."
+                    ),
                 })
             elif risk_type == "frost":
                 constraints.append({
                     "id": "technician-review-before-frost-window",
                     "risk": risk_type,
-                    "effect": "review application timing against the forecast frost window",
+                    "effect": (
+                        "Revisar el momento de aplicación contra la ventana de "
+                        "helada pronosticada."
+                    ),
                 })
             elif risk_type == "late_blight":
                 constraints.append({
                     "id": "avoid-leaf-wetting-window",
                     "risk": risk_type,
-                    "effect": "coordinate field work with the late-blight inspection window",
+                    "effect": (
+                        "Coordinar el trabajo en campo con la ventana de inspección "
+                        "de gota tardía."
+                    ),
                 })
         return constraints

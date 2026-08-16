@@ -27,7 +27,15 @@
 - [x] Productores, consentimiento y dashboard persistido del centro.
 - [x] Logs JSON, request ID, errores consistentes, CORS y API key opcional.
 - [x] OpenAPI v2 y script de demo sin Internet.
-- [x] 42 pruebas unitarias, ML, contrato e integración offline.
+- [x] Español en todo el texto que lee una persona, con prueba de regresión que
+  recorre el package y el tablero buscando prosa inglesa.
+- [x] Ortografía correcta en la configuración versionada (Nariño, El Niño).
+- [x] Un código de error por excepción de dominio; un lote sin mediciones
+  responde `409 plot_has_no_readings` y no un error genérico.
+- [x] Siembra automática del lote demo si está vacío, para que el arranque en
+  frío de serverless sirva datos reales.
+- [x] `spatial.run` fuera del event loop y proyecciones agregadas del tablero.
+- [x] 57 pruebas unitarias, ML, contrato, operación e integración offline.
 
 ## Resultado ML que debe conservarse
 

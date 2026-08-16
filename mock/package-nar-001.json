@@ -43,31 +43,31 @@
       "failed": false
     },
     {
-      "name": "Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.",
+      "name": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
       "url": null,
       "parameter": "requirement_kg_ha",
       "degraded": true
     },
     {
-      "name": "Supuesto de muestreo de demostracion IOmido v1.",
+      "name": "Supuesto de muestreo de demostración IOmido v1.",
       "url": null,
       "parameter": "sampling_depth_cm",
       "degraded": true
     },
     {
-      "name": "Estimacion demostrativa para suelo volcanico; requiere medicion del lote.",
+      "name": "Estimación demostrativa para suelo volcánico; requiere medición del lote.",
       "url": null,
       "parameter": "bulk_density_g_cm3",
       "degraded": true
     },
     {
-      "name": "Factor operacional conservador de demostracion IOmido v1.",
+      "name": "Factor operacional conservador de demostración IOmido v1.",
       "url": null,
       "parameter": "availability_fraction",
       "degraded": true
     },
     {
-      "name": "Limite de seguridad de demostracion IOmido v1.",
+      "name": "Límite de seguridad de demostración IOmido v1.",
       "url": null,
       "parameter": "maximum_application_kg_ha",
       "degraded": true
@@ -85,24 +85,24 @@
     "agronomy": "soil-mass-balance/2.0.0",
     "optimizer": "bounded-exact-integer/2.0.0"
   },
-  "generated_at": "2026-08-16T05:47:18.266023Z",
+  "generated_at": "2026-08-16T07:52:33.697900Z",
   "degraded": true,
   "warnings": [
-    "Open-Meteo Forecast: network access is disabled; using a versioned offline fixture; data is not presented as current",
-    "NASA POWER: network access is disabled; using a versioned offline fixture; data is not presented as current",
-    "Sensor percentages have not been calibrated against laboratory samples.",
-    "Spatial predictions support sampling and review; they are not laboratory measurements.",
-    "Small dataset (18 in-plot observations); metrics have high variance.",
-    "The crop profile is demo_unvalidated; no candidate plan is an applied prescription."
+    "Open-Meteo Forecast: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
+    "NASA POWER: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
+    "Los porcentajes del sensor no están calibrados contra muestras de laboratorio.",
+    "Las predicciones espaciales orientan el muestreo y la revisión; no son análisis de laboratorio.",
+    "Conjunto pequeño (18 observaciones dentro del lote): las métricas tienen alta variabilidad.",
+    "El perfil de cultivo está sin validar: ningún plan candidato es una prescripción aplicada."
   ],
-  "id": "package-800aec473c26195b",
+  "id": "package-568bd23014a3cc07",
   "plot": {
     "id": "nar-001",
     "center_id": "center-pasto-demo",
     "producer_id": "producer-el-rosal-demo",
     "crop_profile_id": "potato-pasto-demo-v1",
     "name": "Lote El Rosal",
-    "municipality": "Pasto, Narino",
+    "municipality": "Pasto, Nariño",
     "boundary": [
       [
         1.2475,
@@ -161,7 +161,7 @@
           "suspicious": false,
           "method": "geometry/polygon-v1",
           "score": null,
-          "reason": "measurement is outside the declared plot boundary"
+          "reason": "La medición cae fuera del polígono declarado del lote."
         }
       },
       {
@@ -353,7 +353,7 @@
           "suspicious": true,
           "method": "median-mad/v1 + isolation-forest/v1",
           "score": 4.7215,
-          "reason": "robust MAD score 4.72 exceeds 3.50; Isolation Forest score is in the most unusual 10%"
+          "reason": "El puntaje robusto MAD es 4.72 y supera el umbral de 3,50.; Isolation Forest la ubica en el 10 % de lecturas más inusuales."
         }
       },
       {
@@ -417,7 +417,7 @@
           "suspicious": true,
           "method": "median-mad/v1 + isolation-forest/v1",
           "score": 4.7215,
-          "reason": "robust MAD score 4.72 exceeds 3.50; Isolation Forest score is in the most unusual 10%"
+          "reason": "El puntaje robusto MAD es 4.72 y supera el umbral de 3,50.; Isolation Forest la ubica en el 10 % de lecturas más inusuales."
         }
       },
       {
@@ -2455,7 +2455,7 @@
           null
         ],
         "threshold": 4.515022,
-        "threshold_method": "75th percentile of in-plot predictive uncertainty",
+        "threshold_method": "Percentil 75 de la incertidumbre predictiva dentro del lote.",
         "unit": "percentage_points"
       }
     },
@@ -2656,11 +2656,11 @@
         "value": 54.027,
         "unit": "m"
       },
-      "reason": "Selected inside the plot by high predictive uncertainty and distance from existing measurements.",
+      "reason": "Se eligió dentro del lote combinando incertidumbre predictiva alta y distancia a las mediciones existentes.",
       "potential_coverage_improvement": {
         "upper_bound_percentage_points": 6.84,
-        "method": "heuristic neighborhood of currently uncertain cells",
-        "limitation": "This is an upper bound, not a promised uncertainty reduction."
+        "method": "Vecindario heurístico de las celdas hoy inciertas.",
+        "limitation": "Es una cota superior, no una reducción de incertidumbre prometida."
       }
     }
   },
@@ -2728,18 +2728,18 @@
         "idw": 4.619368
       },
       "gp_better_than_idw": false,
-      "claim": "GP is not claimed to outperform IDW for this input set."
+      "claim": "No se afirma que el GP supere a IDW con este conjunto de datos."
     },
-    "inference_ms": 547.529,
+    "inference_ms": 397.023,
     "input_hash": "e088f55208bdf1f3f0f378e29a917d1f9ce3a168dafff8e5e09875b22a2b40e3",
     "limitations": [
-      "Sensor percentages have not been calibrated against laboratory samples.",
-      "Spatial predictions support sampling and review; they are not laboratory measurements.",
-      "Small dataset (18 in-plot observations); metrics have high variance."
+      "Los porcentajes del sensor no están calibrados contra muestras de laboratorio.",
+      "Las predicciones espaciales orientan el muestreo y la revisión; no son análisis de laboratorio.",
+      "Conjunto pequeño (18 observaciones dentro del lote): las métricas tienen alta variabilidad."
     ],
-    "id": "model-run-aa60691c0fccbf02",
+    "id": "model-run-f731bec51b0d14c2",
     "plot_id": "nar-001",
-    "created_at": "2026-08-16T05:47:18.266023Z"
+    "created_at": "2026-08-16T07:52:33.697900Z"
   },
   "climate": {
     "risks": [
@@ -2761,7 +2761,7 @@
         },
         "inputs": {
           "minimum_temperature_c": 2.4,
-          "enso_phase": "El Nino"
+          "enso_phase": "El Niño"
         },
         "sources": [
           {
@@ -2790,11 +2790,11 @@
           }
         ],
         "model_version": "frost-rule/2.0.0",
-        "recommended_action": "Review the local station and protect exposed areas before the forecast minimum.",
+        "recommended_action": "Consulte la estación local y proteja las zonas expuestas antes de la mínima prevista.",
         "limitations": [
-          "Rules are decision support and have not been locally validated as a supervised classifier.",
-          "No synthetic labels were used; probabilities are transparent rule scores.",
-          "Coarse climate products can smooth high-altitude extremes."
+          "Son reglas de apoyo a la decisión, no un clasificador entrenado y validado localmente.",
+          "No se usaron etiquetas sintéticas: la probabilidad es el puntaje transparente de la regla.",
+          "Los productos climáticos de baja resolución suavizan los extremos de alta montaña."
         ]
       },
       {
@@ -2818,7 +2818,7 @@
           "evapotranspiration_mm": 57.1,
           "water_balance_mm": -22.6,
           "seasonal_rainfall_anomaly_pct": -22.0,
-          "enso_phase": "El Nino"
+          "enso_phase": "El Niño"
         },
         "sources": [
           {
@@ -2847,10 +2847,10 @@
           }
         ],
         "model_version": "drought-water-balance-rule/2.0.0",
-        "recommended_action": "Prioritize soil moisture verification and postpone nutrient application if water is unavailable.",
+        "recommended_action": "Verifique la humedad del suelo primero y aplace la aplicación de nutrientes si no hay agua.",
         "limitations": [
-          "Rules are decision support and have not been locally validated as a supervised classifier.",
-          "No synthetic labels were used; probabilities are transparent rule scores."
+          "Son reglas de apoyo a la decisión, no un clasificador entrenado y validado localmente.",
+          "No se usaron etiquetas sintéticas: la probabilidad es el puntaje transparente de la regla."
         ]
       },
       {
@@ -2899,11 +2899,11 @@
           }
         ],
         "model_version": "late-blight-hours-rule/2.0.0",
-        "recommended_action": "Inspect lower leaves and ask the technician to validate preventive action.",
+        "recommended_action": "Revise las hojas bajeras y pida al técnico que valide cualquier acción preventiva.",
         "limitations": [
-          "Rules are decision support and have not been locally validated as a supervised classifier.",
-          "No synthetic labels were used; probabilities are transparent rule scores.",
-          "Weather suitability is not evidence that the pathogen is present."
+          "Son reglas de apoyo a la decisión, no un clasificador entrenado y validado localmente.",
+          "No se usaron etiquetas sintéticas: la probabilidad es el puntaje transparente de la regla.",
+          "Que el clima sea favorable no prueba que el patógeno esté presente en el lote."
         ]
       }
     ],
@@ -2913,10 +2913,10 @@
         "rainfall_anomaly_pct": -22.0,
         "mean_temperature_c": 12.1,
         "horizon_months": 6,
-        "source": "Versioned IOmido demo fixture derived from seasonal context; refresh before field use."
+        "source": "Fixture versionado de demostración IOmido derivado del contexto estacional; actualícelo antes de usarlo en campo."
       },
       "enso": {
-        "phase": "El Nino",
+        "phase": "El Niño",
         "index_c": 0.7,
         "persistence_probability": 0.97,
         "published_at": "2026-08-04T00:00:00Z",
@@ -2992,8 +2992,8 @@
     ],
     "degraded": true,
     "warnings": [
-      "Open-Meteo Forecast: network access is disabled; using a versioned offline fixture; data is not presented as current",
-      "NASA POWER: network access is disabled; using a versioned offline fixture; data is not presented as current"
+      "Open-Meteo Forecast: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual.",
+      "NASA POWER: el acceso a Internet está desactivado; se usa un fixture versionado sin conexión. El dato no se presenta como actual."
     ]
   },
   "crop_profile": {
@@ -3001,7 +3001,7 @@
     "crop": "papa",
     "variety": "Diacol Capiro",
     "stage": "establecimiento y desarrollo",
-    "scope": "lote demostrativo de Pasto, Narino; no transferible sin validacion local",
+    "scope": "lote demostrativo de Pasto, Nariño; no transferible sin validación local",
     "requirement_kg_ha": {
       "N": 180.0,
       "P": 90.0,
@@ -3028,33 +3028,33 @@
     "sources": [
       {
         "parameter": "requirement_kg_ha",
-        "citation": "Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.",
+        "citation": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
         "url": null,
-        "note": "No es una prescripcion validada."
+        "note": "No es una prescripción validada."
       },
       {
         "parameter": "sampling_depth_cm",
-        "citation": "Supuesto de muestreo de demostracion IOmido v1.",
+        "citation": "Supuesto de muestreo de demostración IOmido v1.",
         "url": null,
         "note": "Debe confirmarse con el protocolo de campo."
       },
       {
         "parameter": "bulk_density_g_cm3",
-        "citation": "Estimacion demostrativa para suelo volcanico; requiere medicion del lote.",
+        "citation": "Estimación demostrativa para suelo volcánico; requiere medición del lote.",
         "url": null,
         "note": "No proviene de una muestra de densidad aparente del lote."
       },
       {
         "parameter": "availability_fraction",
-        "citation": "Factor operacional conservador de demostracion IOmido v1.",
+        "citation": "Factor operacional conservador de demostración IOmido v1.",
         "url": null,
-        "note": "Debe calibrarse contra analisis de laboratorio y respuesta del cultivo."
+        "note": "Debe calibrarse contra análisis de laboratorio y respuesta del cultivo."
       },
       {
         "parameter": "maximum_application_kg_ha",
-        "citation": "Limite de seguridad de demostracion IOmido v1.",
+        "citation": "Límite de seguridad de demostración IOmido v1.",
         "url": null,
-        "note": "Requiere validacion tecnica antes de cualquier aplicacion."
+        "note": "Requiere validación técnica antes de cualquier aplicación."
       },
       {
         "parameter": "target_yield_t_ha",
@@ -3069,9 +3069,9 @@
     "effective_from": "2026-08-15"
   },
   "proposal": {
-    "id": "proposal-beb94b4ad3ee5972",
+    "id": "proposal-0ff9a69dcaad27ef",
     "plot_id": "nar-001",
-    "package_id": "package-800aec473c26195b",
+    "package_id": "package-568bd23014a3cc07",
     "status": "pending",
     "validation_status": "requires_technical_validation",
     "human_decision_required": true,
@@ -3162,33 +3162,33 @@
             "sources": [
               {
                 "parameter": "requirement_kg_ha",
-                "citation": "Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.",
+                "citation": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
                 "url": null,
-                "note": "No es una prescripcion validada."
+                "note": "No es una prescripción validada."
               },
               {
                 "parameter": "sampling_depth_cm",
-                "citation": "Supuesto de muestreo de demostracion IOmido v1.",
+                "citation": "Supuesto de muestreo de demostración IOmido v1.",
                 "url": null,
                 "note": "Debe confirmarse con el protocolo de campo."
               },
               {
                 "parameter": "bulk_density_g_cm3",
-                "citation": "Estimacion demostrativa para suelo volcanico; requiere medicion del lote.",
+                "citation": "Estimación demostrativa para suelo volcánico; requiere medición del lote.",
                 "url": null,
                 "note": "No proviene de una muestra de densidad aparente del lote."
               },
               {
                 "parameter": "availability_fraction",
-                "citation": "Factor operacional conservador de demostracion IOmido v1.",
+                "citation": "Factor operacional conservador de demostración IOmido v1.",
                 "url": null,
-                "note": "Debe calibrarse contra analisis de laboratorio y respuesta del cultivo."
+                "note": "Debe calibrarse contra análisis de laboratorio y respuesta del cultivo."
               },
               {
                 "parameter": "maximum_application_kg_ha",
-                "citation": "Limite de seguridad de demostracion IOmido v1.",
+                "citation": "Límite de seguridad de demostración IOmido v1.",
                 "url": null,
-                "note": "Requiere validacion tecnica antes de cualquier aplicacion."
+                "note": "Requiere validación técnica antes de cualquier aplicación."
               },
               {
                 "parameter": "target_yield_t_ha",
@@ -3200,9 +3200,9 @@
           },
           "validation_status": "requires_technical_validation",
           "technical_validation_reasons": [
-            "crop profile potato-pasto-demo-v1@1.0.0 is demo_unvalidated"
+            "El perfil de cultivo potato-pasto-demo-v1@1.0.0 está 'demo_unvalidated' y no es una prescripción validada."
           ],
-          "warning": "Soil percentage was converted through sampled soil mass and an explicit availability factor. It was not subtracted from formulation percentage."
+          "warning": "El porcentaje del suelo se convirtió a través de la masa de suelo muestreada y de un factor de disponibilidad explícito. No se restó del porcentaje de la formulación."
         },
         "integer_plan": {
           "optimizer": {
@@ -3244,7 +3244,7 @@
                 "unit": "kg",
                 "basis": "elemental"
               },
-              "source": "Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.",
+              "source": "Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.",
               "basis": "elemental_mass_pct"
             },
             {
@@ -3266,7 +3266,7 @@
                 "unit": "kg",
                 "basis": "elemental"
               },
-              "source": "Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.",
+              "source": "Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.",
               "basis": "elemental_mass_pct"
             }
           ],
@@ -3330,7 +3330,7 @@
           ],
           "validation_status": "requires_technical_validation",
           "technical_review_required": true,
-          "why_this_combination_won": "It is the lexicographic optimum among 225 feasible integer combinations: first least elemental nutrient shortfall, then least excess, then fewest bags, then fewest distinct formulations."
+          "why_this_combination_won": "Es el óptimo lexicográfico entre 225 combinaciones enteras factibles: primero el menor faltante elemental, después el menor exceso, después menos bultos y por último menos formulaciones distintas."
         }
       },
       {
@@ -3418,33 +3418,33 @@
             "sources": [
               {
                 "parameter": "requirement_kg_ha",
-                "citation": "Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.",
+                "citation": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
                 "url": null,
-                "note": "No es una prescripcion validada."
+                "note": "No es una prescripción validada."
               },
               {
                 "parameter": "sampling_depth_cm",
-                "citation": "Supuesto de muestreo de demostracion IOmido v1.",
+                "citation": "Supuesto de muestreo de demostración IOmido v1.",
                 "url": null,
                 "note": "Debe confirmarse con el protocolo de campo."
               },
               {
                 "parameter": "bulk_density_g_cm3",
-                "citation": "Estimacion demostrativa para suelo volcanico; requiere medicion del lote.",
+                "citation": "Estimación demostrativa para suelo volcánico; requiere medición del lote.",
                 "url": null,
                 "note": "No proviene de una muestra de densidad aparente del lote."
               },
               {
                 "parameter": "availability_fraction",
-                "citation": "Factor operacional conservador de demostracion IOmido v1.",
+                "citation": "Factor operacional conservador de demostración IOmido v1.",
                 "url": null,
-                "note": "Debe calibrarse contra analisis de laboratorio y respuesta del cultivo."
+                "note": "Debe calibrarse contra análisis de laboratorio y respuesta del cultivo."
               },
               {
                 "parameter": "maximum_application_kg_ha",
-                "citation": "Limite de seguridad de demostracion IOmido v1.",
+                "citation": "Límite de seguridad de demostración IOmido v1.",
                 "url": null,
-                "note": "Requiere validacion tecnica antes de cualquier aplicacion."
+                "note": "Requiere validación técnica antes de cualquier aplicación."
               },
               {
                 "parameter": "target_yield_t_ha",
@@ -3456,9 +3456,9 @@
           },
           "validation_status": "requires_technical_validation",
           "technical_validation_reasons": [
-            "crop profile potato-pasto-demo-v1@1.0.0 is demo_unvalidated"
+            "El perfil de cultivo potato-pasto-demo-v1@1.0.0 está 'demo_unvalidated' y no es una prescripción validada."
           ],
-          "warning": "Soil percentage was converted through sampled soil mass and an explicit availability factor. It was not subtracted from formulation percentage."
+          "warning": "El porcentaje del suelo se convirtió a través de la masa de suelo muestreada y de un factor de disponibilidad explícito. No se restó del porcentaje de la formulación."
         },
         "integer_plan": {
           "optimizer": {
@@ -3500,7 +3500,7 @@
                 "unit": "kg",
                 "basis": "elemental"
               },
-              "source": "Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.",
+              "source": "Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.",
               "basis": "elemental_mass_pct"
             },
             {
@@ -3522,7 +3522,7 @@
                 "unit": "kg",
                 "basis": "elemental"
               },
-              "source": "Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.",
+              "source": "Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.",
               "basis": "elemental_mass_pct"
             }
           ],
@@ -3586,7 +3586,7 @@
           ],
           "validation_status": "requires_technical_validation",
           "technical_review_required": true,
-          "why_this_combination_won": "It is the lexicographic optimum among 38 feasible integer combinations: first least elemental nutrient shortfall, then least excess, then fewest bags, then fewest distinct formulations."
+          "why_this_combination_won": "Es el óptimo lexicográfico entre 38 combinaciones enteras factibles: primero el menor faltante elemental, después el menor exceso, después menos bultos y por último menos formulaciones distintas."
         }
       },
       {
@@ -3674,33 +3674,33 @@
             "sources": [
               {
                 "parameter": "requirement_kg_ha",
-                "citation": "Supuesto de demostracion IOmido v1; requiere revision de un ingeniero agronomo local.",
+                "citation": "Supuesto de demostración IOmido v1; requiere revisión de un ingeniero agrónomo local.",
                 "url": null,
-                "note": "No es una prescripcion validada."
+                "note": "No es una prescripción validada."
               },
               {
                 "parameter": "sampling_depth_cm",
-                "citation": "Supuesto de muestreo de demostracion IOmido v1.",
+                "citation": "Supuesto de muestreo de demostración IOmido v1.",
                 "url": null,
                 "note": "Debe confirmarse con el protocolo de campo."
               },
               {
                 "parameter": "bulk_density_g_cm3",
-                "citation": "Estimacion demostrativa para suelo volcanico; requiere medicion del lote.",
+                "citation": "Estimación demostrativa para suelo volcánico; requiere medición del lote.",
                 "url": null,
                 "note": "No proviene de una muestra de densidad aparente del lote."
               },
               {
                 "parameter": "availability_fraction",
-                "citation": "Factor operacional conservador de demostracion IOmido v1.",
+                "citation": "Factor operacional conservador de demostración IOmido v1.",
                 "url": null,
-                "note": "Debe calibrarse contra analisis de laboratorio y respuesta del cultivo."
+                "note": "Debe calibrarse contra análisis de laboratorio y respuesta del cultivo."
               },
               {
                 "parameter": "maximum_application_kg_ha",
-                "citation": "Limite de seguridad de demostracion IOmido v1.",
+                "citation": "Límite de seguridad de demostración IOmido v1.",
                 "url": null,
-                "note": "Requiere validacion tecnica antes de cualquier aplicacion."
+                "note": "Requiere validación técnica antes de cualquier aplicación."
               },
               {
                 "parameter": "target_yield_t_ha",
@@ -3712,9 +3712,9 @@
           },
           "validation_status": "requires_technical_validation",
           "technical_validation_reasons": [
-            "crop profile potato-pasto-demo-v1@1.0.0 is demo_unvalidated"
+            "El perfil de cultivo potato-pasto-demo-v1@1.0.0 está 'demo_unvalidated' y no es una prescripción validada."
           ],
-          "warning": "Soil percentage was converted through sampled soil mass and an explicit availability factor. It was not subtracted from formulation percentage."
+          "warning": "El porcentaje del suelo se convirtió a través de la masa de suelo muestreada y de un factor de disponibilidad explícito. No se restó del porcentaje de la formulación."
         },
         "integer_plan": {
           "optimizer": {
@@ -3756,7 +3756,7 @@
                 "unit": "kg",
                 "basis": "elemental"
               },
-              "source": "Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.",
+              "source": "Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.",
               "basis": "elemental_mass_pct"
             }
           ],
@@ -3820,33 +3820,33 @@
           ],
           "validation_status": "requires_technical_validation",
           "technical_review_required": true,
-          "why_this_combination_won": "It is the lexicographic optimum among 10 feasible integer combinations: first least elemental nutrient shortfall, then least excess, then fewest bags, then fewest distinct formulations."
+          "why_this_combination_won": "Es el óptimo lexicográfico entre 10 combinaciones enteras factibles: primero el menor faltante elemental, después el menor exceso, después menos bultos y por último menos formulaciones distintas."
         }
       }
     ],
     "explanation": {
-      "summary": "Candidate integer formulation plans were derived from spatial estimates, explicit demo agronomy assumptions and the center's active catalog.",
+      "summary": "Los planes candidatos de formulación entera salen de las estimaciones espaciales, de los supuestos agronómicos explícitos de la demo y del catálogo activo del centro de acopio.",
       "steps": [
         {
-          "step": "spatial inference",
-          "evidence_id": "model-run-aa60691c0fccbf02",
-          "detail": "Three Matern Gaussian Processes produced means and uncertainty."
+          "step": "Inferencia espacial",
+          "evidence_id": "model-run-f731bec51b0d14c2",
+          "detail": "Tres procesos gaussianos Matérn, uno por nutriente, produjeron la media y la incertidumbre de cada celda."
         },
         {
-          "step": "agronomic accounting",
-          "detail": "Soil percentage was converted to sampled-layer mass and availability; it was not subtracted from bag percentage."
+          "step": "Balance agronómico",
+          "detail": "El porcentaje del suelo se convirtió a masa de la capa muestreada y se aplicó un factor de disponibilidad explícito. Nunca se restó del porcentaje del bulto."
         },
         {
-          "step": "integer optimization",
-          "detail": "Each zone used exact bounded integer search with shortfall, excess, bag count and formulation count in that order."
+          "step": "Optimización entera",
+          "detail": "Cada zona resolvió una búsqueda entera exacta y acotada que minimiza, en ese orden, faltante, exceso, número de bultos y número de formulaciones distintas."
         },
         {
-          "step": "climate context",
-          "detail": "Risk rules used the fused sources and can block application timing."
+          "step": "Contexto climático",
+          "detail": "Las reglas de riesgo usaron las fuentes fusionadas y pueden aplazar el momento de aplicación."
         }
       ],
       "evidence": {
-        "model_run_id": "model-run-aa60691c0fccbf02",
+        "model_run_id": "model-run-f731bec51b0d14c2",
         "source_names": [
           "Open-Meteo Forecast",
           "NASA POWER",
@@ -3855,11 +3855,11 @@
         "input_hash": "e088f55208bdf1f3f0f378e29a917d1f9ce3a168dafff8e5e09875b22a2b40e3"
       },
       "unknowns": [
-        "The sensor has not been calibrated against laboratory samples.",
-        "The crop profile has not been validated by a local agronomist.",
-        "Offline or stale climate data must be refreshed before field action."
+        "El sensor no está calibrado contra muestras de laboratorio.",
+        "El perfil de cultivo no ha sido validado por un agrónomo local.",
+        "El clima está en modo degradado o no actual: hay que refrescarlo antes de ir a campo."
       ]
     },
-    "created_at": "2026-08-16T05:47:18.266023Z"
+    "created_at": "2026-08-16T07:52:33.697900Z"
   }
 }

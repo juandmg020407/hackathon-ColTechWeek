@@ -1,14 +1,14 @@
 center:
   id: center-pasto-demo
   name: Centro de acopio Pasto demo
-  municipality: Pasto, Narino
+  municipality: Pasto, Nariño
   version: "1.0.0"
   validation_status: demo_unvalidated
 producer:
   id: producer-el-rosal-demo
   center_id: center-pasto-demo
   display_name: Productor demo El Rosal
-  municipality: Pasto, Narino
+  municipality: Pasto, Nariño
   data_origin: demonstration
   consent_status: demonstration
 plot:
@@ -17,7 +17,7 @@ plot:
   producer_id: producer-el-rosal-demo
   crop_profile_id: potato-pasto-demo-v1
   name: Lote El Rosal
-  municipality: Pasto, Narino
+  municipality: Pasto, Nariño
   boundary:
     - [1.24750, -77.26767]
     - [1.24872, -77.26767]

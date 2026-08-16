@@ -162,7 +162,9 @@ class ClimateFusion:
                 "forecast_days": len(daily["time"]),
             }
         except (KeyError, TypeError, ValueError) as error:
-            warnings.append(f"Open-Meteo response could not be normalised: {error}; fixture used")
+            warnings.append(
+                f"No se pudo normalizar la respuesta de Open-Meteo ({error}); se usó el fixture."
+            )
             return dict(self.fixture["open_meteo"])
 
     def _normalise_power(
@@ -201,5 +203,7 @@ class ClimateFusion:
                 raise ValueError("no complete years")
             return historical
         except (KeyError, TypeError, ValueError) as error:
-            warnings.append(f"NASA POWER response could not be normalised: {error}; fixture used")
+            warnings.append(
+                f"No se pudo normalizar la respuesta de NASA POWER ({error}); se usó el fixture."
+            )
             return list(self.fixture["nasa_power"]["historical_years"])

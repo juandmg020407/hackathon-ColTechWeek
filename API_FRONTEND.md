@@ -155,13 +155,27 @@ Todos los endpoints devuelven `contract_version`, `units`, `npk_convention`,
   "contract_version": "2.0",
   "generated_at": "...",
   "error": {
-    "code": "validation_error",
-    "message": "request did not match the contract",
+    "code": "plot_has_no_readings",
+    "message": "el lote nar-002 no tiene mediciones: importe un archivo o registre una lectura antes de calcular",
     "request_id": "...",
-    "details": []
+    "details": null
   }
 }
 ```
+
+`error.code` distingue la situación y la interfaz debe reaccionar a él:
+
+| `code` | HTTP | Qué debe hacer la interfaz |
+|---|---|---|
+| `plot_has_no_readings` | 409 | Ofrecer importar o capturar una medición, no mostrar un error |
+| `no_package_evidence` | 409 | Ofrecer recalcular antes de preguntar al asistente |
+| `import_validation_error` | 422 | Mostrar el motivo y dejar reintentar con otro archivo |
+| `spatial_inference_error` | 422 | Indicar que las mediciones no permiten inferir todavía |
+| `optimization_error` | 422 | Revisar catálogo y límites del perfil |
+| `validation_error` | 422 | Corregir el formulario; `details` trae los campos |
+| `http_error` | 4xx | Recurso inexistente o sin autorización |
+
+`error.message` viene en español y se puede mostrar tal cual.
 
 Los endpoints de escritura aceptan `X-API-Key` cuando `WRITE_API_KEY` está
 configurada. No existe todavía autenticación de usuarios: `login.html` y

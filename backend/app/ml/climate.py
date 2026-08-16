@@ -81,8 +81,8 @@ def build_risks(
 
     blight_probability = min(0.95, max(0.05, blight_hours / 24))
     common_limitations = [
-        "Rules are decision support and have not been locally validated as a supervised classifier.",
-        "No synthetic labels were used; probabilities are transparent rule scores.",
+        "Son reglas de apoyo a la decisión, no un clasificador entrenado y validado localmente.",
+        "No se usaron etiquetas sintéticas: la probabilidad es el puntaje transparente de la regla.",
     ]
 
     return [
@@ -92,8 +92,9 @@ def build_risks(
             {"minimum_temperature_c": minimum_temperature, "enso_phase": enso_phase},
             source_evidence,
             "frost-rule/2.0.0",
-            "Review the local station and protect exposed areas before the forecast minimum.",
-            common_limitations + ["Coarse climate products can smooth high-altitude extremes."],
+            "Consulte la estación local y proteja las zonas expuestas antes de la mínima prevista.",
+            common_limitations
+            + ["Los productos climáticos de baja resolución suavizan los extremos de alta montaña."],
         ),
         _risk(
             "drought", drought_probability * confidence_factor, confidence_factor,
@@ -107,7 +108,7 @@ def build_risks(
             },
             source_evidence,
             "drought-water-balance-rule/2.0.0",
-            "Prioritize soil moisture verification and postpone nutrient application if water is unavailable.",
+            "Verifique la humedad del suelo primero y aplace la aplicación de nutrientes si no hay agua.",
             common_limitations,
         ),
         _risk(
@@ -116,8 +117,9 @@ def build_risks(
             {"favorable_hours_48h": blight_hours},
             source_evidence,
             "late-blight-hours-rule/2.0.0",
-            "Inspect lower leaves and ask the technician to validate preventive action.",
-            common_limitations + ["Weather suitability is not evidence that the pathogen is present."],
+            "Revise las hojas bajeras y pida al técnico que valide cualquier acción preventiva.",
+            common_limitations
+            + ["Que el clima sea favorable no prueba que el patógeno esté presente en el lote."],
         ),
     ]
 

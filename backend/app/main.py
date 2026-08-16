@@ -14,9 +14,16 @@ from fastapi.staticfiles import StaticFiles
 from .api import router
 from .api.dependencies import build_container
 from .config import REPOSITORY_ROOT, Settings, settings as default_settings
+from .domain.errors import IncompatibleNPKBasis
+from .governance.service import GovernanceError
+from .ml.spatial import SpatialInferenceError
 from .observability import configure_logging, request_context_middleware
-from .services.bootstrap import bootstrap_repository
+from .optimization.integer import OptimizationError
+from .services.agent import NoPackageEvidenceError
+from .services.bootstrap import bootstrap_repository, seed_demo_readings, warm_demo_package
 from .services.contracts import utc_now
+from .services.engine import EngineError, PlotHasNoReadingsError
+from .services.importer import ImportValidationError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -26,11 +33,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        bootstrap_repository(container.repository, active_settings.config_root)
+        demo_plot_id = bootstrap_repository(container.repository, active_settings.config_root)
         if active_settings.demo_auto_import:
-            plot = container.repository.get_plot("nar-001")
-            if plot is not None:
-                container.importer.import_path(plot=plot, path=active_settings.demo_excel_path)
+            seed_demo_readings(
+                container.repository,
+                container.importer,
+                demo_plot_id,
+                active_settings.demo_excel_path,
+            )
+            await warm_demo_package(container.engine, container.repository, demo_plot_id)
         yield
 
     app = FastAPI(
@@ -65,7 +76,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(ValueError)
     async def domain_error(request: Request, error: ValueError):
-        return _error_response(request, 400, "domain_error", str(error))
+        status_code, code = _classify(error)
+        return _error_response(request, status_code, code, str(error))
 
     app.include_router(router)
 
@@ -77,6 +89,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.mount("/", StaticFiles(directory=frontend_root, html=True), name="frontend")
 
     return app
+
+
+# Cada excepción de dominio es una situación distinta y el cliente tiene que
+# poder distinguirlas: "el lote aún no tiene mediciones" pide ofrecer la
+# importación, no mostrar un error. Todas colapsaban en un `domain_error` 400.
+_ERROR_CODES: tuple[tuple[type[ValueError], int, str], ...] = (
+    (PlotHasNoReadingsError, 409, "plot_has_no_readings"),
+    (NoPackageEvidenceError, 409, "no_package_evidence"),
+    (SpatialInferenceError, 422, "spatial_inference_error"),
+    (ImportValidationError, 422, "import_validation_error"),
+    (OptimizationError, 422, "optimization_error"),
+    (IncompatibleNPKBasis, 422, "incompatible_npk_basis"),
+    (GovernanceError, 404, "governance_error"),
+    (EngineError, 400, "engine_error"),
+)
+
+
+def _classify(error: ValueError) -> tuple[int, str]:
+    for error_type, status_code, code in _ERROR_CODES:
+        if isinstance(error, error_type):
+            return status_code, code
+    return 400, "domain_error"
 
 
 def _error_response(

@@ -34,11 +34,11 @@ def rows_from_excel(content: bytes) -> list[Row]:
     try:
         sheet = book.active
         if sheet is None:
-            raise ImportValidationError("the workbook has no sheets")
+            raise ImportValidationError("el libro de Excel no tiene hojas")
         stream = sheet.iter_rows(values_only=True)
         header = next(stream, None)
         if header is None:
-            raise ImportValidationError("the sheet is empty")
+            raise ImportValidationError("la hoja está vacía")
         columns = [str(cell).strip() if cell is not None else "" for cell in header]
         # Una hoja con formato arrastra filas vacias al final; se descartan.
         return [
@@ -53,7 +53,7 @@ def rows_from_excel(content: bytes) -> list[Row]:
 def rows_from_csv(content: bytes) -> list[Row]:
     reader = csv.DictReader(StringIO(content.decode("utf-8-sig")))
     if reader.fieldnames is None:
-        raise ImportValidationError("the file has no header row")
+        raise ImportValidationError("el archivo no tiene fila de encabezados")
     reader.fieldnames = [name.strip() for name in reader.fieldnames]
     return [row for row in reader if any(value not in (None, "") for value in row.values())]
 
@@ -72,10 +72,10 @@ class ReadingImporter:
         measured_at: datetime | None = None,
     ) -> dict[str, Any]:
         if not content:
-            raise ImportValidationError("uploaded file is empty")
+            raise ImportValidationError("el archivo subido está vacío")
         if len(content) > self.max_bytes:
             raise ImportValidationError(
-                f"uploaded file exceeds the {self.max_bytes} byte limit"
+                f"el archivo supera el límite de {self.max_bytes} bytes"
             )
         suffix = Path(filename or "").suffix.lower()
         try:
@@ -84,11 +84,13 @@ class ReadingImporter:
             elif suffix == ".csv":
                 rows = rows_from_csv(content)
             else:
-                raise ImportValidationError("only .xlsx, .xls and .csv files are accepted")
+                raise ImportValidationError("solo se aceptan archivos .xlsx, .xls y .csv")
         except ImportValidationError:
             raise
         except (ValueError, KeyError, UnicodeDecodeError, OSError) as error:
-            raise ImportValidationError(f"could not parse tabular file: {error}") from error
+            raise ImportValidationError(
+                f"no se pudo leer el archivo tabular: {error}"
+            ) from error
         return self.import_rows(
             plot=plot,
             rows=rows,
@@ -114,12 +116,12 @@ class ReadingImporter:
         measured_at: datetime | None = None,
     ) -> dict[str, Any]:
         if not rows:
-            raise ImportValidationError("file contains no readings")
+            raise ImportValidationError("el archivo no contiene mediciones")
         normalised = {str(column).strip().lower(): column for column in rows[0]}
         required = {"latitud", "longitud", "n", "p", "k"}
         if not required.issubset(normalised):
             missing = ", ".join(sorted(required - set(normalised)))
-            raise ImportValidationError(f"missing columns: {missing}")
+            raise ImportValidationError(f"faltan columnas obligatorias: {missing}")
         timestamp = measured_at or datetime.now(timezone.utc)
         readings: list[Reading] = []
         for position, row in enumerate(rows, start=1):
@@ -132,7 +134,9 @@ class ReadingImporter:
                     K=float(row[normalised["k"]]),
                 )
             except (TypeError, ValueError) as error:
-                raise ImportValidationError(f"invalid row {position}: {error}") from error
+                raise ImportValidationError(
+                    f"fila {position} inválida: {error}"
+                ) from error
             client_id = f"import:{plot.id}:{import_hash}:{position}"
             readings.append(Reading(
                 id=stable_id("reading", client_id),
@@ -145,7 +149,7 @@ class ReadingImporter:
                 valid_for_model=point_in_polygon(latitude, longitude, plot.boundary),
             ))
         if not readings:
-            raise ImportValidationError("file contains no readings")
+            raise ImportValidationError("el archivo no contiene mediciones")
         stored, created = self.repository.create_readings(readings)
         first = stored[0]
         return {
@@ -162,5 +166,8 @@ class ReadingImporter:
                 "basis": "elemental_mass_pct",
             },
             "conversion_applied": False,
-            "warning": "Sensor values were persisted as percentages; no unit conversion was applied.",
+            "warning": (
+                "Los valores del sensor se guardaron como porcentaje tal cual; "
+                "no se aplicó ninguna conversión de unidades."
+            ),
         }

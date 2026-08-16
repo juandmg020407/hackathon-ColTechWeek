@@ -33,7 +33,10 @@ medido en suelo. Primero aplica el perfil agronómico explícito y versionado.
 - Propuestas pendientes y auditoría append-only; nada se aplica sin decisión.
 - Dashboard persistido de centro → productores → lotes, sin KPIs sintéticos.
 - Agente conversacional determinista, anclado al último package.
-- 42 pruebas offline; ninguna llama APIs pagadas.
+- Todo el texto que lee una persona va en español; las claves, enumeraciones y
+  versiones de modelo siguen en inglés como identificadores de contrato.
+- Cada excepción de dominio tiene su propio código de error y estado HTTP.
+- 57 pruebas offline; ninguna llama APIs pagadas.
 
 ## Arranque
 
@@ -44,6 +47,10 @@ python -m uvicorn app.main:app --reload --port 8000
 ```
 
 Documentación interactiva: <http://localhost:8000/docs>.
+
+El primer arranque crea la base, carga la configuración versionada e importa las
+19 mediciones del lote demo. No hay ningún paso manual antes de abrir la
+aplicación; `GET /health/ready` informa cuántos lotes tienen evidencia cargada.
 
 ## Verificación
 

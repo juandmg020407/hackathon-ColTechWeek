@@ -82,7 +82,7 @@ def annotate_quality(
                 suspicious=False,
                 method="geometry/polygon-v1",
                 score=None,
-                reason="measurement is outside the declared plot boundary",
+                reason="La medición cae fuera del polígono declarado del lote.",
             ))
             continue
 
@@ -94,10 +94,10 @@ def annotate_quality(
         reasons: list[str] = []
         if mad_suspicious:
             methods.append("median-mad/v1")
-            reasons.append(f"robust MAD score {mad_score:.2f} exceeds 3.50")
+            reasons.append(f"El puntaje robusto MAD es {mad_score:.2f} y supera el umbral de 3,50.")
         if isolation_suspicious:
             methods.append("isolation-forest/v1")
-            reasons.append("Isolation Forest score is in the most unusual 10%")
+            reasons.append("Isolation Forest la ubica en el 10 % de lecturas más inusuales.")
         score = max(mad_score, isolation_score or 0.0) if methods else mad_score
         annotations.append(QualityAnnotation(
             reading_id=reading.id,

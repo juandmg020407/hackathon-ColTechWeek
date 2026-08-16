@@ -8,7 +8,7 @@ formulations:
     bag_weight_kg: 50
     available: true
     valid_from: 2026-08-15
-    source: Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.
+    source: Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.
     basis: elemental_mass_pct
   - id: center-pasto-20-10-30
     center_id: center-pasto-demo
@@ -17,7 +17,7 @@ formulations:
     bag_weight_kg: 50
     available: true
     valid_from: 2026-08-15
-    source: Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.
+    source: Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.
     basis: elemental_mass_pct
   - id: center-pasto-10-20-20
     center_id: center-pasto-demo
@@ -26,5 +26,5 @@ formulations:
     bag_weight_kg: 50
     available: true
     valid_from: 2026-08-15
-    source: Catalogo demostrativo declarado por el centro de acopio; confirmar inventario real.
+    source: Catálogo demostrativo declarado por el centro de acopio; confirmar el inventario real.
     basis: elemental_mass_pct

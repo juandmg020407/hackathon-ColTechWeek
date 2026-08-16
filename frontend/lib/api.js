@@ -123,7 +123,11 @@ export const postDecision = ({ proposalId, action, actor, modification = null, n
 export const getDecision = (decisionId) => get(`/v1/decisions/${decisionId}`);
 export const getDecisionHistory = (identifier) => get(`/v1/decisions/${identifier}/history`);
 export const getGovernance = () => get('/v1/governance');
-export const getAudit = () => get('/v1/audit');
+// entity_type y entity_id son obligatorios: sin ellos el backend responde 422.
+export const getAudit = (entityType, entityId) => get(
+  `/v1/audit?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`,
+);
+export const getPlotAudit = (plotId) => getAudit('plot', plotId);
 
 // Modelos
 export const getModels = () => get('/v1/models');
