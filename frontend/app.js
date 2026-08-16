@@ -41,6 +41,13 @@ const DECISION_LABEL = {
   pending_technical_review: 'pendiente de revisión técnica',
   referred_to_technician: 'derivada a un técnico',
 };
+// What the person did, and who they were. The backend stores both in English.
+const ACTION_LABEL = {
+  accept: 'Aceptar', reject: 'Rechazar', modify: 'Modificar', refer: 'Pedir revisión',
+};
+const ACTOR_LABEL = {
+  technician: 'Técnico', farmer: 'Productor', system: 'Sistema',
+};
 const VALIDATION_LABEL = {
   requires_technical_validation: 'Plan candidato: requiere validación técnica antes de aplicarse.',
   demo_unvalidated: 'Perfil de demostración sin validar.',
@@ -1198,11 +1205,15 @@ function viewRecomendaciones() {
 }
 
 function viewHistorial() {
+  const when = (iso) => new Date(iso).toLocaleString('es-CO', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+
   const rows = (state.historial || []).map((d) => `<tr>
-      <td>${new Date(d.created_at).toLocaleString('es-CO')}</td>
-      <td>${DECISION_LABEL[d.action] || d.action}</td>
+      <td>${when(d.created_at)}</td>
+      <td>${ACTION_LABEL[d.action] || d.action}</td>
       <td>${DECISION_LABEL[d.resulting_status] || d.resulting_status}</td>
-      <td>${d.actor_type || ''} ${d.actor_id || ''}</td>
+      <td${d.actor_id ? ` title="${d.actor_id}"` : ''}>${ACTOR_LABEL[d.actor_type] || d.actor_type || '—'}</td>
     </tr>`).join('');
   const body = rows
     ? `<div class="table-wrap"><table class="data"><thead><tr>
