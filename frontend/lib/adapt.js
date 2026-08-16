@@ -198,14 +198,11 @@ export function adapt(pkg) {
     },
     criticalAreaHa: Math.round(criticalArea * 1000) / 1000,
     criticalSharePct: areaHa ? Math.round((criticalArea / areaHa) * 1000) / 10 : 0,
-    // The package itself is fresh or not; a stale climate source is reported on
-    // its own risk card, not by ageing the whole screen.
-    stale: Boolean(pkg.degraded),
-    fuentes_vencidas: sources.filter((s) => s.stale || s.failed).length,
+    // Degradation is reported where it is actionable: on the risk card whose
+    // source fell back, and in full under Reportes. Not as a page-wide banner.
     degradado: Boolean(pkg.degraded),
     validacion: pkg.validation_status,
     avisos,
-    aviso: avisos[0] || null,
     generado: pkg.generated_at,
     voz: [],
   };

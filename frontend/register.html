@@ -81,11 +81,9 @@
 </main>
 
 <script type="module">
-import { paintField } from '/lib/field-background.js';
 import { signUp, usingMock } from '/lib/auth.js';
 
 document.getElementById('mode').textContent = usingMock ? 'Demo · sin backend' : 'Backend conectado';
-paintField(document.getElementById('field'));
 
 const form = document.getElementById('form');
 const submit = document.getElementById('submit');
