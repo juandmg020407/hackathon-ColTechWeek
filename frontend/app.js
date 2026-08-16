@@ -7,7 +7,7 @@ import { getNetwork } from './lib/network.js';
 import { adapt, latLonToCell } from './lib/adapt.js';
 import { NUTRIENTS, RANGES } from './lib/plotmap.js';
 import { plasmaGradient } from './lib/colormap.js';
-import { renderTiles, ATTRIBUTION } from './lib/slippy.js';
+import { renderTiles, ATTRIBUTION, MIN_ZOOM, MAX_ZOOM } from './lib/slippy.js';
 import { gridGeoBounds, paintSurface, paintOverlay } from './lib/heatsurface.js';
 import { ask, speak, stopSpeaking, listen, canSpeak, canListen } from './lib/assistant.js';
 
@@ -143,20 +143,40 @@ function drawMap() {
 }
 
 const DRAG_SLOP_PX = 5;
-const ZOOM_LIMIT = 4;
+
+// The offset is only meaningful against the zoom the current bounds fitted to.
+// A lot fits at 18 and the tiles stop at 19, so its real range is a single step
+// in; the network map, fitted much further out, has plenty of room.
+function zoomBounds() {
+  const base = state.projector?.baseZoom;
+  if (!Number.isFinite(base)) return { min: 0, max: 0 };
+  return { min: MIN_ZOOM - base, max: MAX_ZOOM - base };
+}
 
 function resetMapView() {
   state.map = { zoomOffset: 0, panX: 0, panY: 0 };
   state.probe = null;
   drawMap();
   showProbe();
+  syncZoomButtons();
 }
 
 function zoomBy(step) {
-  const next = Math.max(-2, Math.min(ZOOM_LIMIT, state.map.zoomOffset + step));
+  const { min, max } = zoomBounds();
+  const next = Math.max(min, Math.min(max, state.map.zoomOffset + step));
   if (next === state.map.zoomOffset) return;
   state.map = { ...state.map, zoomOffset: next };
   drawMap();
+  syncZoomButtons();
+}
+
+// A control that cannot do anything says so, instead of swallowing the tap.
+function syncZoomButtons() {
+  const { min, max } = zoomBounds();
+  const inButton = document.querySelector('[data-map="in"]');
+  const outButton = document.querySelector('[data-map="out"]');
+  if (inButton) inButton.disabled = state.map.zoomOffset >= max;
+  if (outButton) outButton.disabled = state.map.zoomOffset <= min;
 }
 
 // Reads the grid cell under a point of the stage, so a tap answers "what is here".
@@ -278,6 +298,7 @@ function scheduleDraw(attempt = 0) {
     return;
   }
   drawMap();
+  syncZoomButtons();
 }
 
 function observeStage() {
