@@ -1,396 +1,335 @@
-# IOmido — backend
+# IOmido — arquitectura del backend
 
-Arquitectura, endpoints y fuentes. Complemento técnico de `BRIEF.md`.
-El contrato con el frontend está en `FRONTEND.md` y es la fuente de verdad.
+Este documento describe tanto el backend que existe hoy (`v0.1`) como el contrato
+objetivo (`v0.2`). La distinción es intencional: los jurados y colaboradores deben
+poder separar código ejecutable de trabajo pendiente.
 
----
+## Objetivo del backend
 
-## 1. Stack
+Recibir lecturas NPK georreferenciadas de las fincas proveedoras de un centro de
+acopio, convertir pocos puntos en una representación espacial con incertidumbre y
+crear propuestas de formulación que un técnico pueda revisar.
 
-```
-Python 3.11
-FastAPI + Uvicorn            API
-Pydantic v2                  schemas y OpenAPI automático
-scikit-learn                 GP, GradientBoosting, IsolationForest
-scipy                        linprog, spatial
-httpx                        clientes de APIs externas (async)
-Supabase (Postgres+PostGIS)  persistencia, geometrías, Realtime
-Azure Speech SDK             TTS es-CO y STT
-Anthropic SDK                agente con tool-use
-Railway                      deploy
-```
+El backend no compra insumos, no ejecuta aplicaciones y no decide por el productor.
 
-**Por qué Supabase:** PostGIS resuelve las geometrías, Realtime da el tiempo real sin montar WebSockets, y sobrevive al hackathon — que son 15 puntos del scoring.
+## Stack actual
 
----
-
-## 2. Estructura
-
-```
-backend/
-├── app/
-│   ├── main.py                  FastAPI, CORS, compresión, middleware de auditoría
-│   ├── config.py                settings desde entorno
-│   ├── db.py                    cliente Supabase
-│   │
-│   ├── api/v1/
-│   │   ├── plots.py             lotes y el paquete
-│   │   ├── readings.py          ingesta del sensor
-│   │   ├── risk.py              riesgos y contexto estacional
-│   │   ├── decisions.py         human-in-the-loop
-│   │   ├── agent.py             preguntas
-│   │   ├── voice.py             TTS / STT
-│   │   └── public.py            bien público
-│   │
-│   ├── schemas/                 modelos Pydantic (espejo de FRONTEND.md)
-│   │
-│   ├── ml/
-│   │   ├── quality.py           M1  control de calidad
-│   │   ├── calibration.py       M2  desagregación NPK
-│   │   ├── spatial.py           M3  Proceso Gaussiano + zonas + active learning
-│   │   ├── nutrition.py         M4  balance de nutrientes
-│   │   └── blend.py             M5  optimización de mezcla
-│   │
-│   ├── risk/
-│   │   ├── frost.py             R1  helada
-│   │   ├── drought.py           R2  sequía
-│   │   ├── blight.py            R3  gota
-│   │   ├── fire.py              R4  incendios
-│   │   ├── landslide.py         R5  deslizamiento
-│   │   ├── seasonal.py          R6  ENSO
-│   │   └── engine.py            orquesta los seis y ordena por severidad
-│   │
-│   ├── adjust.py                ajusta la receta según los riesgos activos
-│   │
-│   ├── sources/
-│   │   ├── openmeteo.py         forecast, seasonal, archive
-│   │   ├── firms.py             NASA FIRMS
-│   │   ├── soilgrids.py         ISRIC
-│   │   ├── enso.py              NOAA CPC
-│   │   └── cache.py             caché en Postgres con TTL
-│   │
-│   ├── agent/
-│   │   ├── tools.py             las herramientas = los endpoints
-│   │   └── runner.py            bucle con tool-use
-│   │
-│   ├── voice/
-│   │   ├── tts.py               Azure es-CO-SalomeNeural
-│   │   └── phrasing.py          números y unidades a español hablado
-│   │
-│   └── governance/
-│       ├── audit.py             registro append-only (AI Act art. 12)
-│       ├── disclosure.py        divulgación de IA (art. 50)
-│       └── limits.py            lo que el sistema NO hace
-│
-├── tools/build_mock.py          prototipo del pipeline, ya funciona
-├── data/                        el Excel real
-├── mock/                        paquete generado
-└── requirements.txt
+```text
+Python 3
+FastAPI + Pydantic          API y contrato
+pandas + openpyxl           fuente Excel de la demo
+NumPy + SciPy               geometría y optimización
+scikit-learn                Isolation Forest, GP y KMeans
+httpx                       fuentes climáticas
+SQLite                      propuestas, decisiones y auditoría local
+Brotli ASGI                 compresión del package
 ```
 
----
+Postgres, autenticación, colas y cache durable son objetivos de producción, no
+dependencias activas de la demo.
 
-## 3. Endpoints
+## Estructura real
 
-Base `/v1`. Todo JSON, todo con Brotli.
+```text
+backend/app/
+├── main.py                  API `/v1`, catálogo demo y caches en memoria
+├── schemas.py               modelos Pydantic del contrato `v0.1`
+├── config.py                entorno y parámetros operativos
+├── adjust.py                ajustes explícitos por riesgo
+├── ml/
+│   ├── soil.py              calidad, GP, zonas, balance y mezcla heredada
+│   ├── climatology.py       contexto histórico y años análogos
+│   └── package.py           ensambla el paquete completo
+├── risk/
+│   ├── engine.py            prioriza y limita alertas
+│   ├── frost.py             helada
+│   ├── drought.py           déficit hídrico
+│   ├── blight.py            condiciones para gota
+│   └── seasonal.py          contexto ENSO/estacional
+├── sources/
+│   ├── openmeteo.py         pronóstico y estacional
+│   ├── nasa.py              climatología y cliente FIRMS
+│   └── enso.py              boletín ENSO versionado manualmente
+└── governance/
+    ├── disclosure.py        límites y divulgación
+    ├── proposals.py         propuestas, explicación y revisión
+    └── audit.py             SQLite append-only local
+```
 
-### P0 — sin esto no hay demo
+## API implementada
 
-| Ruta | Qué hace |
-|---|---|
-| `GET /v1/plots` | Lista de lotes |
-| `GET /v1/plots/{id}/package` | **El principal.** Suelo + zonas + receta + riesgos + voz, en una llamada |
-| `POST /v1/readings` | Ingesta de una medición, con M1 e idempotencia |
+| Método | Ruta | Estado |
+|---|---|---|
+| GET | `/health` | Implementado |
+| GET | `/v1/plots` | Implementado; un lote de demo |
+| GET | `/v1/plots/{id}/package` | Implementado; contrato `v0.1` |
+| GET | `/v1/plots/{id}/risk` | Implementado |
+| POST | `/v1/readings` | Implementado en memoria |
+| POST | `/v1/decisions` | Implementado con SQLite local |
+| GET | `/v1/decisions/{id}/why` | Implementado |
+| GET | `/v1/decisions/{id}/history` | Implementado |
+| GET | `/v1/governance` | Implementado |
+| POST | `/v1/agent/ask` | No implementado |
+| `/v1/auth/*` | No implementado |
 
-### P1 — la demo brilla
+## Semántica canónica `v0.2`
 
-| Ruta | Qué hace |
-|---|---|
-| `GET /v1/plots/{id}/risk` | Los seis riesgos, por separado, para refrescar sin recalcular el suelo |
-| `POST /v1/agent/ask` | Pregunta en texto o audio |
-| `POST /v1/decisions` | Aceptar, rechazar o derivar una propuesta |
-| `GET /v1/decisions/{id}/why` | Explicación completa y trazable |
+### Lecturas del sensor
 
-### P2 — si sobra
+Los datos originales son porcentajes NPK. El código actual usa `N_raw`, `P_raw`,
+`K_raw` y todavía convierte parte del pipeline a ppm; esa conversión se retirará.
 
-| Ruta | Qué hace |
-|---|---|
-| `POST /v1/readings/import` | Subir el Excel |
-| `GET /v1/public/soil-map` | Mapa agregado anonimizado |
-| `GET /v1/public/stats` | Mediciones, hectáreas, kg de N no aplicados |
-| `POST /v1/vision/leaf` | Foto de hoja |
-| `POST /v1/whatsapp/webhook` | Canal B |
+Contrato objetivo:
 
----
-
-### `GET /v1/plots/{id}/package`
-
-Al paquete de `FRONTEND.md` se le agregan dos bloques. **Todo lo anterior se mantiene igual.**
-
-```jsonc
+```json
 {
-  // ... plot, grid, contorno, puntos, descartados, zonas, next_sample, receta, voz
-
-  "riesgos": [
-    {
-      "id": "rk-helada-2026w34",
-      "tipo": "helada",                    // helada|sequia|gota|incendio|deslizamiento|estacional
-      "severidad": "alta",                 // baja|media|alta|critica
-      "probabilidad": 0.72,
-      "confianza": "media",                // baja|media|alta
-      "ventana": { "desde": "2026-08-22", "hasta": "2026-08-27" },
-      "titulo": "Riesgo de helada la próxima semana",
-      "resumen": "Cinco noches seguidas con cielo despejado y mínimas cerca de cero.",
-      "que_hacer": [
-        "Riegue en la tarde: el suelo húmedo suelta calor de noche.",
-        "Si tiene con qué, cubra los surcos más bajos del lote.",
-        "Aplace la aplicación de nitrógeno hasta que pase."
-      ],
-      "por_que": {
-        "modelo": "frost/v1",
-        "entradas": { "t_min_c": [1.2, 0.4, -0.3], "nubosidad_pct": [12, 8, 5],
-                      "punto_rocio_c": [-1.1, -1.8], "viento_ms": [0.8, 0.6] },
-        "regla": "Mínima bajo 2 °C con nubosidad bajo 30% y viento bajo 2 m/s",
-        "fuentes": [
-          { "nombre": "Open-Meteo Forecast", "consultado": "2026-08-15T14:00:00Z" }
-        ]
-      },
-      "requiere_confirmacion": true
-    }
-  ],
-
-  "estacional": {
-    "fenomeno": "El Niño",
-    "estado": "activo y fortaleciéndose",
-    "anomalia_nino34_c": 0.7,
-    "prob_muy_fuerte": 0.63,
-    "pico_esperado": "noviembre 2026 a enero 2027",
-    "implicacion_local": "Menos lluvia y más noches despejadas en el altiplano nariñense. Su papa va a estar llenando tubérculo justo en el pico.",
-    "horizonte_meses": 9,
-    "fuente": { "nombre": "NOAA CPC", "actualizado": "2026-08-04" }
-  }
+  "plot_id": "nar-001",
+  "lat": 1.247822,
+  "lon": -77.267613,
+  "npk_pct": { "N": 2, "P": 1, "K": 1 },
+  "measured_at": "2026-08-15T14:30:00-05:00",
+  "client_id": "phone-7-reading-104"
 }
 ```
 
-`por_que` no es decoración: es el artículo 12 del AI Act. Cada riesgo carga sus entradas, su modelo y sus fuentes con marca de tiempo.
+Reglas:
 
----
+- unidad única: `%`;
+- rango válido por componente: 0 a 100;
+- se conserva la lectura original sin transformación destructiva;
+- cualquier dato derivado debe indicar modelo, versión y unidad;
+- no se afirma equivalencia con laboratorio.
 
-### `POST /v1/decisions` — human-in-the-loop
+### Formulaciones disponibles
 
-Toda propuesta nace en estado `pendiente` y no pasa nada hasta que alguien decide.
+No habrá catálogo de marcas ni productos químicos en el dominio central. Cada
+centro registra grados NPK disponibles:
 
-```jsonc
-// request
-{ "propuesta_id": "rec-nar-001-z1",
-  "accion": "aceptar",              // aceptar | rechazar | derivar | modificar
-  "actor": { "tipo": "agricultor", "id": "u-882" },
-  "modificacion": { "productos": [ { "nombre": "KCl 0-0-60", "bultos": 3 } ] },
-  "nota": "No consigo DAP en la vereda esta semana" }
-
-// response
-{ "ok": true,
-  "decision_id": "dc-4471",
-  "estado": "aceptada",
-  "requiere_revision_tecnica": false,
-  "registrado_en": "2026-08-15T15:22:10Z" }
-
-// cuando supera el umbral de gasto
-{ "ok": true,
-  "decision_id": "dc-4472",
-  "estado": "pendiente_revision",
-  "requiere_revision_tecnica": true,
-  "motivo": "La propuesta supera $1.500.000. Necesita visto bueno del técnico de la UMATA.",
-  "notificado_a": "tec-nar-03" }
+```json
+{
+  "id": "grade-30-30-40",
+  "label": "30-30-40",
+  "npk_pct": { "N": 30, "P": 30, "K": 40 },
+  "bag_weight_kg": 50,
+  "available": true,
+  "source": "configuración del centro",
+  "valid_from": "2026-08-15"
+}
 ```
 
-**`modificar` es la acción más valiosa del sistema.** Cada corrección de un técnico es una etiqueta de entrenamiento. Con 19 mediciones no se entrena nada; con miles de correcciones, sí. La supervisión humana es lo que llena el dataset.
+`bag_weight_kg` tampoco debe ser una constante global: diferentes proveedores o
+regiones pueden usar presentaciones distintas.
 
----
+Si una integración externa expresa fósforo o potasio como P₂O₅/K₂O, el adaptador
+de esa fuente realiza la conversión antes de ingresar al dominio y registra la
+convención. El núcleo de IOmido solo compara variables con la misma base.
 
-### `GET /v1/decisions/{id}/why`
+### Perfiles agronómicos
 
-El botón «¿por qué me dice eso?».
+Los objetivos y factores dejan de vivir dentro de `soil.py`. Se cargan como datos:
 
-```jsonc
-{ "propuesta": "rec-nar-001-z1",
-  "que_recomendamos": "3 bultos de DAP, 2 de KCl y 2 de Urea en la zona 1",
-  "porque": [
-    { "paso": "medición", "detalle": "18 puntos válidos del 15 de agosto. Uno descartado por estar a 1,2 km." },
-    { "paso": "suelo",    "detalle": "Zona 1: nitrógeno crítico, fósforo crítico, potasio bajo.",
-      "confianza": "media", "nota": "La calibración del sensor a ppm es provisional, sin validar contra laboratorio." },
-    { "paso": "clima",    "detalle": "El Niño activo. Se subió el potasio un 15% por riesgo de helada." },
-    { "paso": "costo",    "detalle": "Mezcla más barata que cubre el faltante. Precios de referencia, no de su vereda." }
+```json
+{
+  "id": "potato-diacol-capiro-v1",
+  "crop": "papa",
+  "variety": "Diacol Capiro",
+  "stage": "establecimiento",
+  "target_npk_pct": null,
+  "response_kg_ha_per_pct_point": null,
+  "application_limits_kg_ha": null,
+  "source": "pendiente de validación agronómica",
+  "version": "draft-1"
+}
+```
+
+Los números anteriores son **estructura de ejemplo, no valores agronómicos**. Un
+perfil no puede activarse como validado hasta tener fuente y revisión técnica.
+
+## Pipeline `v0.2`
+
+### 1. Calidad
+
+- validar esquema, rangos y coordenadas;
+- separar `fuera_del_lote` de `atipica`;
+- conservar las atípicas válidas con su bandera;
+- usar un polígono real cuando exista; el radio actual es solo fallback de demo.
+
+### 2. Campo espacial
+
+Para cada componente N, P y K:
+
+- entrenar GP sobre porcentajes;
+- predecir media y desviación por celda;
+- enmascarar con el contorno;
+- derivar el umbral de incertidumbre del espaciamiento de muestreo;
+- elegir la celda válida con mayor incertidumbre como `next_sample`.
+
+La salida sigue expresada en porcentaje.
+
+### 3. Requerimiento
+
+Para una zona `z` y nutriente `i`:
+
+```text
+deficit_pct[z,i] = max(target_pct[i] - estimated_pct[z,i], 0)
+required_kg_ha[z,i] = deficit_pct[z,i] × response_kg_ha_per_pct_point[i]
+```
+
+Los ajustes climáticos se aplican después y viajan como una lista explícita. No se
+modifica ninguna recomendación en silencio.
+
+### 4. Optimización sin precios
+
+Variables enteras:
+
+```text
+x[z,f] = número de bultos de formulación f asignados a zona z
+```
+
+Aporte de una formulación:
+
+```text
+supplied_kg[z,i] = Σf x[z,f] × bag_weight_kg[f] × npk_pct[f,i] / 100
+```
+
+Objetivo lexicográfico:
+
+1. minimizar faltantes de N, P y K;
+2. minimizar exceso total ponderado;
+3. minimizar el número de bultos;
+4. preferir menos formulaciones distintas si hay empate.
+
+Restricciones y pesos proceden de configuración versionada. La implementación debe
+usar MILP o una búsqueda entera acotada; no se acepta resolver continuo y redondear
+producto por producto.
+
+### 5. Gobernanza
+
+Cada recomendación nace como propuesta pendiente. Como ya no hay precio, la revisión
+técnica no se activa por dinero. El contrato objetivo la activa por:
+
+- confianza baja;
+- dosis superior al límite del perfil;
+- formulación no disponible;
+- cambio climático superior al rango permitido;
+- modificación manual solicitada por el productor;
+- regla explícita del centro.
+
+Ningún cliente puede autodeclararse técnico: producción necesita autenticación y
+roles verificados.
+
+## Package objetivo `v0.2`
+
+Ejemplo reducido:
+
+```json
+{
+  "contract_version": "2.0",
+  "plot": {
+    "id": "nar-001",
+    "name": "Lote El Rosal",
+    "crop": "papa",
+    "center_id": "acopio-demo"
+  },
+  "grid": {
+    "unit": "pct",
+    "N_pct": [2, 3, 3],
+    "P_pct": [1, 1, 2],
+    "K_pct": [1, 2, 2],
+    "sigma_pct": [0.4, 0.8, 1.2],
+    "sigma_threshold_pct": 0.9
+  },
+  "zones": [
+    {
+      "id": "z1",
+      "mean_npk_pct": { "N": 2.4, "P": 1.2, "K": 1.6 },
+      "recommendation": {
+        "formulations": [
+          { "grade": "30-30-40", "bags": 2, "bag_weight_kg": 50 }
+        ],
+        "reason": "Es la combinación disponible que cubre mejor el faltante con menor exceso.",
+        "proposal_id": "rec-nar-001-z1-rev-001"
+      }
+    }
   ],
-  "no_sabemos": [
-    "Cuánto rinde su lote: no tenemos historial de cosecha.",
-    "Si el precio del bulto en su vereda coincide con el nacional."
-  ],
-  "modelo": { "suelo": "gp/v1", "nutricion": "balance/v1", "riesgo": "engine/v1" },
-  "decidido_por": null,
-  "estado": "pendiente" }
+  "risks": [],
+  "degraded": false
+}
 ```
 
-`no_sabemos` es obligatorio y nunca va vacío. Un sistema que solo declara certezas es el que pierde la confianza del agricultor la primera vez que se equivoca.
+Los valores son ilustrativos. Los mocks definitivos deben generarse desde el
+pipeline y nunca escribirse a mano.
 
----
+## Configuración objetivo
 
-## 4. Los seis motores de riesgo
-
-Todos exponen la misma firma: `evaluar(lote, clima, contexto) -> Riesgo | None`, y siempre devuelven `por_que`.
-
-### R1 · Helada — `risk/frost.py`
-El riesgo real para papa a 2.500 msnm, y el que trae El Niño.
-Heladas de radiación: cielo despejado, aire seco, viento calmo, la noche irradia al espacio.
-
-```
-señal = f(t_min, nubosidad, punto_rocio, viento)
-alerta si  t_min < 2 °C  y  nubosidad < 30 %  y  viento < 2 m/s
-severidad por cuántas noches seguidas y qué tan por debajo de cero
-```
-Entradas: Open-Meteo horario, `temperature_2m_min`, `cloud_cover`, `dew_point_2m`, `wind_speed_10m`.
-
-### R2 · Sequía — `risk/drought.py`
-Balance hídrico simple contra el pronóstico estacional.
-
-```
-balance = precipitación acumulada − evapotranspiración de referencia
-compara contra la normal climática de ERA5 para el mismo período
-proyecta a 9 meses con SEAS5 y su índice de eventos extremos
+```text
+domain/
+├── sensor_profiles.json
+├── crop_profiles.json
+├── formulation_catalog.json
+├── risk_thresholds.json
+└── review_policies.json
 ```
 
-### R3 · Gota (tizón tardío) — `risk/blight.py`
-*Phytophthora infestans*, la enfermedad número uno de la papa en Colombia. El riesgo se calcula **solo con clima**, sin necesidad de ver la planta.
+En producción estos recursos pueden vivir en Postgres. Durante la demo pueden ser
+JSON versionados, siempre que el código no duplique sus valores.
 
+## Fuentes y degradación
+
+- Open-Meteo: pronóstico y estacional.
+- NASA POWER: contexto histórico.
+- NOAA CPC: contexto ENSO; hoy se actualiza manualmente.
+- Sensor: medición puntual del lote.
+
+El cache actual es de proceso. El objetivo es un cache durable con TTL y último dato
+bueno. Una fuente fallida debe marcar `degraded: true`; nunca inventar datos.
+
+## Persistencia objetivo
+
+```text
+centers
+users
+plots
+readings
+packages
+crop_profiles
+formulations
+proposals
+decisions
+audit_log
 ```
-hora favorable: humedad relativa > 90 % y temperatura entre 10 y 24 °C
-acumula horas favorables en ventanas de 48 h
-umbral de severidad sobre las horas acumuladas
-```
-Es un modelo agronómico clásico, barato de implementar y de altísimo valor práctico.
 
-### R4 · Incendios — `risk/fire.py`
-Focos activos de NASA FIRMS en un radio configurable, ponderados por distancia y dirección del viento respecto al lote.
+Cada entidad mutable necesita centro, versión, timestamps y autor. Propuestas,
+decisiones y auditoría conservan historial append-only.
 
-### R5 · Deslizamiento — `risk/landslide.py`
-Umbrales de intensidad-duración sobre lluvia acumulada de 3 y 7 días, ponderados por la pendiente del terreno (derivada de la elevación de Open-Meteo).
+## Migración desde `v0.1`
 
-No dependemos de una API de terceros que se pueda caer en la demo. El dataset de alertas del IDEAM queda como validación cruzada, no como dependencia.
-
-### R6 · Estacional — `risk/seasonal.py`
-Estado de ENSO y su traducción a una implicación local para el ciclo del cultivo. Es el que da la visión de meses, no de días.
-
-### Orquestador — `risk/engine.py`
-Corre los seis en paralelo con `asyncio.gather`, ordena por severidad × probabilidad, y **se queda con los tres primeros**. Más de tres alertas es ruido y el agricultor deja de leerlas.
-
----
-
-## 5. El ajuste de la receta — `adjust.py`
-
-Donde las dos mitades del producto se encuentran.
-
-| Riesgo activo | Ajuste | Razón |
+| Paso | Archivos principales | Criterio de aceptación |
 |---|---|---|
-| Sequía alta o crítica | N × 0,75 | Sin agua no se absorbe y se volatiliza |
-| Helada alta o crítica | K × 1,15 | El potasio mejora la tolerancia osmótica al frío |
-| Lluvia fuerte en 48 h | Aplazar la ventana | Se lava y termina en la quebrada |
-| Gota alta | Alerta sanitaria, sin cambio de dosis | Es un problema de fungicida, no de nutrición |
+| Unidad `%` | `schemas.py`, `soil.py`, `package.py`, mocks | No aparece `ppm` en API ni UI |
+| Configuración | nuevo `domain/`, `config.py` | Sin catálogo, perfiles o precios dentro de Python |
+| Optimizador | `soil.py` o nuevo `ml/formulations.py` | Solución entera reproducible y cubierta por tests |
+| Gobernanza | `proposals.py`, `audit.py` | Revisión por confianza/límites; auditoría registra eventos |
+| Persistencia | repositorios y migraciones | Lecturas e idempotencia sobreviven reinicios |
+| Contrato | `schemas.py`, `FRONTEND.md` | `contract_version=2.0` y validación de mocks |
 
-Cada ajuste se registra en `por_que` con su factor. Nunca se aplica en silencio.
+## Verificación mínima
 
----
+- tests de rangos 0–100;
+- primera fila del Excel permanece `2,1,1` en la API;
+- arrays de grilla tienen igual longitud;
+- ninguna recomendación contiene marca, nombre químico o precio;
+- el optimizador cumple restricciones con bultos enteros;
+- un paquete degradado sigue siendo válido;
+- propuestas y decisiones aparecen en `audit_log`;
+- OpenAPI solo publica unidades y nombres vigentes.
 
-## 6. Fuentes externas
-
-### Open-Meteo — sin llave, CC-BY
-
-```
-Pronóstico    https://api.open-meteo.com/v1/forecast
-              &hourly=temperature_2m,relative_humidity_2m,dew_point_2m,
-                      cloud_cover,wind_speed_10m,precipitation,
-                      soil_moisture_0_to_7cm,soil_temperature_0cm
-              &daily=temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration
-              &forecast_days=16&timezone=America/Bogota
-
-Estacional    https://seasonal-api.open-meteo.com/v1/seasonal
-              &monthly=temperature_2m_max,precipitation_sum
-              &forecast_months=9
-              ECMWF SEAS5, 51 miembros de ensemble
-
-Histórico     https://archive-api.open-meteo.com/v1/archive
-              ERA5 desde 1940, para las normales climáticas
-```
-
-### NASA FIRMS — llave gratis por correo
-```
-https://firms.modaps.eosdis.nasa.gov/api/area/csv/{MAP_KEY}/VIIRS_SNPP_NRT/{bbox}/{días}
-Límite 5.000 peticiones por cada 10 minutos.
-```
-
-### SoilGrids (ISRIC)
-pH, carbono orgánico, textura, nitrógeno total, CEC a 250 m.
-⚠️ **Su REST API está pausada.** Descargar el raster de la zona por adelantado. Nada en la demo puede depender de que responda.
-
-### NOAA CPC — estado de ENSO
-Se actualiza mensualmente. **Cachear el valor y no consultarlo en vivo durante la demo.**
-
-### SIPSA (DANE) y UPRA
-Precios de insumos, vía `datos.gov.co` (Socrata). Reemplazan los precios de referencia del catálogo.
-
-### Regla general de caché
-Nada de red en el camino crítico de una petición. Todo lo externo se cachea en Postgres con TTL: clima 3 h, estacional 24 h, ENSO 7 días, precios 24 h, SoilGrids indefinido. **Si una fuente externa falla, el paquete se sirve igual con lo cacheado y marca `degradado: true`.**
-
----
-
-## 7. Datos
-
-```sql
-plots        (id, nombre, municipio, geom, cultivo, variedad, area_ha, owner_id, creado)
-readings     (id, plot_id, geom, n_raw, p_raw, k_raw, medido_en, client_id UNIQUE,
-              valida, sospechoso, confianza, motivo, creado)
-packages     (plot_id, payload JSONB, generado, ttl_horas)
-risks        (id, plot_id, tipo, severidad, probabilidad, ventana, payload JSONB, generado)
-proposals    (id, plot_id, tipo, payload JSONB, costo_cop, estado, creado)
-decisions    (id, proposal_id, accion, actor_tipo, actor_id, modificacion JSONB,
-              nota, creado)                                    -- append-only
-audit_log    (id, evento, entidad, entidad_id, modelo_version, entradas JSONB,
-              fuentes JSONB, actor, creado)                    -- append-only
-consents     (id, owner_id, alcance, otorgado, revocado)       -- opt-in del mapa público
-```
-
-`decisions` y `audit_log` son **append-only**: sin UPDATE, sin DELETE. Una corrección es una fila nueva. Eso es lo que hace auditable el sistema.
-
----
-
-## 8. Entorno
+## Arranque
 
 ```bash
-SUPABASE_URL=
-SUPABASE_SERVICE_KEY=
-AZURE_SPEECH_KEY=
-AZURE_SPEECH_REGION=eastus
-AZURE_TTS_VOICE=es-CO-SalomeNeural
-ANTHROPIC_API_KEY=
-FIRMS_MAP_KEY=
-UMBRAL_REVISION_COP=1500000        # sobre esto, doble firma
-CORS_ORIGINS=http://localhost:5173,https://sereno.vercel.app
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
----
-
-## 9. Orden de implementación
-
-| | Qué | Por qué primero |
-|---|---|---|
-| 1 | Portar `build_mock.py` a `ml/` y servir `/package` desde memoria | Desbloquea al frontend. **Ya funciona.** |
-| 2 | `sources/openmeteo.py` con caché | Alimenta cuatro de los seis riesgos |
-| 3 | R1 helada + R6 estacional | Son el corazón del giro del producto |
-| 4 | `adjust.py` | Une las dos mitades |
-| 5 | Supabase + `POST /readings` | Persistencia |
-| 6 | `voice/tts.py` | La escena del video |
-| 7 | R2 sequía + R3 gota | Profundidad |
-| 8 | `agent/` con tool-use | La conversación |
-| 9 | `decisions` + `why` | La gobernanza, demostrable |
-| 10 | R4 incendios, R5 deslizamiento, `/public` | Si sobra tiempo |
-
-**Regla:** a las 19:00 tiene que existir un corte end-to-end feo pero completo. Congelar funcionalidad a las 22:00.
+Documentación interactiva: <http://localhost:8000/docs>.

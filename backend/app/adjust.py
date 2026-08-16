@@ -29,6 +29,18 @@ FACTOR_K_SEQUIA = 1.10
 GRAVES = ("alta", "critica")
 
 
+def _es_fase_seca(riesgo: Riesgo) -> bool:
+    """
+    Si la fase de ENSO que viene es de las que secan el altiplano.
+
+    Sale de `por_que.entradas`, que es el mismo dato que el agricultor ve
+    cuando abre «¿por que?». La decision agronomica y su explicacion salen
+    de la misma fuente, asi que no pueden separarse.
+    """
+    fenomeno = (riesgo.por_que.entradas or {}).get("fenomeno", "")
+    return "Niño" in fenomeno or "Nino" in fenomeno
+
+
 def calcular(riesgos: list[Riesgo]) -> list[Ajuste]:
     """Traduce los riesgos activos en ajustes de dosis."""
     ajustes: list[Ajuste] = []
@@ -38,16 +50,18 @@ def calcular(riesgos: list[Riesgo]) -> list[Ajuste]:
     helada = activos.get("helada")
     estacional = activos.get("estacional")
 
-    # El Nino fuerte cuenta como sequia anunciada aunque el pronostico
-    # de 16 dias todavia no la muestre.
-    if estacional and "Nino" in estacional.titulo and not seco:
+    # Un El Nino fuerte cuenta como sequia anunciada aunque el pronostico de
+    # 16 dias todavia no la muestre. Se mira el fenomeno declarado en las
+    # entradas del riesgo, no el titulo: el titulo es texto para el
+    # agricultor y puede cambiar sin que cambie la agronomia.
+    if estacional and not seco and _es_fase_seca(estacional):
         seco = estacional
 
     if seco:
         ajustes.append(Ajuste(
             nutriente="N", factor=FACTOR_N_SEQUIA, riesgo=seco.tipo,
             motivo=(
-                "Se baja el nitrogeno porque sin agua no se alcanza a absorber. "
+                "Se baja el nitrógeno porque sin agua no se alcanza a absorber. "
                 "Se volatiliza y es plata perdida."
             ),
         ))
@@ -59,7 +73,7 @@ def calcular(riesgos: list[Riesgo]) -> list[Ajuste]:
     if helada:
         ajustes.append(Ajuste(
             nutriente="K2O", factor=FACTOR_K_HELADA, riesgo="helada",
-            motivo="Se sube el potasio: mejora la tolerancia de la mata al frio.",
+            motivo="Se sube el potasio: mejora la tolerancia de la mata al frío.",
         ))
 
     return _fusionar(ajustes)

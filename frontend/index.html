@@ -10,6 +10,13 @@
 </head>
 <body>
 <div id="app"><div class="loading">Cargando el lote…</div></div>
+<script>
+  // En desarrollo el backend corre al lado. En producción se define al
+  // desplegar. Si no responde, api.js cae al paquete local: la app abre igual.
+  window.NPK_API_BASE ??= /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+    ? 'http://127.0.0.1:8000'
+    : '';
+</script>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -78,9 +78,9 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
         ),
         que_hacer=[
             "Revise las hojas de abajo: la gota empieza por ahi, con manchas de borde claro.",
-            "Si va a fumigar preventivo, hagalo ANTES de que entre la humedad, no despues.",
-            "Consulte con el tecnico de la UMATA que producto usar y en que dosis.",
-            "Evite regar por aspersion estos dias: moja la hoja y le ayuda al hongo.",
+            "Si va a fumigar preventivo, hágalo ANTES de que entre la humedad, no despues.",
+            "Consulte con el técnico de la UMATA qué producto usar y en qué dosis.",
+            "Evite regar por aspersión estos días: moja la hoja y le ayuda al hongo.",
         ],
         por_que=PorQue(
             modelo="blight/v1",
@@ -91,7 +91,7 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
                 "condicion": f"HR >= {HR_MINIMA}% y {T_MIN} C <= T <= {T_MAX} C",
             },
             regla=(
-                "Acumulacion de horas favorables en ventana de 48 h. Phytophthora "
+                "Acumulación de horas favorables en ventana de 48 h. Phytophthora "
                 "infestans necesita agua libre sobre la hoja y temperatura templada."
             ),
             fuentes=[Fuente(nombre="Open-Meteo Forecast", consultado=datetime.now(timezone.utc))],

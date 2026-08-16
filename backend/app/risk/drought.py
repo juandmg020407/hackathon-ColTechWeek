@@ -62,7 +62,7 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
         severidad, prob = "media", 0.50
 
     return Riesgo(
-        id=f"rk-sequia-{fechas[0]}",
+        id=f"rk-sequía-{fechas[0]}",
         tipo="sequia",
         severidad=severidad,
         probabilidad=prob,
@@ -70,15 +70,15 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
         ventana={"desde": fechas[0], "hasta": fechas[min(dias - 1, len(fechas) - 1)]},
         titulo="Le va a faltar agua",
         resumen=(
-            f"En los proximos {dias} dias la mata va a gastar {sale:.0f} milimetros "
-            f"de agua y solo le entran {entra:.0f}. Van {abs(balance):.0f} milimetros "
+            f"En los próximos {dias} días la mata va a gastar {sale:.0f} milímetros "
+            f"de agua y solo le entran {entra:.0f}. Van {abs(balance):.0f} milímetros "
             f"de menos"
-            + (f", con {maxima} dias seguidos sin lluvia util." if maxima >= 7 else ".")
+            + (f", con {maxima} días seguidos sin lluvia util." if maxima >= 7 else ".")
         ),
         que_hacer=[
-            "Si tiene riego, priorice las zonas mas altas del lote: se secan primero.",
+            "Si tiene riego, priorice las zonas más altas del lote: se secan primero.",
             "Aporque para tapar el surco. El suelo tapado pierde menos agua.",
-            "Aplace el nitrogeno. Sin agua no se disuelve, se volatiliza y pierde la plata.",
+            "Aplace el nitrógeno. Sin agua no se disuelve, se volatiliza y pierde la plata.",
             "Deje la maleza cortada en el surco como cobertura, no la saque.",
         ],
         por_que=PorQue(
@@ -91,8 +91,8 @@ def evaluar(lat: float, lon: float, clima: dict) -> Riesgo | None:
                 "racha_seca_dias": maxima,
             },
             regla=(
-                f"Balance hidrico = lluvia acumulada menos ET0 FAO-56. Alerta bajo "
-                f"{DEFICIT_MEDIO} mm o con siete dias seguidos de lluvia bajo 1 mm."
+                f"Balance hídrico = lluvia acumulada menos ET0 FAO-56. Alerta bajo "
+                f"{DEFICIT_MEDIO} mm o con siete días seguidos de lluvia bajo 1 mm."
             ),
             fuentes=[Fuente(nombre="Open-Meteo Forecast (ET0 FAO-56)",
                             consultado=datetime.now(timezone.utc))],

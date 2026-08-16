@@ -19,9 +19,9 @@ from datetime import date
 
 # Boletin vigente. Verificado el 15 de agosto de 2026.
 BOLETIN = {
-    "fenomeno": "El Nino",
-    "estado": "activo y fortaleciendose",
-    "alerta": "Alerta de El Nino",
+    "fenomeno": "El Niño",
+    "estado": "activo y fortaleciéndose",
+    "alerta": "Alerta de El Niño",
     "anomalia_nino34_c": 0.7,
     "prob_persiste_invierno": 0.97,
     "prob_muy_fuerte": 0.63,
@@ -34,20 +34,20 @@ BOLETIN = {
 # Que significa cada fase en la region andina colombiana.
 # El Nino en el altiplano: menos lluvia, cielos despejados, mas heladas.
 IMPLICACION = {
-    "El Nino": (
-        "En el altiplano narinense El Nino trae menos lluvia y noches mas "
-        "despejadas. Menos nubes de noche significa mas heladas, y menos "
+    "El Niño": (
+        "En el altiplano nariñense El Niño trae menos lluvia y noches más "
+        "despejadas. Menos nubes de noche significa más heladas, y menos "
         "lluvia significa que el abono que se aplica no se alcanza a "
         "aprovechar."
     ),
-    "La Nina": (
-        "En el altiplano narinense La Nina trae mas lluvia de la normal. "
+    "La Niña": (
+        "En el altiplano nariñense La Niña trae más lluvia de la normal. "
         "Sube el riesgo de gota y de que el abono se lave antes de que la "
         "mata lo tome."
     ),
     "Neutral": (
-        "Sin fenomeno activo. Las condiciones deberian parecerse al promedio "
-        "de los ultimos anos para esta epoca."
+        "Sin fenómeno activo. Las condiciones deberían parecerse al promedio "
+        "de los últimos años para esta época."
     ),
 }
 
