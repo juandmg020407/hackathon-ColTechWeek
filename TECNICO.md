@@ -589,15 +589,14 @@ de usuarios y no la presentamos como si la hubiera.
 
 ## 9. Frontend
 
-SPA estática sin build. Cuatro vistas, cada una con su hash, así que el botón
-Atrás funciona y las vistas se pueden enlazar:
+SPA estática sin build ni `node_modules`. Un shell con barra lateral y **nueve
+secciones** —`resumen`, `lotes`, `mediciones`, `mapa`, `alertas`,
+`recomendaciones`, `historial`, `reportes`, `configuracion`— más las vistas
+`lote` y `productores`, que enrutan sin entrada propia en el menú.
 
-| Hash | Vista | Qué responde |
-|---|---|---|
-| `#resumen` | Resumen | Estado del centro y qué lote atender primero |
-| `#mapa` | Mapa | Red del centro, o N/P/K del lote con incertidumbre |
-| `#productores` | Productores | Productores con sus lotes y última medición |
-| `#lote` | Lote El Rosal | Suelo, incertidumbre, propuesta por zona, clima y decisión |
+Cada vista tiene su hash, así que el botón Atrás funciona y las vistas se pueden
+enlazar; un hash desconocido cae en `#resumen`. Los iconos del menú van inline
+como paths SVG: el shell debe pintar **sin una sola petición de red**.
 
 `lib/api.js` es la **única** puerta de red. `lib/adapt.js` traduce el contrato v2
 al modelo de vista sin modificar el JSON de origen. `lib/plotmap.js` renderiza el

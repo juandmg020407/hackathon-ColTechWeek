@@ -162,16 +162,18 @@ es saber llamar a `.fit()`.
 ## La demo en un minuto
 
 Centro de acopio demo con tres formulaciones en bodega: `30-30-40`, `20-10-30` y
-`10-20-20`.
+`10-20-20`. La aplicación abre en un centro de control con barra lateral y nueve
+secciones; el recorrido de la demo toca seis:
 
-1. **Resumen del centro** — qué lotes necesitan medición o revisión, hoy.
-2. **Mapa del lote** — N, P y K en porcentaje; lo rayado es lo incierto.
-3. **Propuesta por zona** — `20-10-30 × 8 + 30-30-40 × 1`, con su faltante y su
-   exceso.
+1. **Resumen** — qué lotes necesitan medición o revisión, hoy.
+2. **Mapas** — N, P y K en porcentaje; lo rayado es lo incierto, no lo pobre.
+3. **Recomendaciones** — `20-10-30 × 8 + 30-30-40 × 1` por zona, con su faltante
+   y su exceso.
 4. **¿Por qué?** — modelo, entradas, fuentes, hash de los datos y lo que **no**
    se sabe.
-5. **Clima** — el riesgo con su ventana, su confianza y su efecto.
-6. **Decisión** — aceptar o remitir; queda en auditoría.
+5. **Alertas** — el riesgo climático con su ventana, su confianza y su efecto
+   sobre la propuesta.
+6. **Historial** — se acepta o se remite, y queda en la auditoría append-only.
 
 ## Correrlo
 

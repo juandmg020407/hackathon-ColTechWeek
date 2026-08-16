@@ -28,22 +28,36 @@ En localhost, `index.html` intenta `http://127.0.0.1:8000`. Si falla, carga
 
 | Archivo | Contenido |
 |---|---|
-| `index.html` | Centro de control del acopio. Cuatro vistas sin scroll, una por hash |
+| `index.html` | Centro de control del acopio: shell con barra lateral y una vista por hash |
 | `pitch.html` | Solo el demo en vivo y el audio narrado; no sustituye el video final |
 | `login.html` y `register.html` | Prototipos sin backend de identidad |
 
 ### Vistas del centro de control
 
+La barra lateral muestra nueve secciones (`MENU_VIEWS` en `app.js`):
+
 | Hash | Vista | Qué responde |
 |---|---|---|
 | `#resumen` | Resumen | Estado del centro, lotes que requieren atención y prioridades |
-| `#mapa` | Mapa | Red del centro o N/P/K del lote en porcentaje, con incertidumbre |
-| `#productores` | Productores | Productores del centro con sus lotes y su última medición |
-| `#lote` | Lote El Rosal | Suelo, incertidumbre, propuesta por zona, clima y decisión |
+| `#lotes` | Lotes | Los lotes del centro y su estado |
+| `#mediciones` | Mediciones | Lecturas registradas con su anotación de calidad |
+| `#mapa` | Mapas | Red del centro o N/P/K del lote en porcentaje, con incertidumbre |
+| `#alertas` | Alertas | Riesgos climáticos y avisos de degradación de fuentes |
+| `#recomendaciones` | Recomendaciones | Propuestas por zona pendientes de decisión |
+| `#historial` | Historial | Decisiones y auditoría |
+| `#reportes` | Reportes | Resumen exportable del centro |
+| `#configuracion` | Configuración | Perfil de cultivo y catálogo de formulaciones |
+
+Además enrutan `#lote` (detalle del lote El Rosal: suelo, incertidumbre,
+propuesta por zona, clima y decisión) y `#productores`, que no tienen entrada
+propia en el menú.
 
 Cada vista tiene su hash, así que el botón Atrás funciona y las vistas se pueden
 enlazar. Un hash desconocido cae en `#resumen`. `pitch.html` embebe
 `index.html#lote`.
+
+Los iconos del menú van **inline como paths SVG**: el contrato prohíbe pedir
+recursos a hosts externos, y el shell debe pintar sin una sola petición de red.
 
 ## Módulos
 
