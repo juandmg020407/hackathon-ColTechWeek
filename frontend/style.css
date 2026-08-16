@@ -76,8 +76,11 @@ body {
 }
 .btn:hover { background: #005a73; }
 .btn:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+.btn:disabled { opacity: .48; cursor: not-allowed; }
+.btn:disabled:hover { background: var(--brand-deep); }
 .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--border); text-decoration: none; }
 .btn.ghost:hover { background: var(--brand-soft); border-color: var(--brand-border); }
+.btn.ghost:disabled:hover { background: var(--surface); border-color: var(--border); }
 
 /* ── layout ───────────────────────────────────────────── */
 .grid {

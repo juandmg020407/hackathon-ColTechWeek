@@ -1,10 +1,11 @@
-"""Explicador opcional sobre Claude Haiku.
+"""Agente conversacional opcional sobre Claude.
 
 El router determinista de `agent.py` decide QUE se responde y con que evidencia.
-Este modulo solo reescribe ese texto para que se lea bien. No calcula, no decide
-y no puede introducir cifras: si la redaccion trae un numero que no estaba en la
-evidencia, se descarta y se devuelve el texto determinista. Esa regla es lo que
-permite seguir firmando la respuesta como fundamentada.
+Para las rutas conocidas este modulo mejora la redaccion; para otras preguntas
+puede responder directamente desde un resumen acotado del paquete. No calcula,
+no decide y no puede introducir cifras: si la respuesta trae un numero que no
+estaba en la evidencia, se descarta. Esa regla permite seguir firmando la
+respuesta como fundamentada.
 """
 
 from __future__ import annotations
@@ -24,22 +25,27 @@ logger = logging.getLogger(__name__)
 # leerlos como signo hacia que "zone 3" pareciera una cifra inventada.
 _NUMBER = re.compile(r"(?<![\w.,])-?\d[\d.,]*")
 
-SYSTEM_PROMPT = """Eres el redactor de un tablero agronomico colombiano. Recibes una \
-respuesta ya calculada por un motor determinista y la evidencia que la sustenta.
+SYSTEM_PROMPT = """Eres el asistente de un tablero agronomico colombiano. Recibes una \
+pregunta, evidencia estructurada de un lote y, a veces, una respuesta ya calculada \
+por un motor determinista.
 
-Tu unica tarea es reescribir esa respuesta para que un tecnico de acopio la lea \
-comodo: frases cortas, espanol claro de Colombia, sin jerga innecesaria.
+Si existe una respuesta calculada, reescribela con claridad. Si esta vacia, \
+responde la pregunta usando exclusivamente la evidencia entregada. Usa frases \
+cortas y espanol claro de Colombia, sin jerga innecesaria.
 
 Reglas que no puedes romper:
-1. No inventes, calcules, redondees ni conviertas cifras. Copia cada numero \
-exactamente como aparece en la respuesta original, con sus mismos decimales.
+1. No inventes, calcules, redondees ni conviertas cifras. Si hay respuesta \
+calculada, copia sus numeros exactamente; en una pregunta abierta, copia cada \
+numero exactamente como aparece en la evidencia.
 2. No agregues hechos, causas, recomendaciones ni contexto que no esten en la \
-evidencia.
+evidencia. Si no hay evidencia suficiente, dilo directamente.
 3. No quites las salvedades. Si la respuesta dice que algo esta pendiente de \
 validacion tecnica o que los datos estan degradados, eso se mantiene.
-4. Responde solo con el texto reescrito. Sin encabezados, sin vinetas, sin \
+4. No presentes una propuesta pendiente como aprobada y no reemplaces la \
+validacion de un tecnico.
+5. Responde solo con la respuesta al usuario. Sin encabezados, sin vinetas, sin \
 comillas y sin comentarios sobre tu tarea.
-5. Maximo tres frases."""
+6. Maximo cuatro frases."""
 
 
 def _numbers(text: str) -> set[str]:
@@ -73,7 +79,7 @@ def _numbers(text: str) -> set[str]:
 class AnthropicEvidenceExplainer:
     """Implementa `EvidenceExplainer` contra la API de Anthropic."""
 
-    version = "anthropic-evidence-explainer/1.0.0"
+    version = "anthropic-evidence-agent/2.0.0"
 
     def __init__(
         self,
@@ -184,12 +190,17 @@ class AnthropicEvidenceExplainer:
         }
 
     def _prompt(self, question: str, evidence: dict[str, Any]) -> str:
+        calculated = evidence.get("answer", "")
         return (
             f"Pregunta del usuario:\n{question}\n\n"
-            f"Respuesta calculada por el motor (fuente de toda cifra):\n{evidence.get('answer', '')}\n\n"
+            f"Respuesta calculada por el motor (puede estar vacia):\n{calculated}\n\n"
             "Evidencia disponible:\n"
-            f"{json.dumps(evidence, ensure_ascii=False, indent=1, sort_keys=True)}\n\n"
-            "Reescribe la respuesta calculada respetando las reglas."
+            f"{json.dumps(evidence, ensure_ascii=False, separators=(',', ':'), sort_keys=True)}\n\n"
+            + (
+                "Reescribe la respuesta calculada respetando las reglas."
+                if calculated
+                else "Responde la pregunta solo con la evidencia disponible."
+            )
         )
 
     def _count_tokens(self, user_prompt: str) -> int:

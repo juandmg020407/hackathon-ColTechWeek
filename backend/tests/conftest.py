@@ -19,7 +19,9 @@ EXCEL_PATH = REPOSITORY_ROOT / "data" / "data_ejemplo.csv.xlsx"
 def client(tmp_path):
     application = create_app(Settings(
         db_path=str(tmp_path / "iomido-test.sqlite3"),
+        demo_auto_import=False,
         external_sources_enabled=False,
+        ai_explainer_enabled=False,
         log_level="WARNING",
     ))
     with TestClient(application) as test_client:
@@ -31,7 +33,9 @@ def prepared_client(tmp_path_factory):
     database = tmp_path_factory.mktemp("prepared") / "iomido.sqlite3"
     application = create_app(Settings(
         db_path=str(database),
+        demo_auto_import=False,
         external_sources_enabled=False,
+        ai_explainer_enabled=False,
         log_level="WARNING",
     ))
     with TestClient(application) as test_client:

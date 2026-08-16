@@ -138,9 +138,9 @@ def test_oversized_input_is_not_sent():
     assert client.messages.calls == 0
 
 
-def ask(client):
+def ask(client, question="que tiene este lote?"):
     response = client.post(
-        "/v1/agent/ask", json={"plot_id": "nar-001", "question": "que tiene este lote?"}
+        "/v1/agent/ask", json={"plot_id": "nar-001", "question": question}
     )
     assert response.status_code == 200, response.text
     return response.json()
@@ -180,3 +180,32 @@ def test_agent_uses_the_rewrite_and_publishes_the_explainer_version(prepared_cli
     assert agent["answer_deterministic"] == deterministic["answer"]
     assert agent["evidence_ids"] == deterministic["evidence_ids"]
     assert body["model_versions"]["explainer"] == AnthropicEvidenceExplainer.version
+
+
+def test_open_question_uses_compact_package_evidence(prepared_client, monkeypatch):
+    client, _, _ = prepared_client
+    container = client.app.state.container
+    explainer, fake = build("La prioridad es revisar la propuesta pendiente.")
+    monkeypatch.setattr(container, "agent", GroundedAgent(container.repository, explainer))
+
+    body = ask(client, "que deberia priorizar hoy?")
+    agent = body["agent"]
+
+    assert agent["answered"] is True
+    assert agent["intent"] == "grounded_question"
+    assert agent["llm_used"] is True
+    assert agent["answer"] == "La prioridad es revisar la propuesta pendiente."
+    assert len(agent["evidence_ids"]) == 3
+    assert fake.messages.calls == 1
+
+
+def test_open_question_without_model_degrades_honestly(prepared_client, monkeypatch):
+    client, _, _ = prepared_client
+    container = client.app.state.container
+    monkeypatch.setattr(container, "agent", GroundedAgent(container.repository))
+
+    agent = ask(client, "que deberia priorizar hoy?")["agent"]
+
+    assert agent["answered"] is False
+    assert agent["intent"] == "unsupported"
+    assert agent["llm_used"] is False
