@@ -52,6 +52,12 @@ const SEVERITY_MARK = {
 const SEVERITY_WORD = { critical: 'crítica', high: 'alta', medium: 'media', low: 'baja' };
 const RISK_TITLE = { frost: 'Helada', drought: 'Sequía', late_blight: 'Gota', seasonal: 'Estacional' };
 const LEVEL_MARK = { alto: '▲', medio: '●', bajo: '○' };
+const KPI_ICON = {
+  area: 'M4 7h16v10H4zM4 11h16M9 7v10',
+  mediciones: 'M4 5h16v14H4zM8 15l3-4 2 2 3-5',
+  critico: 'M12 4 3 20h18zM12 10v4M12 17h.01',
+  incierto: 'M9 9a3 3 0 1 1 4 2.8c-.7.3-1 .9-1 1.7M12 17h.01',
+};
 // Every view routes; the sidebar shows the ones with a screen of their own.
 const NAV_VIEWS = [
   'resumen', 'lotes', 'mediciones', 'mapa', 'alertas',
@@ -299,7 +305,10 @@ function paintNutrientToggle() {
   const slot = document.getElementById('colorbar-slot');
   if (slot) {
     slot.innerHTML = colorbar();
-    document.getElementById('map-nutrient').textContent = state.nutrient;
+    const label = document.getElementById('map-nutrient');
+    if (label) label.textContent = state.nutrient;
+    const average = document.getElementById('map-avg');
+    if (average && state.view) average.textContent = `${fmt(gridAverage(state.view.grid, state.nutrient))}%`;
   }
   for (const button of document.querySelectorAll('.nut')) {
     button.classList.toggle('on', button.dataset.nut === state.nutrient);
@@ -666,12 +675,15 @@ function viewResumen() {
       : 'El Rosal está al día.';
 
   const kpis = [
-    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: view.plot.municipality || view.plot.municipio || '' },
-    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo' },
-    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40 },
-    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo' },
+    { label: 'Área del lote', value: `${fmt(view.plot.area_ha, 2)} ha`, hint: view.plot.municipality || view.plot.municipio || '', tone: 'green', icon: KPI_ICON.area },
+    { label: 'Mediciones', value: `${view.sampling.valid}/${view.sampling.total}`, hint: 'alimentan el modelo', tone: 'blue', icon: KPI_ICON.mediciones },
+    { label: 'En nivel crítico', value: `${fmt(view.criticalSharePct)}%`, hint: `${fmt(view.criticalAreaHa, 2)} ha del lote`, warn: view.criticalSharePct > 40, tone: 'red', icon: KPI_ICON.critico },
+    { label: 'Sin certeza', value: `${view.coverage.uncertainPct}%`, hint: 'del lote, según el modelo', tone: 'grey', icon: KPI_ICON.incierto },
   ].map((c) => `<div class="kpi ${c.warn ? 'warn-kpi' : ''}">
-      <div class="label">${c.label}</div><div class="value">${c.value}</div><div class="hint">${c.hint}</div>
+      <span class="kpi-icon tone-${c.tone}" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${c.icon}"/></svg></span>
+      <div class="kpi-text">
+        <div class="label">${c.label}</div><div class="value">${c.value}</div><div class="hint">${c.hint}</div>
+      </div>
     </div>`).join('');
 
   const cola = [];
@@ -717,11 +729,14 @@ function viewResumen() {
     });
   }
 
-  const rail = cola.map((c) => `<div class="rail-item rv-${c.sev}">
-      <div class="rail-head"><span class="sev">${SEVERITY_MARK[c.sev] || '●'}</span>${c.titulo}</div>
-      <p>${c.detalle}</p>
-      <button class="btn ghost rail-go" type="button" data-go="lote" data-tab-go="${c.tab}">${c.meta} →</button>
-    </div>`).join('');
+  const rail = cola.map((c) => `<article class="prio-card rv-${c.sev}">
+      <span class="prio-icon" aria-hidden="true">${SEVERITY_MARK[c.sev] || '●'}</span>
+      <div class="prio-body">
+        <b>${c.titulo}</b>
+        <p>${c.detalle}</p>
+        <button class="btn ghost rail-go" type="button" data-go="lote" data-tab-go="${c.tab}">${c.meta} →</button>
+      </div>
+    </article>`).join('');
 
   return `<div class="rwrap rwrap-mvp">
     <section class="hero">
@@ -729,17 +744,17 @@ function viewResumen() {
       <div class="hero-sub">${view.plot.name} · ${view.cultivo?.crop || ''} ${view.cultivo?.variety || ''} · medido ${new Date(view.generado).toLocaleDateString('es-CO')}</div>
     </section>
 
-    ${net?.real ? `<section class="card real-plots">
-      <h2>Lotes del centro · datos reales</h2>
-      <ul class="moves-list">${net.real.lotes.map((l) => `<li>
-        <b>${l.name}</b> · ${l.municipality} · ${l.reading_count} ${l.reading_count === 1 ? 'medición' : 'mediciones'}
-      </li>`).join('')}</ul>
-      <p class="note">Del backend: <code>/v1/centers</code> y <code>/v1/plots</code>.</p>
-    </section>` : ''}
+    <section class="card facts-card">
+      <div class="facts-head">
+        <h2>${view.plot.name} · ${net?.real ? 'datos reales' : 'paquete local'}</h2>
+        <p class="note">${net?.real
+          ? `Del backend: <code>/v1/plots/${view.plot.id}/package</code>`
+          : 'Del paquete descargado, sin conexión'}</p>
+      </div>
+      <div class="kpi-grid">${kpis}</div>
+    </section>
 
-    <div class="kpi-grid">${kpis}</div>
-
-    <div class="mvp-main net-grid">
+    <div class="mvp-main">
       <section class="card map-card">
         <div class="nutrients">
           ${NUTRIENTS.map((n) => `<button class="nut" data-nut="${n}" aria-pressed="${n === state.nutrient}">${n}</button>`).join('')}
@@ -750,7 +765,14 @@ function viewResumen() {
           <div class="tiles" id="tiles"></div>
           <canvas id="heat"></canvas>
           <svg id="overlay"></svg>
-          <div class="map-title"><b id="map-nutrient">${state.nutrient}</b> en el lote<span>% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span></div>
+          <div class="map-panel">
+            <b><span id="map-nutrient">${state.nutrient}</span> en el lote</b>
+            <span class="note">% de masa · celda ${view.grid.celda_m} m · ✛ mida aquí</span>
+            <div class="map-avg"><span class="map-avg-mark" aria-hidden="true">🌿</span>
+              <span><b id="map-avg">${fmt(gridAverage(view.grid, state.nutrient))}%</b>
+              <small>Promedio estimado</small></span>
+            </div>
+          </div>
           <div id="colorbar-slot"></div>
           <div class="map-ctl">
             <button type="button" data-map="in" aria-label="Acercar">+</button>
@@ -762,17 +784,31 @@ function viewResumen() {
           <div class="attribution">${ATTRIBUTION}</div>
         </div>
       </section>
-
-      <section class="card rail">
-        <h2>Prioridad hoy</h2>
-        ${rail || '<p class="note">Sin acciones pendientes.</p>'}
-      </section>
     </div>
+
+    <section class="card prio-card-wrap">
+      <h2>Prioridad hoy</h2>
+      <div class="prio-grid">${rail || '<p class="note">Sin acciones pendientes.</p>'}</div>
+    </section>
 
     <button class="btn open-lote" type="button" data-nav="lote">Abrir ${view.plot.name} →</button>
 
     ${view.stale ? '<p class="note">El paquete pasó su ventana de validez: conviene recalcularlo.</p>' : ''}
   </div>`;
+}
+
+// Average over the cells inside the plot only: the grid is a rectangle, the lot
+// is not, so counting masked-out cells would drag the number toward nothing.
+function gridAverage(grid, nutrient) {
+  let sum = 0;
+  let count = 0;
+  const values = grid[nutrient] || [];
+  for (let i = 0; i < values.length; i += 1) {
+    if (!grid.mask[i] || !Number.isFinite(values[i])) continue;
+    sum += values[i];
+    count += 1;
+  }
+  return count ? sum / count : 0;
 }
 
 function viewResumenRed() {

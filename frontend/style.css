@@ -164,6 +164,59 @@ table.data tr.row-out td { color: var(--low); }
 .alert-row.sev-medium { border-left: 3px solid var(--mid); }
 .alert-row.sev-low { border-left: 3px solid var(--muted); }
 
+/* One band: what this lot is, and its four numbers. */
+.facts-card { display: grid; grid-template-columns: minmax(140px, 15rem) minmax(0, 1fr); gap: var(--gap); align-items: center; }
+.facts-head h2 { margin-bottom: .2em; }
+@media (max-width: 900px) { .facts-card { grid-template-columns: 1fr; } }
+
+/* ── KPI tiles with a coloured mark ───────────────────── */
+.kpi { display: flex; align-items: center; gap: .7em; }
+.kpi-text { min-width: 0; }
+.kpi-icon {
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+}
+.kpi-icon svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tone-green { background: var(--high); }
+.tone-blue { background: var(--brand-deep); }
+.tone-red { background: var(--low); }
+.tone-grey { background: var(--muted); }
+
+/* ── map floating panel ───────────────────────────────── */
+.map-panel {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  background: rgb(255 255 255 / 95%); border: 1px solid var(--border);
+  border-radius: 10px; padding: .55em .7em; box-shadow: var(--shadow);
+  display: grid; gap: .15em; max-width: 15rem;
+}
+.map-panel > b { font-size: .92em; }
+.map-avg { display: flex; align-items: center; gap: .45em; margin-top: .4em; }
+.map-avg-mark { font-size: 1.15em; }
+.map-avg b { font-size: 1.5em; font-weight: 800; line-height: 1.05; display: block; }
+.map-avg small { color: var(--muted); font-size: .74em; }
+
+/* ── priority row ─────────────────────────────────────── */
+.prio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--gap); }
+.prio-card {
+  display: flex; align-items: flex-start; gap: .7em;
+  border: 1px solid var(--border); border-left: 4px solid var(--mid);
+  border-radius: 10px; padding: .7em .8em; background: var(--surface);
+}
+.prio-card.rv-alta { border-left-color: var(--low); background: #fdf6f5; }
+.prio-card.rv-media { border-left-color: var(--mid); background: #fffaf0; }
+.prio-card.rv-baja { border-left-color: var(--high); background: #f2f9f4; }
+.prio-icon {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; color: #fff; font-size: .84em;
+  background: var(--mid);
+}
+.prio-card.rv-alta .prio-icon { background: var(--low); }
+.prio-card.rv-baja .prio-icon { background: var(--high); }
+.prio-body { flex: 1; min-width: 0; display: grid; gap: .25em; }
+.prio-body b { font-size: .94em; }
+.prio-body p { font-size: .82em; line-height: 1.45; color: var(--ink); }
+.prio-body .btn { justify-self: start; min-height: 38px; font-size: .88em; }
+
 /* ── header ───────────────────────────────────────────── */
 .topbar { display: flex; align-items: center; gap: 11px; flex: none; }
 
@@ -689,7 +742,10 @@ tr.rejected td { color: var(--low); background: #fdf2f1; }
   }
 
   .resumen-c { grid-template-rows: auto auto minmax(340px, 1fr) auto; }
-  .rwrap.rwrap-mvp .mvp-main { min-height: 340px; }
+  /* The map absorbs whatever the other bands leave, down to a readable floor. */
+  .rwrap.rwrap-mvp .mvp-main { min-height: 240px; }
+  /* Inset the frame so the illustrated ground stays visible around it. */
+  .shell { padding: clamp(10px, 1.6vh, 18px) clamp(16px, 2.2vw, 34px); }
 
   .net-grid,
   .rwrap-mvp .mvp-main {
